@@ -34,11 +34,16 @@ jobs:
           set -euo pipefail
           cd linux
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
-          scripts/config --enable CONFIG_NET_VENDOR_MEDIATEK \
+          scripts/config --enable CONFIG_COMPILE_TEST \
+            --enable CONFIG_NET_VENDOR_MEDIATEK \
             --enable CONFIG_NET_MEDIATEK_SOC --enable CONFIG_PHYLINK \
             --enable CONFIG_NET_DSA
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-          grep -Fqx 'CONFIG_NET_MEDIATEK_SOC=y' .config
+          grep -E '^(CONFIG_COMPILE_TEST|CONFIG_NET_VENDOR_MEDIATEK|CONFIG_NET_MEDIATEK_SOC)=' .config
+          if ! grep -Fqx 'CONFIG_NET_MEDIATEK_SOC=y' .config; then
+            echo 'ERROR: NET_MEDIATEK_SOC not enabled; inspect Kconfig dependencies' >&2
+            exit 1
+          fi
           echo 'Compiling unmodified upstream object'
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 \
             drivers/net/ethernet/mediatek/mtk_eth_soc.o
