@@ -20,6 +20,8 @@ jobs:
           persist-credentials: false
       - name: Python syntax check
         run: python3 -m py_compile scripts/check-publication.py
+      - name: Publication gate unit tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Static publication gate
         run: python3 scripts/check-publication.py
       - name: Validate documented files exist
