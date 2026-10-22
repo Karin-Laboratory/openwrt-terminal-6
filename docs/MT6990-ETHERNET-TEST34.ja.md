@@ -28,6 +28,17 @@ These are **implementation claims from internal source review**, not proof that 
 
 SHA-256 values identify the private research inputs and outputs; they do **not** provide access to those files or establish their redistribution rights.
 
+## Public read-only tool
+
+A source identity checker is now available at [`tools/verify_test34_source.py`](../tools/verify_test34_source.py). It checks two **locally provided** source files against the reported Test32 or Test34 SHA-256 values and never downloads or modifies a kernel tree.
+
+```sh
+python3 tools/verify_test34_source.py --source-dir /path/to/local/sources --version test32
+# or --version test34
+```
+
+A matching digest verifies only the identity of the two supplied files. It does not establish permission to redistribute, compilation success, device safety or completeness of the patch set. The corresponding files are **not** included in this repository.
+
 ## Evidence and limitations
 
 Private Test34 records report: script syntax validation, application to a hash-pinned disposable kernel-source copy, offline static checks and recorded output digests. Complete kernel compilation, KUnit, lockdep, KASAN, fault injection, race stress, and live device execution were **not** established for this candidate. A private source-check CI result also predated the final reviewed edits.
