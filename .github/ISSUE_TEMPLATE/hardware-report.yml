@@ -1,0 +1,37 @@
+name: Hardware report (redacted)
+description: Report device-tree, Ethernet, Wi-Fi or boot findings without private or device-unique data.
+title: "[Research] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **No flash support is available.** Do not upload OEM images, full raw dumps, keys, certificates, serial numbers, MAC addresses, IMEI, credentials or unredacted UART logs. Share only research observations.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options: [Device Tree / SGMII, Ethernet, Wi-Fi, PCIe, Kernel boot, OpenWrt userspace, 5G modem, Build or CI, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Distinguish verified observations from hypotheses. Redact logs before including excerpts.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Read-only reproduction and environment
+      description: Specify git revision, versions and safe read-only commands only.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Publication safety
+      options:
+        - label: I checked this report for device-unique identifiers, secrets, OEM binaries and unredacted logs.
+          required: true
+        - label: I understand that this issue does not authorize flashing or other destructive device changes.
+          required: true
