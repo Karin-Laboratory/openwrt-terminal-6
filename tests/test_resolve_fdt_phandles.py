@@ -28,6 +28,12 @@ class TestResolve(unittest.TestCase):
     def test_duplicate_fails(self):
         dts = "/ {\n a {\n phandle = <0x6d>;\n };\n b {\n phandle = <0x6d>;\n };\n};"
         self.assertEqual(tool.resolve(dts)["0x6d"]["status"], "duplicate")
+    def test_legacy_alias_same_node(self):
+        dts = "/ {\n a {\n phandle = <0x6d>;\n linux,phandle = <0x6d>;\n };\n};"
+        result = tool.resolve(dts)["0x6d"]
+        self.assertEqual(result["status"], "resolved")
+        self.assertEqual(len(result["matches"]), 1)
+
     def test_missing_fails(self):
         self.assertEqual(tool.resolve("/ { };")["0x24"]["status"], "missing")
 
