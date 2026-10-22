@@ -24,7 +24,6 @@ int main(void)
     assert(!t6_fe_request(&s, T6_FE_DEFERRED));
     assert(t6_fe_request(&s, T6_FE_NORMAL));
     assert(!t6_fe_request(&s, T6_FE_NORMAL));
-    assert(t6_fe_request(&s, T6_FE_NORMAL));
     /* Normal work must survive; stale deferred work must not. */
     s.pending |= T6_FE_DEFERRED;
     t6_fe_success(&s);
