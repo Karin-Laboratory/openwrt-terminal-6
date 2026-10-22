@@ -38,6 +38,25 @@ Private working archive: `Karin-Laboratory/SBAT6A-Offline-Archive`. Its README d
 - The private archive includes manufacturer-derived backups. The original rootfs, partition images and extracted firmware are not publication candidates by default.
 - Code search did not yield a reviewable implementation list in this pass. Therefore **no target, DTS, driver, signing or build source has been approved for migration**.
 
+## Private archive read-only triage (2026-10-23)
+
+Source consulted: private `SBAT6A-Offline-Archive/README.md` and its `docs/collection-status.md` and `docs/vendor/RESEARCH-INDEX.md`, read-only. This is **directory-level categorization, not a complete file inventory or license clearance**.
+
+| Source category | Classification | Rationale / next evidence |
+| --- | --- | --- |
+| `originals/` manufacturer snapshots and restored partition files | BLOCK | OEM binaries and device-specific content; never import or mirror |
+| `docs/collection-status.md` and live access/recovery notes | HOLD | Contain live management topology, hardware identity, recovery references; do not copy verbatim |
+| `docs/vendor/` reverse-engineering notes | HOLD | Need line-by-line redaction and author/quotation rights review |
+| `src/t6a/` independent source candidates | HOLD | Need immutable source path + SHA, entire file, dependencies and license review |
+| `scripts/` independently written build/analysis tools | HOLD | Inspect for embedded OEM portions, signing material, internal paths and device actions |
+| Manufacturer SDK-derived tables, blobs, keys and signed boot images | BLOCK | Rights not established, potential device-specific sensitive material |
+
+The archive README states that historical backups are incomplete; never infer a complete source or reproducible firmware from their presence. This first pass **approved zero private files for copying**.
+
+### First import gate
+
+For an individual candidate file, gather its exact private path and immutable commit, verify it is newly authored or has a compatible license, inspect its entire content and dependencies, remove all host/identity secrets, record SHA-256 and origin, then submit a minimal reviewed PR. Avoid copying private Git history. The original project's MIT policy applies **only after rights are established**; it does not relicense Linux/OpenWrt or vendor files.
+
 ## Next source review
 
 Get a read-only inventory of paths and sizes from the current private development branch, select candidate text patches/scripts, inspect each complete file and license, redact or rewrite where needed, and submit them in small PRs with review evidence. Do not import private git history or use a wholesale mirror.
