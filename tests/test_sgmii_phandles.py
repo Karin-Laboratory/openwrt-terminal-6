@@ -29,6 +29,13 @@ class TestSgmiiPhandle(unittest.TestCase):
         self.assertTrue(tool.check(VALID.replace("&phy1", "&missing")))
     def test_missing_power_dependency(self):
         self.assertTrue(tool.check(VALID.replace("power-domains = <&spm 1>;", "")))
+
+    def test_unresolved_pll_provider_is_not_currently_checked(self):
+        # An explicit scope reminder: the lexical checker is not dtc.
+        self.assertEqual(tool.check(VALID.replace("&pll", "&not_defined")), [])
+
+    def test_missing_phy_name(self):
+        self.assertTrue(tool.check(VALID.replace('phy-names = "sgmii";', "")))
     def test_missing_nodes(self):
         self.assertTrue(tool.check("/dts-v1/; / { };"))
 
