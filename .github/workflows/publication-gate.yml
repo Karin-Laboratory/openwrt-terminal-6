@@ -38,7 +38,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in README.md BUILDING.md INSTALL.md RECOVERY.md SECURITY.md \
+          for file in README.md BUILDING.md INSTALL.md RECOVERY.md SECURITY.md RELEASE-READINESS.md \
                       LICENSES/README.md CONTRIBUTING.md PUBLICATION-CHECKLIST.md \
                       docs/SOURCE-AUDIT.md; do
             test -s "$file"
