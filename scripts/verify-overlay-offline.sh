@@ -11,7 +11,11 @@ fdtoverlay -i "$temp/base.dtb" -o "$temp/merged.dtb" "$temp/patch.dtbo"
 for path in /sgmiiphy@11E60000 /sgmiisys@11305000; do
   test "$(fdtget -t s "$temp/merged.dtb" "$path" status)" = disabled
 done
-test "$(fdtget -t s "$temp/merged.dtb" /sgmiiphy@11E60000 compatible)" = mediatek,mt6990-sgmii-phy
-test "$(fdtget -t s "$temp/merged.dtb" /sgmiisys@11305000 compatible)" = mediatek,mt6990-sgmiisys
+case "$(fdtget -t s "$temp/merged.dtb" /sgmiiphy@11E60000 compatible)" in mediatek,mt6990-sgmii-phy*) ;; *) exit 1 ;; esac
+case "$(fdtget -t s "$temp/merged.dtb" /sgmiisys@11305000 compatible)" in mediatek,mt6990-sgmiisys*) ;; *) exit 1 ;; esac
+PHY_HANDLE="$(fdtget -t x "$temp/merged.dtb" /sgmiiphy@11E60000 phandle)"
+PCS_PHY="$(fdtget -t x "$temp/merged.dtb" /sgmiisys@11305000 phys)"
+test "$PHY_HANDLE" = "$PCS_PHY"
+test "$(fdtget -t s "$temp/merged.dtb" /sgmiisys@11305000 phy-names)" = sgmii
 echo 'PASS: synthetic base + overlay merge, both nodes remain disabled'
 echo 'NOT a physical board validation, dtbs_check, or firmware build'
