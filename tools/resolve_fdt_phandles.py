@@ -22,7 +22,11 @@ def resolve(source, target_handles=TARGETS):
         found = HANDLE.match(line)
         if found and stack:
             value = int(found.group(1), 0)
-            definitions.setdefault(value, []).append({"node": "/" + "/".join(stack), "line": line_number})
+            entry = {"node": "/" + "/".join(stack), "line": line_number}
+            seen = definitions.setdefault(value, [])
+            # phandle and linux,phandle aliases on the SAME node are not duplicates.
+            if not any(item["node"] == entry["node"] for item in seen):
+                seen.append(entry)
         closes = line.count("}")
         for _ in range(closes):
             if stack:
