@@ -11,7 +11,7 @@ BAD_NAMES = {".env", "id_rsa", "id_ed25519", "credentials", "secrets.json"}
 BAD_DIRS = {"originals", "vendor-dumps", "private", "secrets"}
 MAX_BYTES = 1048576
 SIGNATURES = (
-    re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----\\s+[A-Za-z0-9+/=\\r\\n]{40,}\\s+-----END (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----"),
+    re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----\s+[A-Za-z0-9+/=\r\n]{40,}\s+-----END (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----"),
     re.compile(rb"(?i)(?:ghp_|github_pat_)[A-Za-z0-9_]{20,}"),
 )
 def git(*args):
