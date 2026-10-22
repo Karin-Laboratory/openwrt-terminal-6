@@ -31,6 +31,8 @@ jobs:
               assert isinstance(data.get('jobs'), dict), f'{path}: missing jobs'
               print('YAML OK:', path)
           PY
+      - name: Check workflow shell block syntax
+        run: python3 tools/check_workflow_shell.py
       - name: Python syntax check
         run: python3 -m py_compile scripts/check-publication.py
       - name: Publication gate unit tests
