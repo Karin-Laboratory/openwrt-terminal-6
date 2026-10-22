@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "status": "experimental-evidence-only",
+  "board": "SoftBank Air Terminal 6",
+  "soc": "mediatek,mt6990",
+  "base_kernel": "6.18.44",
+  "board_dts": "NOT_YET_AVAILABLE",
+  "ethernet": {
+    "linux_netdev": "eth1",
+    "mac_node": "mac@1",
+    "switch": "mt7531",
+    "switch_cpu_port": 5,
+    "switch_user_port": 1,
+    "dsa_interface": "lan2",
+    "serdes": "SGMII1",
+    "sgmiisys_base": "0x11305000",
+    "analog_phy_base": "0x11e60000",
+    "test_link_mbps": 100
+  },
+  "wifi": {
+    "driver": "mt7996e",
+    "endpoint_ids": [
+      "14c3:7990",
+      "14c3:7991"
+    ],
+    "eeprom": "PER_DEVICE_NOT_REDISTRIBUTED",
+    "confirmed_bands_ghz": [
+      2.4,
+      5
+    ],
+    "ap_only_bands_ghz": [
+      6
+    ]
+  },
+  "unknowns": [
+    "boot-time device tree and phandle dependencies",
+    "board pinctrl and regulator mapping",
+    "stable physical port labels",
+    "5G modem operation",
+    "cold boot persistent Ethernet and Wi-Fi",
+    "safe recovery"
+  ]
+}
