@@ -18,6 +18,11 @@ The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported k
 
 - [Standalone FE recovery state machine](examples/fe-recovery/t6_fe_recovery.h) and [host-side regression test](examples/fe-recovery/test_fe_recovery.c): independent, hardware-free reference logic for retry and teardown state transitions. This is **not** a Linux/OpenWrt driver patch and does not control the MT6990. The publication safety gate is configured to compile and execute the test. [Linux workqueue integration contract](examples/fe-recovery/INTEGRATION.md) documents locking, callback cancellation and the remaining non-hardware-tested gaps.
 
+## First upstream-anchored Ethernet RFC / 公開パッチの適用検証
+
+- [RFC patch: reorder MediaTek FE worker cleanup](patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch).
+- [Automated upstream source apply check](.github/workflows/rfc-mediatek-patch.yml): fetches Linux v6.18's pinned source file, checks its Git blob ID, applies the RFC and checks the cleanup order. **This does not compile the driver or establish safe hardware behavior.**
+
 ## Latest technical research / 最新の技術調査
 
 - [MT6990 Ethernet FE lifecycle (Test34): race and teardown design, input/output digests, remaining tests](docs/MT6990-ETHERNET-TEST34.ja.md). This is a sanitized source-level engineering note, **not** a distributable kernel patch or verified driver.
