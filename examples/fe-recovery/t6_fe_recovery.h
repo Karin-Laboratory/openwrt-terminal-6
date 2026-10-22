@@ -32,7 +32,7 @@ static inline void t6_fe_stop(struct t6_fe_state *s)
 
 static inline bool t6_fe_request(struct t6_fe_state *s, enum t6_fe_request req)
 {
-    if (s->shutdown)
+    if (s->shutdown || (req != T6_FE_NORMAL && req != T6_FE_DEFERRED))
         return false;
     if (req == T6_FE_DEFERRED && (!s->deferred || s->exhausted))
         return false;
@@ -73,6 +73,7 @@ static inline void t6_fe_success(struct t6_fe_state *s)
     if (s->shutdown)
         return;
     s->deferred = false;
+    s->pending &= ~((unsigned)T6_FE_DEFERRED);
     s->exhausted = false;
     s->recheck_used = false;
     s->failures = 0;
