@@ -12,7 +12,7 @@ The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported k
 
 ## Public C source experiment / 公開Cコード
 
-- [Standalone FE recovery state machine](examples/fe-recovery/t6_fe_recovery.h) and [host-side regression test](examples/fe-recovery/test_fe_recovery.c): independent, hardware-free reference logic for retry and teardown state transitions. This is **not** a Linux/OpenWrt driver patch and does not control the MT6990. The publication safety gate is configured to compile and execute the test.
+- [Standalone FE recovery state machine](examples/fe-recovery/t6_fe_recovery.h) and [host-side regression test](examples/fe-recovery/test_fe_recovery.c): independent, hardware-free reference logic for retry and teardown state transitions. This is **not** a Linux/OpenWrt driver patch and does not control the MT6990. The publication safety gate is configured to compile and execute the test. [Linux workqueue integration contract](examples/fe-recovery/INTEGRATION.md) documents locking, callback cancellation and the remaining non-hardware-tested gaps.
 
 ## Latest technical research / 最新の技術調査
 
