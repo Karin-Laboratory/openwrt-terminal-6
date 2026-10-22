@@ -21,7 +21,7 @@ The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported k
 ## First upstream-anchored Ethernet RFC / 公開パッチの適用検証
 
 - [RFC patch: reorder MediaTek FE worker cleanup](patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch).
-- [Automated upstream source apply check](.github/workflows/rfc-mediatek-patch.yml): fetches Linux v6.18's pinned source file, checks its Git blob ID, applies the RFC and checks the cleanup order. **This does not compile the driver or establish safe hardware behavior.**
+- [Automated upstream source apply check](.github/workflows/rfc-mediatek-patch.yml): fetches Linux v6.18's pinned source file, checks its Git blob ID, applies the RFC and checks the cleanup order. **This does not compile the driver or establish safe hardware behavior.** A separate [manual ARM64 object compilation probe](.github/workflows/rfc-mediatek-object-compile.yml) now attempts compilation after applying the RFC. Its result has not yet been verified, and even success would not establish runtime safety.
 
 ## Latest technical research / 最新の技術調査
 
