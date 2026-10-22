@@ -18,7 +18,7 @@ jobs:
       - name: Install ARM64 build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git make gcc-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev python3
+          sudo apt-get install -y --no-install-recommends git make gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev python3
       - name: Fetch exact publicly available donor
         run: |
           set -euo pipefail
@@ -40,7 +40,17 @@ jobs:
           make -C kernel ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
           make -C kernel ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 prepare
           make -C kernel ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 drivers/phy/mediatek/phy-mtk-mt6990-sgmii.o
-          test -s kernel/drivers/phy/mediatek/phy-mtk-mt6990-sgmii.o
+          object=kernel/drivers/phy/mediatek/phy-mtk-mt6990-sgmii.o
+          test -s "$object"
+          aarch64-linux-gnu-readelf -h "$object" | tee phy-object-elf-header.txt
+          aarch64-linux-gnu-readelf -h "$object" | grep -Eq 'Machine:[[:space:]]+AArch64'
+          sha256sum "$object" | tee phy-object-sha256.txt
+          {
+            echo '### Compiler output'
+            echo 'Validated ELF machine: AArch64'
+            echo 'Object SHA-256:'
+            cat phy-object-sha256.txt
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Record probe limitation
         if: always()
         run: |
