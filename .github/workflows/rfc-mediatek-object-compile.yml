@@ -72,6 +72,12 @@ jobs:
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 \
             drivers/net/ethernet/mediatek/mtk_eth_soc.o
           sha256sum drivers/net/ethernet/mediatek/mtk_eth_soc.o | tee /tmp/mtk-rfc.sha256
+          echo "### MediaTek RFC ARM64 compile evidence" >> "$GITHUB_STEP_SUMMARY"
+          echo "Upstream: torvalds/linux v6.18" >> "$GITHUB_STEP_SUMMARY"
+          echo "Upstream source blob: e68997a29191b2a8ce0868873dcfe95c79e10e56" >> "$GITHUB_STEP_SUMMARY"
+          echo "Config: $(grep '^CONFIG_NET_MEDIATEK_SOC=' .config)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Baseline object SHA-256: $(cut -d' ' -f1 /tmp/mtk-baseline.sha256)" >> "$GITHUB_STEP_SUMMARY"
+          echo "RFC object SHA-256: $(cut -d' ' -f1 /tmp/mtk-rfc.sha256)" >> "$GITHUB_STEP_SUMMARY"
           git diff --check
           echo 'BASELINE_AND_RFC_OBJECT_BUILD_PASS'
       - name: Explain scope
