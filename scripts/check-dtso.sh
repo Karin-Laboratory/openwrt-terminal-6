@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Compile-only validation. Never applies overlays or creates a flashable image.
 set -euo pipefail
 command -v dtc >/dev/null || { echo 'dtc required' >&2; exit 2; }
