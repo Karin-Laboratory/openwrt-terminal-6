@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Small self-contained tests for publication checks."""
 import pathlib
 import sys
