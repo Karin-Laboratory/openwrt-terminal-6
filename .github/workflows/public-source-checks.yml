@@ -19,6 +19,23 @@ jobs:
           persist-credentials: false
       - name: Install device-tree compiler
         run: sudo apt-get update && sudo apt-get install -y device-tree-compiler
+      - name: Toolchain and source provenance
+        run: |
+          set -euo pipefail
+          echo "Commit: ${GITHUB_SHA}"
+          echo "Runner: ${RUNNER_OS} / ${RUNNER_ARCH}"
+          dtc --version
+          python3 --version
+          git rev-parse HEAD
+      - name: Summarize public verification scope
+        if: always()
+        run: |
+          {
+            echo "## Public source checks"
+            echo "Commit: \`${GITHUB_SHA}\`"
+            echo "This workflow checks synthetic Device Trees and Python source tests only."
+            echo "No Linux 6.18.44 kernel object build, signed firmware, or hardware test is performed."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Check disabled experimental overlay syntax
         run: bash scripts/check-dtso.sh
       - name: Apply overlay to synthetic fixture only
