@@ -5,12 +5,13 @@ Source-blob: e68997a29191b2a8ce0868873dcfe95c79e10e56
 
 This is a source-only RFC for review. The current cleanup path frees
 network devices before draining pending FE recovery work. Reorder the
-existing synchronous cancellations ahead of the teardown calls.
+existing synchronous cancellations ahead of the teardown calls. Also
+stop existing recovery work ahead of the remove path's hardware deinit.
 
-This patch does NOT resolve the earlier mtk_remove() hardware-deinit
-ordering, races with producers which can requeue the work, or possible
-RTNL interactions. It is NOT validated by a kernel compile or runtime
-testing. Do not use it as a standalone device fix.
+This RFC does NOT stop other producers from requeueing work or the DMA
+monitor self-rearm, and does not resolve RTNL interactions. The prior
+single-hunk revision compiled for ARM64; this two-hunk revision awaits
+CI results and has no runtime testing. Do not flash or use as a complete fix.
 
 diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
 --- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
@@ -28,3 +29,12 @@ diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/
  
  	return 0;
  }
+@@ -5331,6 +5331,9 @@
+ 	}
+ 
++	cancel_work_sync(&eth->pending_work);
++	cancel_delayed_work_sync(&eth->reset.monitor_work);
++
+ 	mtk_wed_exit();
+ 	mtk_hw_deinit(eth);
+ 
