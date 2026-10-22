@@ -4,7 +4,7 @@ Community-maintained experimental port of OpenWrt for the **SoftBank Air Termina
 
 > **Experimental / not ready for general installation.** A working developer unit is not proof that a third-party device can be flashed or recovered safely. Do not flash images without verifying exact hardware identity, partition layout, current boot slot, backup integrity and a tested recovery path.
 
-[日本語](#日本語) · [Measured hardware findings](board/SBAT6D-HARDWARE-FINDINGS.md) · [Build](BUILDING.md) · [Install safety](INSTALL.md) · [Recovery](RECOVERY.md) · [Verification](tests/README.md) · [Licensing](LICENSES/README.md) · [Contributing](CONTRIBUTING.md)
+[日本語](#日本語) · [Measured hardware findings](board/SBAT6D-HARDWARE-FINDINGS.md) · [Release readiness](RELEASE-READINESS.md) · [Build](BUILDING.md) · [Install safety](INSTALL.md) · [Recovery](RECOVERY.md) · [Verification](tests/README.md) · [Licensing](LICENSES/README.md) · [Contributing](CONTRIBUTING.md)
 
 ## Status
 
