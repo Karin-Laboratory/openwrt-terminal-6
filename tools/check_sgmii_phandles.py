@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Validate SGMII provider links in a local, decompiled DTS (read-only)."""
 import argparse
 import json
