@@ -1,0 +1,16 @@
+/dts-v1/;
+/ {
+    compatible = "mediatek,mt6990";
+    #address-cells = <2>;
+    #size-cells = <2>;
+    sgmiiphy@11E60000 {
+        compatible = "mediatek,colgin-sgmiisys_phy_1", "syscon";
+        reg = <0 0x11e60000 0 0x10000>;
+        status = "disabled";
+    };
+    sgmiisys@11305000 {
+        compatible = "mediatek,colgin-sgmiisys_1", "syscon";
+        reg = <0 0x11305000 0 0x1000>;
+        status = "disabled";
+    };
+};
