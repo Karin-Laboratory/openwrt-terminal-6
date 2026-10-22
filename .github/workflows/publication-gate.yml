@@ -37,6 +37,17 @@ jobs:
         run: python3 scripts/check-publication.py
       - name: Screen reachable git history (read only)
         run: python3 scripts/check-publication-history.py
+      - name: Publication gate diagnostics
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Publication safety gate'
+            echo "Commit: \`${GITHUB_SHA}\`"
+            echo 'Tests and checks above are independently required; consult each failed step.'
+            echo 'This gate is not a complete license or secret-history certification.'
+            echo 'A PASS does not authorize flashing or firmware release.'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Validate documented files exist
         shell: bash
         run: |
