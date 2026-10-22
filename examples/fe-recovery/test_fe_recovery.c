@@ -32,6 +32,16 @@ int main(void)
     t6_fe_stop(&s);
     assert(!t6_fe_request(&s, T6_FE_NORMAL));
     assert(t6_fe_take_pending(&s) == 0);
+    /* Shutdown must make retry accounting and deferred scheduling inert. */
+    t6_fe_init(&s);
+    s.deferred = true;
+    assert(t6_fe_request(&s, T6_FE_DEFERRED));
+    t6_fe_stop(&s);
+    assert(!t6_fe_request(&s, T6_FE_DEFERRED));
+    assert(t6_fe_failure(&s) == 0);
+    t6_fe_success(&s);
+    assert(s.shutdown);
+    assert(t6_fe_take_pending(&s) == 0);
     puts("FE reference state transitions: PASS");
     return 0;
 }
