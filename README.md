@@ -4,11 +4,11 @@ Community-maintained experimental port of OpenWrt for the **SoftBank Air Termina
 
 > **Experimental / not ready for general installation.** A working developer unit is not proof that a third-party device can be flashed or recovered safely. Do not flash images without verifying exact hardware identity, partition layout, current boot slot, backup integrity and a tested recovery path.
 
-[日本語](#日本語) · [Build](BUILDING.md) · [Install safety](INSTALL.md) · [Recovery](RECOVERY.md) · [Verification](tests/README.md) · [Licensing](LICENSES/README.md) · [Contributing](CONTRIBUTING.md)
+[日本語](#日本語) · [Measured hardware findings](board/SBAT6D-HARDWARE-FINDINGS.md) · [Build](BUILDING.md) · [Install safety](INSTALL.md) · [Recovery](RECOVERY.md) · [Verification](tests/README.md) · [Licensing](LICENSES/README.md) · [Contributing](CONTRIBUTING.md)
 
 ## Status
 
-The following are **project development reports**, not independent third-party verification. Detailed logs, build inputs and reproducibility evidence have not yet been released in this repository.
+The following are **project development reports**, not independent third-party verification. A structured summary of observed Ethernet, FDT, Wi-Fi and modem evidence is now public in [SBAT6D hardware findings](board/SBAT6D-HARDWARE-FINDINGS.md). Raw logs, build inputs and independent reproducibility evidence have not yet been released here.
 
 | Component | Reported state | Publication qualification |
 | --- | --- | --- |
@@ -44,6 +44,6 @@ See [SECURITY.md](SECURITY.md), [LICENSES/README.md](LICENSES/README.md), and [P
 
 SoftBank Airターミナル6向けの**実験的なOpenWrt移植プロジェクト**です。開発機ではLinux 6.18.44、OpenWrtユーザーランド、有線LAN、2.4/5GHz無線LANの通信成功と6GHz AP起動の報告があります（EHT/MLOなどWi-Fi 7機能全体は未検証）が、第三者の機器への安全な導入と復旧は**未検証**です。5Gモデムも未対応です。
 
-現時点では公開用の文書と審査基準を整備する段階であり、**配布可能なファームウェアイメージや推奨書込みコマンドはありません**。純正バイナリ、秘密鍵、署名素材は公開しません。再現手順は[BUILDING.md](BUILDING.md)、危険性は[INSTALL.md](INSTALL.md)と[RECOVERY.md](RECOVERY.md)を参照してください。
+実機で観測したハードウェア構成とFDTの解析結果は[公開資料](board/SBAT6D-HARDWARE-FINDINGS.md)に整理しています。現時点では公開用の文書と審査基準を整備する段階であり、**配布可能なファームウェアイメージや推奨書込みコマンドはありません**。純正バイナリ、秘密鍵、署名素材は公開しません。再現手順は[BUILDING.md](BUILDING.md)、危険性は[INSTALL.md](INSTALL.md)と[RECOVERY.md](RECOVERY.md)を参照してください。
 
 This is an independent community project, not an official SoftBank or OpenWrt release.
