@@ -25,11 +25,11 @@ Both files were retrieved at the above refs. A direct comparison found a Test25-
 
 | Function / purpose | Source A line range | Source B line range | Relationship |
 | --- | --- | --- | --- |
-| SGMII_TOP MTCMOS off/on ordering | 42 onward (function; exact ending requires confirmation) | 42-87 (estimate; verify before quoting) | Comment calls it exact SDK ordering; direct SDK line origin unverified |
+| SGMII_TOP MTCMOS off/on ordering | 42-87 | 42-87 | Comment calls it exact SDK ordering; direct SDK line origin unverified |
 | Shared PLL enable and Gen2 configuration | 106-175 | 106-175 | Includes explicit SDK attribution and register programming |
 | SDK `mtk_sgmii_phy_gen2()` register sequence | **127-166** | **127-166** | The referenced key code span, with ordered read-modify-write, writes, and delays |
-| SDK force-mode PLL enabling | 177 onward | 177 onward | Function comments cite `mtk_sgmii_setup_mode_force()`; end line not certified |
-| PHY reset / power cycling | Approximately 200-221 | Approximately 200-220 | Different logic; candidate disables TOP power cycling |
+| SDK force-mode PLL enabling | 177-190 | 177-190 | Function comments cite `mtk_sgmii_setup_mode_force()`; end line not certified |
+| PHY reset / power cycling | 201-221 | 201-220 | Different logic; candidate disables TOP power cycling |
 | License declaration | 1 | 1 | License header is evidence of a declaration, not a complete origin audit |
 
 **Do not interpret the above as a claim that an original MediaTek SDK file's line numbers have been located.** The confirmed 127-166 range is in the *public donor-adapted PHY file* and private candidate, **not yet the original SDK**.
