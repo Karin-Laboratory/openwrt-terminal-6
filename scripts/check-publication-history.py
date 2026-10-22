@@ -23,7 +23,7 @@ def main():
     violations = []
     blobs = 0
     # Check every name across history, including files renamed or deleted.
-    historical_names = git("log", "--all", "--pretty=format:", "--name-only", "-z").split(b"\\0")
+    historical_names = git("log", "--all", "--pretty=format:", "--name-only", "-z").split(b"\0")
     for raw_name in historical_names:
         if not raw_name.strip():
             continue
