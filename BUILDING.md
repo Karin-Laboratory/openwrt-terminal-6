@@ -44,3 +44,17 @@ gate only. Linux 6.18.44 PHY/PCS object compilation remains a separate,
 unverified gate until the legal/public source inputs, immutable donor pin,
 kernel revision, patch ordering, and ARM64 toolchain are assembled in public
 CI. Do not describe the current workflow as the complete OpenWrt build.
+
+## Manual Linux 6.18.44 donor PHY compilation probe
+
+[mt6990-phy-compile-probe.yml](.github/workflows/mt6990-phy-compile-probe.yml)
+is a separate **manual** GitHub-hosted `ubuntu-24.04` workflow.
+It pins the previously audited donor commit and Git blob; obtains upstream
+Linux `v6.18.44`, configures ARM64, and attempts to compile the donor's
+`phy-mtk-mt6990-sgmii.o` directly. A failure is useful diagnostic evidence,
+not authorization to skip a failing stage or silently change version.
+
+Run it from **Actions > MT6990 PHY compile probe (public) > Run workflow**.
+This is deliberately a first compatibility probe, **not** compilation of the
+private Test25 derivative, the PCS patch chain, a full OpenWrt image or a
+working hardware integration. Inspect its run logs before claiming PASS.
