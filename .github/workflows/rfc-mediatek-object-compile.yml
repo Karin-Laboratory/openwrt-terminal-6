@@ -28,7 +28,7 @@ jobs:
           cd linux
           test "$(git hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.c)" = \
             e68997a29191b2a8ce0868873dcfe95c79e10e56
-      - name: Configure and compile MediaTek Ethernet object
+      - name: Configure, compile baseline, then compile patched object
         shell: bash
         run: |
           set -euo pipefail
@@ -38,24 +38,17 @@ jobs:
             --enable CONFIG_NET_MEDIATEK_SOC --enable CONFIG_PHYLINK \
             --enable CONFIG_NET_DSA
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-          grep -E '^CONFIG_NET_MEDIATEK_SOC=y
-      - name: Explain scope
-        if: always()
-        run: |
-          echo 'This is a compile-only RFC investigation.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'No kernel image, rootfs, signed firmware, device write, or runtime test.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Passing does not establish safe FE recovery or driver removal.' >> "$GITHUB_STEP_SUMMARY"
- .config
-          echo 'Compile control: unchanged Linux v6.18 source'
+          grep -Fqx 'CONFIG_NET_MEDIATEK_SOC=y' .config
+          echo 'Compiling unmodified upstream object'
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 \
             drivers/net/ethernet/mediatek/mtk_eth_soc.o
           rm drivers/net/ethernet/mediatek/mtk_eth_soc.o
           git apply --check ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
           git apply ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
-          echo 'Compile candidate: exact same config and toolchain with RFC applied'
+          echo 'Compiling RFC-patched object using the same configuration'
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 \
             drivers/net/ethernet/mediatek/mtk_eth_soc.o
-          echo 'CONTROL_AND_PATCHED_OBJECT_COMPILE_PASS'
+          echo CONTROL_AND_PATCHED_OBJECT_COMPILE_PASS
       - name: Explain scope
         if: always()
         run: |
