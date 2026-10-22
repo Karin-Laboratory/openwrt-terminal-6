@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Inspect a caller-provided text DTS for SGMII dependencies, without modification.
 
 This is a lexical triage tool, not a full Device Tree parser or binding validator.
