@@ -38,7 +38,7 @@ Read [BUILDING.md](BUILDING.md) for the reproducibility contract and [INSTALL.md
 
 ## Security and licensing
 
-See [SECURITY.md](SECURITY.md), [LICENSES/README.md](LICENSES/README.md), and [PUBLICATION-CHECKLIST.md](PUBLICATION-CHECKLIST.md). Do not post device-specific identifiers, secrets, OEM images, signing materials or copyrighted vendor binaries in issues/PRs.
+Original project-owned code is MIT-licensed where authorship/rights are confirmed ([LICENSE-MIT](LICENSE-MIT)); original documentation remains CC BY 4.0 ([LICENSE](LICENSE)). Third-party/Linux/OpenWrt/OEM-derived material is **not** relicensed. See [SECURITY.md](SECURITY.md), [LICENSES/README.md](LICENSES/README.md), and [PUBLICATION-CHECKLIST.md](PUBLICATION-CHECKLIST.md). Do not post device-specific identifiers, secrets, OEM images, signing materials or copyrighted vendor binaries in issues/PRs.
 
 ## 日本語
 
