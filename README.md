@@ -10,6 +10,10 @@ Community-maintained experimental port of OpenWrt for the **SoftBank Air Termina
 
 The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported kernel/userspace boots, Ethernet and Wi-Fi observations, and the remaining blockers. It is **not an installable release**. The synthetic DTS example and offline tests are open for review now; full source patches and an independently reproducible build remain pending.
 
+## Latest technical research / 最新の技術調査
+
+- [MT6990 Ethernet FE lifecycle (Test34): race and teardown design, input/output digests, remaining tests](docs/MT6990-ETHERNET-TEST34.ja.md). This is a sanitized source-level engineering note, **not** a distributable kernel patch or verified driver.
+
 ## Status
 
 The following are **project development reports**, not independent third-party verification. A structured summary of observed Ethernet, FDT, Wi-Fi and modem evidence is now public in [SBAT6D hardware findings](board/SBAT6D-HARDWARE-FINDINGS.md). Raw logs, build inputs and independent reproducibility evidence have not yet been released here.
