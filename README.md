@@ -10,6 +10,10 @@ Community-maintained experimental port of OpenWrt for the **SoftBank Air Termina
 
 The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported kernel/userspace boots, Ethernet and Wi-Fi observations, and the remaining blockers. It is **not an installable release**. The synthetic DTS example and offline tests are open for review now; full source patches and an independently reproducible build remain pending.
 
+## First upstream-anchored Ethernet RFC patch / 初の公開差分
+
+- [RFC patch: stop pending MediaTek recovery workers before cleanup](patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch), based on the **public** Linux `v6.18` source blob `e68997a29191b2a8ce0868873dcfe95c79e10e56`. A context-only local `git apply --check` succeeded, but no full kernel build or runtime validation has been performed. **Review-only: not a complete MT6990 driver and not safe to flash.** It does not resolve producers requeuing work or the separate remove/deinit ordering.
+
 ## Public C source experiment / 公開Cコード
 
 - [Standalone FE recovery state machine](examples/fe-recovery/t6_fe_recovery.h) and [host-side regression test](examples/fe-recovery/test_fe_recovery.c): independent, hardware-free reference logic for retry and teardown state transitions. This is **not** a Linux/OpenWrt driver patch and does not control the MT6990. The publication safety gate is configured to compile and execute the test. [Linux workqueue integration contract](examples/fe-recovery/INTEGRATION.md) documents locking, callback cancellation and the remaining non-hardware-tested gaps.
