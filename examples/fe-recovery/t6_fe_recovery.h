@@ -65,8 +65,6 @@ static inline unsigned t6_fe_failure(struct t6_fe_state *s)
         return 0;
     }
     unsigned delay = backoff_ms[s->failures++];
-    if (s->failures == sizeof(backoff_ms) / sizeof(backoff_ms[0]))
-        s->exhausted = true;
     return delay;
 }
 
