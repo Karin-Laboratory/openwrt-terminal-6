@@ -10,6 +10,8 @@ int main(void)
     assert(t6_fe_take_pending(&s) == T6_FE_NORMAL);
     assert(t6_fe_take_pending(&s) == 0);
     assert(!t6_fe_request(&s, T6_FE_DEFERRED));
+    assert(!t6_fe_request(&s, (enum t6_fe_request)3));
+    assert(t6_fe_take_pending(&s) == 0);
     s.deferred = true;
     assert(t6_fe_request(&s, T6_FE_DEFERRED));
     assert(t6_fe_take_pending(&s) == T6_FE_DEFERRED);
@@ -22,7 +24,11 @@ int main(void)
     assert(!t6_fe_request(&s, T6_FE_DEFERRED));
     assert(t6_fe_request(&s, T6_FE_NORMAL));
     assert(!t6_fe_request(&s, T6_FE_NORMAL));
+    assert(t6_fe_request(&s, T6_FE_NORMAL));
+    /* Normal work must survive; stale deferred work must not. */
+    s.pending |= T6_FE_DEFERRED;
     t6_fe_success(&s);
+    assert(t6_fe_take_pending(&s) == T6_FE_NORMAL);
     assert(!s.exhausted && !s.recheck_used && s.failures == 0);
     t6_fe_stop(&s);
     assert(!t6_fe_request(&s, T6_FE_NORMAL));
