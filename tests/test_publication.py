@@ -20,8 +20,9 @@ class TestPublication(unittest.TestCase):
         self.assertIn("originals", checker.BLOCK_PARTS)
         self.assertIn("vendor-dumps", checker.BLOCK_PARTS)
 
-    def test_secret_pattern(self):
-        self.assertTrue(checker.RULES[0][1].search(b"-----BEGIN PRIVATE KEY-----"))
+    def test_blocked_names(self):
+        self.assertIn(".env", checker.BLOCK_NAMES)
+        self.assertIn("credentials", checker.BLOCK_NAMES)
 
 if __name__ == "__main__":
     unittest.main()
