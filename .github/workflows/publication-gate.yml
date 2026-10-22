@@ -50,6 +50,8 @@ jobs:
         run: bash scripts/verify-overlay-offline.sh
       - name: Validate synthetic SGMII phandle resolution
         run: bash scripts/check-sgmii-linked-fixture.sh
+      - name: Check RFC cancellation ordering (static only)
+        run: python3 tools/check_mediatek_rfc.py
       - name: Validate board evidence
         run: python3 tools/validate_board_evidence.py
       - name: Static publication gate
