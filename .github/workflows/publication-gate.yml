@@ -19,6 +19,18 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Validate GitHub Actions YAML syntax
+        run: |
+          python3 -m pip install --quiet --break-system-packages PyYAML
+          python3 - <<'PY'
+          from pathlib import Path
+          import yaml
+          for path in sorted(Path('.github/workflows').glob('*.yml')):
+              data = yaml.safe_load(path.read_text())
+              assert isinstance(data, dict), f'{path}: workflow must be a mapping'
+              assert isinstance(data.get('jobs'), dict), f'{path}: missing jobs'
+              print('YAML OK:', path)
+          PY
       - name: Python syntax check
         run: python3 -m py_compile scripts/check-publication.py
       - name: Publication gate unit tests
