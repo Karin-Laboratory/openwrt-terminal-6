@@ -21,9 +21,9 @@ Updated: 2026-10-23. This is an **evidence-based source-publication status**, no
 | Gate | Evidence | Status / action |
 | --- | --- | --- |
 | Documentation-only publication | README, BUILDING, INSTALL, RECOVERY, SECURITY, LICENSES | Prepared, subject to audit |
-| Current and reachable-history screening | `scripts/check-publication.py`, `scripts/check-publication-history.py` | Both CI gates configured; results pending. Heuristics do not replace full history/path/license review |
-| Public safety gate | `.github/workflows/publication-gate.yml` | Previously failing Python/DTS tests. Re-run latest commit and require PASS before announcing ready |
-| Offline DTS fixture tests | `.github/workflows/public-source-checks.yml` | Previously failed labelled PHY check. Latest fix requires confirmed PASS |
+| Current and reachable-history screening | `scripts/check-publication.py`, `scripts/check-publication-history.py` | Publication safety gate PASS at `cc938e99` (run #39841379271). Heuristics do not replace manual history/path/license review |
+| Public safety gate | `.github/workflows/publication-gate.yml` | **PASS** on commit `cc938e99ea569e45ca6f8e400b568800b3e03a2a`, push run [#39841379271](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39841379271), static-audit SUCCESS, 2026-10-22 UTC |
+| Offline DTS fixture tests | `.github/workflows/public-source-checks.yml` | Separate workflow PASS not yet verified; publication-gate DTS and phandle steps PASS in run #39841379271 |
 | Public donor PHY object | `.github/workflows/mt6990-phy-compile-probe.yml` | Experimental probe; no verified PASS; not the privately adapted Test25 driver |
 | Code provenance | `docs/SOURCE-AUDIT.md`, `LICENSES/README.md` | Hold unreviewed imports, especially SDK-derived code |
 | Reproducible build | `BUILDING.md` | NOT PASSED |
