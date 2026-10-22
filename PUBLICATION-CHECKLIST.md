@@ -27,6 +27,6 @@ The project has eight guiding principles: **reproducibility**, **third-party rig
 - [ ] Installation guide includes explicit irreversible risks and stop conditions.
 - [ ] Release notes record known limitations including 5G status.
 
-**Gate status today:** Documentation-only initial release; Gate B and Gate C **NOT PASSED**.
+**Gate status as of 2026-10-23:** Documentation/source research publication preparation only. Gate A requires complete history and per-file review and is **NOT YET SIGNED OFF**; Gates B and C **NOT PASSED**. See [RELEASE-READINESS.md](RELEASE-READINESS.md).
 
 日本語: 「公開可能なソース」と「安全に導入可能なバイナリ」は別判定です。現在は文書のみを公開し、実機書込み可能な配布物は出しません。
