@@ -13,3 +13,7 @@ bash scripts/check-dtso.sh
 Limitations: `dtc -@` can compile an overlay, but this does not prove a valid target path on arbitrary device revisions, correct overlay application, `dtbs_check`, driver binding, rootfs success, kernel safety or network operation. Overlay target paths are case-sensitive; the source currently records the developer-observed `/sgmiiphy@11E60000` and `/sgmiisys@11305000` strings pending an independent FDT recheck.
 
 **Next**: review current FDT and phandle dependencies off-device, build an independently authored full board DTS, verify bindings, review SDK-related PHY/PCS rights, compile kernel with no signed output, then perform separately approved live tests.
+
+## Offline dependency inspection
+
+Use [`tools/audit_sgmii_dts.py`](../tools/audit_sgmii_dts.py) to inventory relevant properties from a locally acquired and permitted DTS. See [SGMII1 dependencies](SGMII1-DEPENDENCIES.md). The result is a preliminary, lexical check only and does not validate binding semantics or phandles.
