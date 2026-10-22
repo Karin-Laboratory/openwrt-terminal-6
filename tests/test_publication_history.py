@@ -53,6 +53,22 @@ class HistoryScreenTests(unittest.TestCase):
         self.git("commit", "-qm", "remove fixture")
         self.assertEqual(self.scan(), 1)
 
+    def test_deleted_private_key_content_remains_blocked(self):
+        # A synthetic token marker, never real signing material.
+        self.commit("ordinary.txt", "-----BEGIN PRIVATE KEY-----\\nexample only\\n")
+        self.git("rm", "ordinary.txt")
+        self.git("commit", "-qm", "remove sensitive content fixture")
+        self.assertEqual(self.scan(), 1)
+
+    def test_deleted_binary_content_remains_blocked(self):
+        binary = self.repo / "ordinary.txt"
+        binary.write_bytes(b"test\\0binary")
+        self.git("add", "ordinary.txt")
+        self.git("commit", "-qm", "binary fixture")
+        self.git("rm", "ordinary.txt")
+        self.git("commit", "-qm", "remove binary fixture")
+        self.assertEqual(self.scan(), 1)
+
     def test_renamed_sensitive_name_remains_blocked(self):
         self.commit("private.pem", "placeholder only\n")
         self.git("mv", "private.pem", "notes.txt")
