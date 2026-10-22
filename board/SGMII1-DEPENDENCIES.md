@@ -19,3 +19,9 @@ python3 tools/audit_sgmii_dts.py /path/to/your-decompiled-board.dts
 ```
 
 The tool shows missing property names but **cannot** verify phandles, register overlap or the semantic validity of IDs. Use `dtc` and kernel `dtbs_check` with the correct, separately reviewed bindings before considering a functional DTS. The existing experimental overlay stays disabled.
+
+## Source-level reference gate
+
+`python3 tools/check_sgmii_phandles.py board.dts` checks for a named `phys = <&label>` link from SGMIISYS1 to the matching PHY1 node and required PHY property names. Tests cover missing/mismatched links and missing power dependencies. The gate deliberately **fails** on the current unconnected experimental overlay; it is for reviewing a future fully authored board DTS, not for validating the disabled overlay.
+
+This lexical gate does not inspect the provider implementation, numeric power domain, clock or PLL correctness. `dtc`, `dtbs_check`, source ownership and actual hardware testing remain separately required.
