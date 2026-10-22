@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Conservative checks for accidentally committed binary firmware files."""
 import pathlib
 import subprocess
