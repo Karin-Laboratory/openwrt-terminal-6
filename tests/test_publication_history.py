@@ -47,6 +47,12 @@ class HistoryScreenTests(unittest.TestCase):
         self.commit("notes.txt", "safe sample text\n")
         self.assertEqual(self.scan(), 0)
 
+    def test_quoted_pem_marker_is_not_a_secret(self):
+        # A line of source-code text quoting a marker is not a PEM block.
+        marker = "-----BEGIN " + "PRIVATE KEY-----"
+        self.commit("notes.txt", 'example = "' + marker + '"\\n')
+        self.assertEqual(self.scan(), 0)
+
     def test_deleted_sensitive_name_remains_blocked(self):
         self.commit("secret.key", "placeholder only, no actual secret\n")
         self.git("rm", "secret.key")
