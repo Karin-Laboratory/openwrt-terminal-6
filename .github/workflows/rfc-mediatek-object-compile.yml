@@ -19,7 +19,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
             make bc bison flex libssl-dev libelf-dev
-      - name: Fetch pinned Linux source and apply RFC
+      - name: Fetch pinned Linux source
         shell: bash
         run: |
           set -euo pipefail
@@ -28,8 +28,6 @@ jobs:
           cd linux
           test "$(git hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.c)" = \
             e68997a29191b2a8ce0868873dcfe95c79e10e56
-          git apply --check ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
-          git apply ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
       - name: Configure and compile MediaTek Ethernet object
         shell: bash
         run: |
@@ -40,9 +38,24 @@ jobs:
             --enable CONFIG_NET_MEDIATEK_SOC --enable CONFIG_PHYLINK \
             --enable CONFIG_NET_DSA
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-          grep -E '^CONFIG_NET_MEDIATEK_SOC=y$' .config
+          grep -E '^CONFIG_NET_MEDIATEK_SOC=y
+      - name: Explain scope
+        if: always()
+        run: |
+          echo 'This is a compile-only RFC investigation.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No kernel image, rootfs, signed firmware, device write, or runtime test.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Passing does not establish safe FE recovery or driver removal.' >> "$GITHUB_STEP_SUMMARY"
+ .config
+          echo 'Compile control: unchanged Linux v6.18 source'
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 \
             drivers/net/ethernet/mediatek/mtk_eth_soc.o
+          rm drivers/net/ethernet/mediatek/mtk_eth_soc.o
+          git apply --check ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
+          git apply ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
+          echo 'Compile candidate: exact same config and toolchain with RFC applied'
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 \
+            drivers/net/ethernet/mediatek/mtk_eth_soc.o
+          echo 'CONTROL_AND_PATCHED_OBJECT_COMPILE_PASS'
       - name: Explain scope
         if: always()
         run: |
