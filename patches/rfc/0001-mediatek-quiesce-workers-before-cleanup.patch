@@ -1,0 +1,30 @@
+From: Karin-Laboratory contributors
+Subject: [RFC PATCH] net: mediatek: quiesce FE recovery workers before cleanup
+Upstream-base: torvalds/linux v6.18
+Source-blob: e68997a29191b2a8ce0868873dcfe95c79e10e56
+
+This is a source-only RFC for review. The current cleanup path frees
+network devices before draining pending FE recovery work. Reorder the
+existing synchronous cancellations ahead of the teardown calls.
+
+This patch does NOT resolve the earlier mtk_remove() hardware-deinit
+ordering, races with producers which can requeue the work, or possible
+RTNL interactions. It is NOT validated by a kernel compile or runtime
+testing. Do not use it as a standalone device fix.
+
+diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+@@ -4475,10 +4475,10 @@
+ static int mtk_cleanup(struct mtk_eth *eth)
+ {
++	cancel_work_sync(&eth->pending_work);
++	cancel_delayed_work_sync(&eth->reset.monitor_work);
+ 	mtk_sgmii_destroy(eth);
+ 	mtk_unreg_dev(eth);
+ 	mtk_free_dev(eth);
+-	cancel_work_sync(&eth->pending_work);
+-	cancel_delayed_work_sync(&eth->reset.monitor_work);
+ 
+ 	return 0;
+ }
