@@ -39,6 +39,18 @@ python3 tools/verify_test34_source.py --source-dir /path/to/local/sources --vers
 
 A matching digest verifies only the identity of the two supplied files. It does not establish permission to redistribute, compilation success, device safety or completeness of the patch set. The corresponding files are **not** included in this repository.
 
+## Local-only change size inspection
+
+The public [`compare_test34_sources.py`](../tools/compare_test34_sources.py) can verify the pinned Test32/Test34 inputs and print only counts of changed lines; it does **not** emit any source lines or a distributable patch:
+
+```sh
+python3 tools/compare_test34_sources.py \\
+  --before-dir /path/to/local/test32 \\
+  --after-dir /path/to/local/test34
+```
+
+This is a preparation step for a separate per-hunk copyright/provenance review. The matching private source files are not supplied or fetched. No downstream user can build the driver from this metadata alone.
+
 ## Evidence and limitations
 
 Private Test34 records report: script syntax validation, application to a hash-pinned disposable kernel-source copy, offline static checks and recorded output digests. Complete kernel compilation, KUnit, lockdep, KASAN, fault injection, race stress, and live device execution were **not** established for this candidate. A private source-check CI result also predated the final reviewed edits.
