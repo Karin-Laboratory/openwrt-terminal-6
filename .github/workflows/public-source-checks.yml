@@ -1,0 +1,34 @@
+name: Public source checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-dts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install device-tree compiler
+        run: sudo apt-get update && sudo apt-get install -y device-tree-compiler
+      - name: Check disabled experimental overlay syntax
+        run: bash scripts/check-dtso.sh
+      - name: Apply overlay to synthetic fixture only
+        run: bash scripts/verify-overlay-offline.sh
+      - name: Check synthetic provider phandles
+        run: bash scripts/check-sgmii-linked-fixture.sh
+      - name: Run public Python unit tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Explicit scope
+        run: |
+          echo 'PASS means offline tests only.'
+          echo 'No proprietary SDK, private key, boot image, firmware or hardware operation.'
+          echo 'No claim of Linux 6.18.44 PHY/PCS compilation.'
