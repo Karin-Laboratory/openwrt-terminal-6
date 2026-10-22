@@ -29,3 +29,18 @@ The exact commands are **pending source publication and independent verification
 Do not upload proprietary firmware or signing keys just to make a build pass. If privately acquired OEM input is required, document that limitation and provide a legal source-only workflow if possible.
 
 日本語: **公開リポジトリ単独での第三者再現ビルドは、まだ成立していません。** ソース一式、固定した依存関係、再現コマンド、成果物ハッシュと独立検証が揃うまで「再現可能」と宣言しません。
+
+## GitHub-hosted offline checks
+
+The public repository has a GitHub Actions workflow at
+[.github/workflows/public-source-checks.yml](.github/workflows/public-source-checks.yml).
+It uses GitHub-hosted `ubuntu-24.04` on `main` pushes, pull requests, and
+manual workflow dispatch, running DTS overlay compilation, synthetic fixture
+merging, provider references, and Python tests. It does **not** download
+proprietary inputs or produce a bootable image.
+
+**Scope:** this establishes a publicly runnable *source syntax and fixture*
+gate only. Linux 6.18.44 PHY/PCS object compilation remains a separate,
+unverified gate until the legal/public source inputs, immutable donor pin,
+kernel revision, patch ordering, and ARM64 toolchain are assembled in public
+CI. Do not describe the current workflow as the complete OpenWrt build.
