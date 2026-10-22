@@ -28,6 +28,8 @@ This project does **not** claim that all components of an OpenWrt firmware image
 | Proprietary OEM binary/firmware | Excluded | Not reviewed | NO | Exclusion policy |
 | OEM signing keys/certificates | Excluded | Not applicable | NO | Exclusion policy |
 
+As of 2026-10-23, SPDX MIT headers were added to 11 project-authored verification scripts and tests. The synthetic SGMII Device Tree overlay retains its existing `GPL-2.0-only` header; this is not a license change for any upstream, OEM or imported source. The latest CI after these changes has not yet been independently verified.
+
 An SPDX/SBOM inventory and corresponding source offer should accompany any future release containing compiled code.
 
 日本語: 元ファーム、署名鍵、証明書、個体固有データは無断公開しません。コード・ファームウェア・文書ごとにライセンスを確認し、改変表示・著作権表示・ソース提供などの義務を守ります。
