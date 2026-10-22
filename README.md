@@ -10,6 +10,10 @@ Community-maintained experimental port of OpenWrt for the **SoftBank Air Termina
 
 The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported kernel/userspace boots, Ethernet and Wi-Fi observations, and the remaining blockers. It is **not an installable release**. The synthetic DTS example and offline tests are open for review now; full source patches and an independently reproducible build remain pending.
 
+## Public C source experiment / 公開Cコード
+
+- [Standalone FE recovery state machine](examples/fe-recovery/t6_fe_recovery.h) and [host-side regression test](examples/fe-recovery/test_fe_recovery.c): independent, hardware-free reference logic for retry and teardown state transitions. This is **not** a Linux/OpenWrt driver patch and does not control the MT6990. The publication safety gate is configured to compile and execute the test.
+
 ## Latest technical research / 最新の技術調査
 
 - [MT6990 Ethernet FE lifecycle (Test34): race and teardown design, input/output digests, remaining tests](docs/MT6990-ETHERNET-TEST34.ja.md). This is a sanitized source-level engineering note, **not** a distributable kernel patch or verified driver.
