@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Validate factual board inventory without building or writing firmware."""
 import json
 import pathlib
