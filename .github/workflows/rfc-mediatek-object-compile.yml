@@ -21,6 +21,18 @@ jobs:
           persist-credentials: false
       - name: Install ARM64 compiler and build dependencies
         run: |
+          # The hosted runner can include a Microsoft APT source that returns 403.
+          # Disable only that third-party source, leaving Ubuntu mirrors enabled.
+          while IFS= read -r file; do
+            case "$file" in
+              *.list)
+                sudo sed -i '/packages\\.microsoft\\.com/d' "$file"
+                ;;
+              *.sources)
+                sudo mv "$file" "$file.disabled"
+                ;;
+            esac
+          done < <(sudo grep -rl 'packages.microsoft.com' /etc/apt/sources.list.d --include='*.list' --include='*.sources' || true)
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
             make bc bison flex libssl-dev libelf-dev
