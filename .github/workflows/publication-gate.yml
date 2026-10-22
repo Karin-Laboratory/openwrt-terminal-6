@@ -26,6 +26,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y device-tree-compiler
       - name: Compile disabled DT experiment
         run: bash scripts/check-dtso.sh
+      - name: Verify disabled overlay merge on synthetic base
+        run: bash scripts/verify-overlay-offline.sh
       - name: Validate board evidence
         run: python3 tools/validate_board_evidence.py
       - name: Static publication gate
