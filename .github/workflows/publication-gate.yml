@@ -23,6 +23,11 @@ jobs:
         run: python3 -m py_compile scripts/check-publication.py
       - name: Publication gate unit tests
         run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Compile and test standalone FE reference logic
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            examples/fe-recovery/test_fe_recovery.c -o /tmp/t6-fe-reference-test
+          /tmp/t6-fe-reference-test
       - name: Install Device Tree compiler
         run: sudo apt-get update && sudo apt-get install -y device-tree-compiler
       - name: Compile disabled DT experiment
