@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for read-only Git-history publication checks."""
 import contextlib
 import importlib.util
