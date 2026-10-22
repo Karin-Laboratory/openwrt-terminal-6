@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Synthetic DT fixture only. No hardware, vendor DTB, or firmware modification.
 set -euo pipefail
 for cmd in dtc fdtoverlay fdtget; do command -v "$cmd" >/dev/null || exit 2; done
