@@ -21,7 +21,7 @@ Updated: 2026-10-23. This is an **evidence-based source-publication status**, no
 | Gate | Evidence | Status / action |
 | --- | --- | --- |
 | Documentation-only publication | README, BUILDING, INSTALL, RECOVERY, SECURITY, LICENSES | Prepared, subject to audit |
-| Tracked-file screening | `scripts/check-publication.py` | CI exists; cannot substitute for manual or **full git-history** secret scan |
+| Current and reachable-history screening | `scripts/check-publication.py`, `scripts/check-publication-history.py` | Both CI gates configured; results pending. Heuristics do not replace full history/path/license review |
 | Public safety gate | `.github/workflows/publication-gate.yml` | Previously failing Python/DTS tests. Re-run latest commit and require PASS before announcing ready |
 | Offline DTS fixture tests | `.github/workflows/public-source-checks.yml` | Previously failed labelled PHY check. Latest fix requires confirmed PASS |
 | Public donor PHY object | `.github/workflows/mt6990-phy-compile-probe.yml` | Experimental probe; no verified PASS; not the privately adapted Test25 driver |
