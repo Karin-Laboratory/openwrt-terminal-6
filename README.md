@@ -15,7 +15,7 @@ The following are **project development reports**, not independent third-party v
 | Linux 6.18.44 boot | Observed on development unit | Exact log/commit/build recipe pending |
 | OpenWrt userspace | Booted to shell | Image and repeatability validation pending |
 | Wired Ethernet | Link/connectivity reported working | PHY/speed, interface mapping, testing pending |
-| Wi-Fi 7 | Reported working | Regulatory, band, encryption, stability, firmware licensing checks pending |
+| Wi-Fi (MT7990 / mt7996e) | 2.4/5 GHz WPA2 association and connectivity tested in RAM; 6 GHz WPA3-SAE AP enabled only | 6 GHz client, EHT/MLO, persistence, calibration provenance and firmware licensing pending |
 | 5G modem | Not working yet | Driver/modem bring-up pending |
 | Third-party installation | NOT VERIFIED | No public flash instructions yet |
 | Recovery on arbitrary units | NOT VERIFIED | Do not assume A/B fallback works |
@@ -42,7 +42,7 @@ See [SECURITY.md](SECURITY.md), [LICENSES/README.md](LICENSES/README.md), and [P
 
 ## 日本語
 
-SoftBank Airターミナル6向けの**実験的なOpenWrt移植プロジェクト**です。開発機ではLinux 6.18.44、OpenWrtユーザーランド、有線LAN、Wi-Fi 7の動作報告がありますが、第三者の機器への安全な導入と復旧は**未検証**です。5Gモデムも未対応です。
+SoftBank Airターミナル6向けの**実験的なOpenWrt移植プロジェクト**です。開発機ではLinux 6.18.44、OpenWrtユーザーランド、有線LAN、2.4/5GHz無線LANの通信成功と6GHz AP起動の報告があります（EHT/MLOなどWi-Fi 7機能全体は未検証）が、第三者の機器への安全な導入と復旧は**未検証**です。5Gモデムも未対応です。
 
 現時点では公開用の文書と審査基準を整備する段階であり、**配布可能なファームウェアイメージや推奨書込みコマンドはありません**。純正バイナリ、秘密鍵、署名素材は公開しません。再現手順は[BUILDING.md](BUILDING.md)、危険性は[INSTALL.md](INSTALL.md)と[RECOVERY.md](RECOVERY.md)を参照してください。
 
