@@ -1,6 +1,10 @@
 name: MT6990 PHY compile probe (public)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mt6990-phy-compile-probe.yml'
   workflow_dispatch:
 
 permissions:
@@ -18,8 +22,10 @@ jobs:
       - name: Fetch exact publicly available donor
         run: |
           set -euo pipefail
-          git clone --filter=blob:none https://github.com/13179415360/openwrt-mt6990-lg6851f.git donor
-          git -C donor checkout --detach a40df9a5afb46716dea799acea69f17480df4d82
+          git init donor
+          git -C donor remote add origin https://github.com/13179415360/openwrt-mt6990-lg6851f.git
+          git -C donor fetch --depth 1 origin a40df9a5afb46716dea799acea69f17480df4d82
+          git -C donor checkout --detach FETCH_HEAD
           test "$(git -C donor rev-parse HEAD)" = a40df9a5afb46716dea799acea69f17480df4d82
           test "$(git -C donor rev-parse HEAD:target/linux/mediatek/files-6.18/drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c)" = 598f9c8d0a905bf6e293157d2fd475fef54bfacd
       - name: Retrieve unmodified upstream Linux 6.18.44
