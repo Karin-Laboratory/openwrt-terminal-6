@@ -17,7 +17,7 @@ REQUIRED = {
 def extract_node(text, name):
     # Only absolute root-level nodes; no source rewrite or overlay application.
     unit = name.lstrip("/")
-    pattern = re.compile(r"(?m)^\s*" + re.escape(unit) + r"\s*\{")
+    pattern = re.compile(r"(?m)^\s*(?:/)?(?:[a-zA-Z_][\w]*\s*:\s*)?" + re.escape(unit) + r"\s*\{")
     match = pattern.search(text)
     if not match:
         return None
