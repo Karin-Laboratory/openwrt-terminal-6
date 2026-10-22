@@ -1,0 +1,33 @@
+name: Publication safety gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout (no credentials retained)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python syntax check
+        run: python3 -m py_compile scripts/check-publication.py
+      - name: Static publication gate
+        run: python3 scripts/check-publication.py
+      - name: Validate documented files exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in README.md BUILDING.md INSTALL.md RECOVERY.md SECURITY.md \
+                      LICENSES/README.md CONTRIBUTING.md PUBLICATION-CHECKLIST.md \
+                      docs/SOURCE-AUDIT.md; do
+            test -s "$file"
+          done
