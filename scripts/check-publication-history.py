@@ -22,6 +22,16 @@ def main():
     seen = set()
     violations = []
     blobs = 0
+    # Check every name across history, including files renamed or deleted.
+    historical_names = git("log", "--all", "--pretty=format:", "--name-only", "-z").split(b"\\0")
+    for raw_name in historical_names:
+        if not raw_name.strip():
+            continue
+        historical_path = raw_name.decode("utf-8", "backslashreplace").strip()
+        historical = pathlib.PurePosixPath(historical_path)
+        if (historical.suffix.lower() in BAD_EXT or historical.name.lower() in BAD_NAMES
+                or any(part.lower() in BAD_DIRS for part in historical.parts)):
+            violations.append(("PATH", historical_path, "blocked historical filename"))
     for line in records:
         oid, _, raw_path = line.partition(b" ")
         if oid in seen:
@@ -46,6 +56,7 @@ def main():
             violations.append((oid.decode()[:12], path, "historical binary content"))
         elif any(sig.search(data) for sig in SIGNATURES):
             violations.append((oid.decode()[:12], path, "possible historical secret"))
+    violations = sorted(set(violations))
     for oid, path, reason in violations:
         print(f"FAIL: {oid} {path}: {reason}")
     print(f"Checked {blobs} unique reachable blobs; {len(violations)} flagged")
