@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 def block(text, node):
-    match = re.search(r"(?m)^\s*" + re.escape(node) + r"\s*\{", text)
+    match = re.search(r"(?m)^\s*(?:[a-zA-Z_][\w]*\s*:\s*)?" + re.escape(node) + r"\s*\{", text)
     if not match:
         return None
     i, start, depth = match.end(), match.end(), 1
