@@ -48,7 +48,7 @@ jobs:
           tree="$(find openwrt/build_dir -type d -path '*/linux-mediatek_filogic/linux-6.18.55' -print -quit)"
           test -n "$tree"
           bash scripts/apply-openwrt-prepared-rfc-series.sh "$tree"
-          rg -n 'schedule_work\(&eth->pending_work\)' "$tree/drivers/net/ethernet/mediatek/mtk_eth_soc.c" | tee /tmp/reset-work-producer.txt
+          grep -n 'schedule_work(&eth->pending_work)' "$tree/drivers/net/ethernet/mediatek/mtk_eth_soc.c" | tee /tmp/reset-work-producer.txt
           test "$(wc -l < /tmp/reset-work-producer.txt)" -eq 1
           echo 'The sole direct schedule_work call must remain inside __mtk_queue_reset_work.' >> "$GITHUB_STEP_SUMMARY"
           echo 'Prepared-source static check only. No kernel compile, SBAT6D target image or device test is claimed.' >> "$GITHUB_STEP_SUMMARY"
