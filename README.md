@@ -18,6 +18,10 @@ The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported k
 
 [Public RFC source bundle Actions](.github/workflows/public-rfc-bundle.yml) packages the two reviewed RFC patches, verification notes, and source checks into a SHA-256-manifested archive. This bundle contains **source only, not an installable image**. See the workflow run's artifacts once its checks succeed.
 
+## Full upstream kernel compilation probe / ARM64カーネル全体ビルド検証
+
+A new [Linux v6.18 ARM64 Image build workflow](.github/workflows/rfc-arm64-kernel-build.yml) applies RFC1→RFC2 and attempts a complete upstream ARM64 kernel `Image` plus the MediaTek Ethernet driver object. **This is a new CI experiment, not yet a verified PASS and not an SBAT6D firmware build.** No device-specific DTS, OpenWrt rootfs, OEM firmware or signed boot images are included.
+
 ## Public C source experiment / 公開Cコード
 
 - [Standalone FE recovery state machine](examples/fe-recovery/t6_fe_recovery.h) and [host-side regression test](examples/fe-recovery/test_fe_recovery.c): independent, hardware-free reference logic for retry and teardown state transitions. This is **not** a Linux/OpenWrt driver patch and does not control the MT6990. The publication safety gate is configured to compile and execute the test. [Linux workqueue integration contract](examples/fe-recovery/INTEGRATION.md) documents locking, callback cancellation and the remaining non-hardware-tested gaps.
