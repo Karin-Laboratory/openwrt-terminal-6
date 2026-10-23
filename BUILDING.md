@@ -1,6 +1,6 @@
 # Reproducible build contract / ビルド再現性
 
-**Status: NOT YET REPRODUCIBLE FROM THIS PUBLIC REPOSITORY.** Do not interpret this document as a completed build guide. No verified public source manifest, patch series or clean-room build result has been published yet.
+**Status: NOT YET REPRODUCIBLE FROM THIS PUBLIC REPOSITORY.** Do not interpret this document as a completed build guide. A **complete OpenWrt image build** has not been reproduced publicly. The separate upstream Linux v6.18 MediaTek RFC1→RFC2 **ARM64 object compile** has passed in public CI.
 
 A build guide may be marked *verified* only when a contributor on a clean environment can:
 
@@ -14,7 +14,7 @@ A build guide may be marked *verified* only when a contributor on a clean enviro
 
 ## Required future commands
 
-The exact commands are **pending source publication and independent verification**. We will add tested commands, not speculative placeholders. Until then, **do not attempt to build a flashable image using this document**.
+Commands for a **flashable OpenWrt image** are still pending. The available, CI-backed Linux Ethernet **object compilation** commands are published in [Public source verification](docs/PUBLIC-SOURCE-VERIFICATION.md). **Do not use these object-build steps as instructions for flashing a device.**
 
 ## Evidence to include with every candidate
 
@@ -40,10 +40,7 @@ merging, provider references, and Python tests. It does **not** download
 proprietary inputs or produce a bootable image.
 
 **Scope:** this establishes a publicly runnable *source syntax and fixture*
-gate only. Linux 6.18.44 PHY/PCS object compilation remains a separate,
-unverified gate until the legal/public source inputs, immutable donor pin,
-kernel revision, patch ordering, and ARM64 toolchain are assembled in public
-CI. Do not describe the current workflow as the complete OpenWrt build.
+gate only. The upstream Linux **v6.18 MediaTek Ethernet RFC1/RFC2** object build is a separately verified public CI gate ([run #39877158871](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158871)). This does **not** verify a Linux 6.18.44 board-specific PHY/PCS integration, full kernel or OpenWrt firmware. Do not describe the current workflow as the complete OpenWrt build.
 
 ## Manual Linux 6.18.44 donor PHY compilation probe
 
