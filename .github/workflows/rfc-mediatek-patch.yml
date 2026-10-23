@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - 'patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch'
+      - 'patches/rfc/0002-mediatek-serialize-reset-requeue.patch'
       - '.github/workflows/rfc-mediatek-patch.yml'
   pull_request:
     paths:
       - 'patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch'
+      - 'patches/rfc/0002-mediatek-serialize-reset-requeue.patch'
       - '.github/workflows/rfc-mediatek-patch.yml'
   workflow_dispatch:
 
@@ -31,24 +33,20 @@ jobs:
             https://raw.githubusercontent.com/torvalds/linux/v6.18/drivers/net/ethernet/mediatek/mtk_eth_soc.c \
             -o upstream/drivers/net/ethernet/mediatek/mtk_eth_soc.c
           test "$(git hash-object upstream/drivers/net/ethernet/mediatek/mtk_eth_soc.c)" = e68997a29191b2a8ce0868873dcfe95c79e10e56
+          curl --fail --location --retry 3 --silent --show-error \
+            https://raw.githubusercontent.com/torvalds/linux/v6.18/drivers/net/ethernet/mediatek/mtk_eth_soc.h \
+            -o upstream/drivers/net/ethernet/mediatek/mtk_eth_soc.h
+          test "$(git hash-object upstream/drivers/net/ethernet/mediatek/mtk_eth_soc.h)" = 0168e2fbc6197a6aa9fe159767166e86915accbc
       - name: Check and apply RFC to real upstream source
         shell: bash
         run: |
           set -euo pipefail
-          cd upstream
-          git apply --check ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
-          git apply ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
-          python3 - <<'PY'
-          from pathlib import Path
-          s = Path("drivers/net/ethernet/mediatek/mtk_eth_soc.c").read_text()
-          fn = s.split("static int mtk_cleanup(struct mtk_eth *eth)", 1)[1].split("static int mtk_get_link_ksettings", 1)[0]
-          assert fn.count("cancel_work_sync(&eth->pending_work)") == 1
-          assert fn.count("cancel_delayed_work_sync(&eth->reset.monitor_work)") == 1
-          assert fn.index("cancel_work_sync") < fn.index("mtk_free_dev")
-          remove = s.split("static void mtk_remove(struct platform_device *pdev)", 1)[1].split("static const struct mtk_soc_data mt2701_data", 1)[0]
-          assert remove.count("cancel_work_sync(&eth->pending_work)") == 1
-          assert remove.count("cancel_delayed_work_sync(&eth->reset.monitor_work)") == 1
-          assert remove.index("cancel_work_sync(&eth->pending_work)") < remove.index("mtk_hw_deinit(eth)")
-          assert remove.index("cancel_delayed_work_sync(&eth->reset.monitor_work)") < remove.index("mtk_hw_deinit(eth)")
-          print("RFC BOTH CLEANUP/REMOVE ORDER CHECK PASS; no runtime safety proof")
-          PY
+          git -C upstream init -q
+          git -C upstream add drivers/net/ethernet/mediatek/mtk_eth_soc.c drivers/net/ethernet/mediatek/mtk_eth_soc.h
+          git -C upstream -c user.name='RFC check' -c user.email='noreply@example.invalid' commit -qm 'Pinned Linux v6.18 files'
+          git -C upstream apply --check "$GITHUB_WORKSPACE/patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch"
+          git -C upstream apply "$GITHUB_WORKSPACE/patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch"
+          git -C upstream apply --check "$GITHUB_WORKSPACE/patches/rfc/0002-mediatek-serialize-reset-requeue.patch"
+          git -C upstream apply "$GITHUB_WORKSPACE/patches/rfc/0002-mediatek-serialize-reset-requeue.patch"
+          python3 tools/check_mediatek_rfc_series.py --source upstream
+          git -C upstream diff --check

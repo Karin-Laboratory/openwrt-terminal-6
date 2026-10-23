@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/rfc-mediatek-object-compile.yml'
       - 'patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch'
+      - 'patches/rfc/0002-mediatek-serialize-reset-requeue.patch'
   workflow_dispatch:
 
 permissions:
@@ -45,6 +46,8 @@ jobs:
           cd linux
           test "$(git hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.c)" = \
             e68997a29191b2a8ce0868873dcfe95c79e10e56
+          test "$(git hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.h)" = \
+            0168e2fbc6197a6aa9fe159767166e86915accbc
       - name: Build baseline and patched objects
         shell: bash
         run: |
@@ -61,25 +64,34 @@ jobs:
             echo 'ERROR: MediaTek Ethernet is disabled' >&2
             exit 1
           }
+          object=drivers/net/ethernet/mediatek/mtk_eth_soc.o
           echo 'Compiling unchanged upstream object'
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 \
-            drivers/net/ethernet/mediatek/mtk_eth_soc.o
-          sha256sum drivers/net/ethernet/mediatek/mtk_eth_soc.o | tee /tmp/mtk-baseline.sha256
-          rm drivers/net/ethernet/mediatek/mtk_eth_soc.o
+            "$object"
+          sha256sum "$object" | tee /tmp/mtk-baseline.sha256
+          rm "$object"
           git apply --check ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
           git apply ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
-          echo 'Compiling RFC-patched object'
+          echo 'Compiling RFC 0001 object'
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 \
-            drivers/net/ethernet/mediatek/mtk_eth_soc.o
-          sha256sum drivers/net/ethernet/mediatek/mtk_eth_soc.o | tee /tmp/mtk-rfc.sha256
+            "$object"
+          sha256sum "$object" | tee /tmp/mtk-rfc1.sha256
+          rm "$object"
+          git apply --check ../patches/rfc/0002-mediatek-serialize-reset-requeue.patch
+          git apply ../patches/rfc/0002-mediatek-serialize-reset-requeue.patch
+          python3 ../tools/check_mediatek_rfc_series.py --source .
+          echo 'Compiling RFC 0001 + RFC 0002 object'
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 "$object"
+          sha256sum "$object" | tee /tmp/mtk-rfc12.sha256
           echo "### MediaTek RFC ARM64 compile evidence" >> "$GITHUB_STEP_SUMMARY"
           echo "Upstream: torvalds/linux v6.18" >> "$GITHUB_STEP_SUMMARY"
           echo "Upstream source blob: e68997a29191b2a8ce0868873dcfe95c79e10e56" >> "$GITHUB_STEP_SUMMARY"
           echo "Config: $(grep '^CONFIG_NET_MEDIATEK_SOC=' .config)" >> "$GITHUB_STEP_SUMMARY"
           echo "Baseline object SHA-256: $(cut -d' ' -f1 /tmp/mtk-baseline.sha256)" >> "$GITHUB_STEP_SUMMARY"
-          echo "RFC object SHA-256: $(cut -d' ' -f1 /tmp/mtk-rfc.sha256)" >> "$GITHUB_STEP_SUMMARY"
+          echo "RFC 0001 object SHA-256: $(cut -d' ' -f1 /tmp/mtk-rfc1.sha256)" >> "$GITHUB_STEP_SUMMARY"
+          echo "RFC 0001 + RFC 0002 object SHA-256: $(cut -d' ' -f1 /tmp/mtk-rfc12.sha256)" >> "$GITHUB_STEP_SUMMARY"
           git diff --check
-          echo 'BASELINE_AND_RFC_OBJECT_BUILD_PASS'
+          echo 'BASELINE_RFC1_RFC12_OBJECT_BUILD_PASS'
       - name: Explain scope
         if: always()
         run: |

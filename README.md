@@ -10,9 +10,9 @@ Community-maintained experimental port of OpenWrt for the **SoftBank Air Termina
 
 The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported kernel/userspace boots, Ethernet and Wi-Fi observations, and the remaining blockers. It is **not an installable release**. The synthetic DTS example and offline tests are open for review now; full source patches and an independently reproducible build remain pending.
 
-## First upstream-anchored Ethernet RFC patch / 初の公開差分
+## Upstream-anchored Ethernet RFC patches / 公開中のEthernet RFC
 
-- [RFC patch: stop pending MediaTek recovery workers before cleanup](patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch), based on the **public** Linux `v6.18` source blob `e68997a29191b2a8ce0868873dcfe95c79e10e56`. The ARM64 object compilation workflow was reported successful on 2026-10-23, compiling both the unchanged upstream source and the RFC-patched source. This is user-reported run status; full kernel build and runtime validation have not been performed. **Review-only: not a complete MT6990 driver and not safe to flash.** The new second hunk also drains work before remove-path hardware deinit, but it does not prevent producers requeuing work or the monitor self-rearm. The two-hunk revision also completed the ARM64 object compilation workflow successfully as reported on 2026-10-23; kernel runtime safety is still unverified.
+- [RFC 0001](patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch) reorders worker cancellation ahead of cleanup and hardware deinit. Its prior ARM64 object build was user-reported successful. [RFC 0002](patches/rfc/0002-mediatek-serialize-reset-requeue.patch) is regenerated from the Linux `v6.18` C/header sources and gates timeout/monitor requeue against teardown. It now has sequential source-apply and static-check coverage. The three-state baseline/RFC1/RFC1+RFC2 ARM64 object build is pending the current Actions run; runtime behavior remains unverified. See [RFC 2 review notes](docs/RFC-2-RESET-REQUEUE.ja.md). These patches are review-only and do not make this a complete MT6990 driver or installable port.
 
 ## Public C source experiment / 公開Cコード
 
@@ -20,8 +20,7 @@ The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported k
 
 ## First upstream-anchored Ethernet RFC / 公開パッチの適用検証
 
-- [RFC patch: reorder MediaTek FE worker cleanup](patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch).
-- [Automated upstream source apply check](.github/workflows/rfc-mediatek-patch.yml): fetches Linux v6.18's pinned source file, checks its Git blob ID, applies the RFC and checks the cleanup order. **This does not compile the driver or establish safe hardware behavior.** The [ARM64 object compilation workflow](.github/workflows/rfc-mediatek-object-compile.yml) runs on changes to its workflow or patch; successful builds of the latest two-hunk RFC were reported on 2026-10-23. Future runs record baseline and patched object SHA-256 values in their job summary. Object compilation does not establish runtime safety.
+- [Automated patch-series apply check](.github/workflows/rfc-mediatek-patch.yml): fetches pinned Linux v6.18 C/header files, checks blob IDs, applies RFC1 then RFC2, and runs a static lifecycle-order check. The [ARM64 object compilation workflow](.github/workflows/rfc-mediatek-object-compile.yml) compares baseline, RFC1-only and RFC1+RFC2 objects. A passing apply or compile check does not establish safe hardware behavior.
 
 ## Latest technical research / 最新の技術調査
 
