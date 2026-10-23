@@ -27,6 +27,7 @@ Updated: 2026-10-23. This is an **evidence-based source-publication status**, no
 | Public donor PHY object | `.github/workflows/mt6990-phy-compile-probe.yml` | Experimental probe; no verified PASS; not the privately adapted Test25 driver |
 | Code provenance | `docs/SOURCE-AUDIT.md`, `LICENSES/README.md` | Hold unreviewed imports, especially SDK-derived code |
 | Reproducible Linux v6.18 Ethernet object | [Public verification](docs/PUBLIC-SOURCE-VERIFICATION.md) | **PASS**: [three-state ARM64 build #39877158871](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158871); [sequential apply #39877158897](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158897) |
+| Full upstream Linux v6.18 ARM64 Image with built-in MediaTek Ethernet | [run #39885153830](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39885153830) | **PASS** on commit `1d8949d` (47m45s); `CONFIG_NET_MEDIATEK_SOC=y`; Image SHA-256 `a99b89d680700e1cad4927d27238eaf0a9882b21968ac8bbb274a79b7aee6128`. Not an SBAT6D image |
 | Complete OpenWrt image build | `BUILDING.md` | NOT PASSED |
 | Installable image and recovery | `INSTALL.md`, `RECOVERY.md` | NOT PASSED |
 
