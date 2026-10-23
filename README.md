@@ -20,7 +20,7 @@ The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported k
 
 ## Full upstream kernel compilation probe / ARM64カーネル全体ビルド検証
 
-A new [Linux v6.18 ARM64 Image build workflow](.github/workflows/rfc-arm64-kernel-build.yml) applies RFC1→RFC2 and attempts a complete upstream ARM64 kernel `Image` plus the MediaTek Ethernet driver object. **This is a new CI experiment, not yet a verified PASS and not an SBAT6D firmware build.** The partial DTS is research-only; no complete board tree, OEM firmware or signed boot images are included.
+A new [Linux v6.18 ARM64 Image build workflow](.github/workflows/rfc-arm64-kernel-build.yml) applies RFC1→RFC2 and builds a complete upstream ARM64 kernel `Image` plus the MediaTek Ethernet driver object. **The upstream ARM64 Image build passed [Actions run #39885153830](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39885153830) (commit `1d8949d`, `CONFIG_NET_MEDIATEK_SOC=y`, Image SHA-256 `a99b89d680700e1cad4927d27238eaf0a9882b21968ac8bbb274a79b7aee6128`).** Separately, the partial DTS has targeted Linux 6.18.55 DTB/schema checks; it is research-only and not an SBAT6D firmware build. No complete board tree, OpenWrt image, OEM firmware or signed boot images are included.
 
 ## Public C source experiment / 公開Cコード
 
