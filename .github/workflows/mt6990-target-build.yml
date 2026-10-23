@@ -3,6 +3,8 @@ name: Experimental MT6990 generic target build
 on:
   pull_request:
     branches: [main]
+    paths:
+      - integration/mt6990-target.patch
   workflow_dispatch:
 
 permissions:

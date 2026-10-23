@@ -65,4 +65,11 @@ Using the pinned OpenWrt source above and the experimental `mt6990` subtarget:
 - `make -j2 target/install V=s`: PASS; generic rootfs staging produced a 2,759,404-byte squashfs at `build_dir/target-aarch64_generic_musl/linux-mediatek_mt6990/root.squashfs` and a 3,468,211-byte tarball at `bin/targets/mediatek/mt6990/openwrt-mediatek-mt6990-default-rootfs.tar.gz`. Their SHA-256 values are `cc1f1b60776991d448c406905924603c19d7b2933b31479afcfdab3a69d51f29` and `7e3ec8ea1292d9c4c10303b2532f5555d813f34b11dacb3e8fba0080e8d003a2` respectively.
 - No SBAT6D device image, boot image, or flashable artifact was generated; `image/mt6990.mk` defines no device profiles.
 
+## Hosted CI evidence
+
+- GitHub Actions run [39943757295](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39943757295): PASS on source commit `019da51c79bc5859ab1980b0d1bda0911c5d984e`.
+- The run completed the generic AArch64 toolchain, new Kconfig normalization, Linux 6.18.55 kernel and MediaTek Ethernet object compile, package compile/install, and generic rootfs staging.
+- The heavy workflow is limited to changes in `integration/mt6990-target.patch`; documentation-only commits do not repeat this 1-hour build. `workflow_dispatch` remains available.
+- This remains compile evidence only. It does not establish that the generated generic artifacts boot MT6990 or SBAT6D.
+
 This proves a generic ARM64 Linux and Ethernet-driver compile against the selected OpenWrt source. It does not prove MT6990 boot support, DTS validity, switch topology, or device operation. The generated kernel is experimental and must not be installed on SBAT6D.

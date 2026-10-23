@@ -4,7 +4,7 @@ This branch now carries an experimental `mediatek/mt6990` source-build target in
 
 The exact pinned OpenWrt base is `openwrt/openwrt` commit `a25fb079b1463cd5d7d69c6d9a1c28d873291ebb`; kernel preparation yields Linux 6.18.55. Do not silently apply the target patch to another OpenWrt revision or kernel patch set.
 
-Local verification on 2026-10-23 completed the generic AArch64 toolchain, Linux 6.18.55 kernel build (including `mtk_eth_soc.o` with MT7530 DSA), package compile/install, and generic rootfs staging. This is generic compile evidence only. GitHub Actions for the updated Kconfig normalization and target build are still running; no SBAT6D image or bootability is claimed.
+Local verification and GitHub Actions run [39943757295](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39943757295) on 2026-10-23 completed the generic AArch64 toolchain, Linux 6.18.55 kernel build (including `mtk_eth_soc.o` with MT7530 DSA), package compile/install, and generic rootfs staging. This is generic compile evidence only. No SBAT6D image or bootability is claimed.
 
 Remaining milestones: add licensed MT6990 clock/reset/power/PCIe/SoC support, complete an independently authored SBAT6D board DTS, produce a generic rootfs staging image without device packaging, then validate each subsystem separately. The LG6851F donor image definition must never be renamed to SBAT6D or flashed.
 
