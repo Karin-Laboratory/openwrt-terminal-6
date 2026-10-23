@@ -41,7 +41,6 @@ jobs:
             fi
           fi
       - name: Positive compatibility gate on pinned upstream blobs
-        if: always()
         shell: bash
         run: |
           if test -f tools/check_openwrt_rfc_compat.py; then
@@ -57,6 +56,8 @@ jobs:
             bash scripts/apply-public-rfc-series.sh --apply pinned
             python3 tools/check_mediatek_rfc_series.py --source pinned
             git -C pinned diff --check
+            test -n "$(git -C pinned diff -- drivers/net/ethernet/mediatek/mtk_eth_soc.c)"
+            test -n "$(git -C pinned diff -- drivers/net/ethernet/mediatek/mtk_eth_soc.h)"
           fi
       - name: Scope
         if: always()
