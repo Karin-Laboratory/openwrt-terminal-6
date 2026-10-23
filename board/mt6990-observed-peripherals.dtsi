@@ -53,6 +53,28 @@
 		status = "disabled";
 	};
 
+	pinctrl@10004000 {
+		compatible = "mediatek,mt69xx-pinctrl";
+		reg = <0x0 0x10004000 0x0 0x1000>,
+		      <0x0 0x11c00000 0x0 0x1000>,
+		      <0x0 0x11c10000 0x0 0x1000>,
+		      <0x0 0x11d00000 0x0 0x1000>,
+		      <0x0 0x11d10000 0x0 0x1000>,
+		      <0x0 0x11d20000 0x0 0x1000>,
+		      <0x0 0x11d30000 0x0 0x1000>,
+		      <0x0 0x11e80000 0x0 0x1000>,
+		      <0x0 0x11e90000 0x0 0x1000>,
+		      <0x0 0x11eb0000 0x0 0x1000>;
+		reg-names = "gpio", "iocfg_rt_8", "iocfg_rt_9", "iocfg_bm_4",
+			    "iocfg_bm_5", "iocfg_bm_6", "iocfg_bm_7", "iocfg_lt_0",
+			    "iocfg_lt_1", "iocfg_lt_3";
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		status = "disabled";
+	};
+
 	serial@11002000 {
 		compatible = "mediatek,mt6873-uart", "mediatek,mt6577-uart";
 		reg = <0x0 0x11002000 0x0 0x1000>;

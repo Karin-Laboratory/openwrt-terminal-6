@@ -31,6 +31,7 @@ class ObservedPeripheralDtsTests(unittest.TestCase):
         nodes = [
             "serial@11002000", "mmc@11230000", "pcie@11280000",
             "pcie@11288000", "pcie@11290000", "netsys@15100000",
+            "pinctrl@10004000",
             "syscon@11036000", "syscon@10000000", "syscon@1200C000",
             "syscon@12013000", "power-controller@12001000",
             "sgmiisys@11305000", "sgmiiphy@11E60000", "sgmiipll@10014000",
@@ -62,6 +63,19 @@ class ObservedPeripheralDtsTests(unittest.TestCase):
         facts = (ROOT / "board/DT-HARDWARE-FACTS.md").read_text()
         self.assertIn("0x3e605000", facts)
         self.assertIn("0x1e800000", facts)
+
+    def test_pinctrl_is_a_disabled_resource_inventory(self):
+        body = node_body(self.source, "pinctrl@10004000")
+        self.assertIn('compatible = "mediatek,mt69xx-pinctrl";', body)
+        self.assertIn('reg-names = "gpio", "iocfg_rt_8", "iocfg_rt_9"', body)
+        self.assertRegex(body, r'\bstatus\s*=\s*"disabled"')
+        self.assertNotIn("gpio_init_default", body)
+        self.assertNotIn("pinmux", body)
+
+    def test_uart_binding_patch_records_observed_compatible(self):
+        patch = (ROOT / "board/patches/0002-serial-mediatek-add-observed-mt6873-uart-compatible.patch").read_text()
+        self.assertIn("+              - mediatek,mt6873-uart", patch)
+        self.assertNotIn("drivers/tty/serial", patch)
 
     def test_firmware_specific_sgmii_lists_are_not_encoded_as_phandles(self):
         for prop in (

@@ -21,12 +21,12 @@
       "evidence": null
     },
     "clock_providers_and_ids": {
-      "status": "unknown",
-      "evidence": null
+      "status": "observed_not_implemented",
+      "evidence": "B-unit boot_b FDT identifies four clock-index providers and consumer indices; this records firmware values only, not upstream binding IDs or a Linux provider driver"
     },
     "power_domain_providers_and_ids": {
-      "status": "unknown",
-      "evidence": null
+      "status": "observed_not_implemented",
+      "evidence": "B-unit boot_b FDT identifies the mt6990-scpsys provider and consumer domain indices; Linux provider driver and binding remain unavailable in this workstream"
     },
     "sgmii_pll_and_phy_binding": {
       "status": "unknown",
@@ -37,8 +37,8 @@
       "evidence": null
     },
     "kernel_binding_validation": {
-      "status": "targeted_schema_pass",
-      "evidence": "Linux 6.18.55 dt_binding_check and dt-doc-validate passed for mediatek.yaml; isolated dt-validate passed for the generated partial MT6990 DTB. Full MediaTek-wide checks include unrelated legacy warnings."
+      "status": "targeted_schema_pass_with_local_uart_enum_patch",
+      "evidence": "Linux 6.18.55 mediatek.yaml validation passed. The unmodified upstream serial schema rejected the observed mt6873-uart compatible tuple; a minimal enum-only patch records it, while the existing driver generic fallback remains unchanged. The serial schema and isolated DTB must be revalidated after applying this patch. Full MediaTek-wide checks include unrelated legacy warnings."
     },
     "cpu_psci_gic_timer": {
       "status": "observed_and_partially_implemented",
@@ -46,7 +46,11 @@
     },
     "peripheral_inventory": {
       "status": "observed_and_disabled",
-      "evidence": "Same B-unit boot_b FDT records UART0, eMMC, three PCIe hosts/PHYs, NETSYS, MAC0/MAC1, SGMII1 and its analog PHY/PLL. A minimal independent subset is encoded with status=disabled; providers and drivers are not claimed"
+      "evidence": "Same B-unit boot_b FDT records UART0, eMMC, three PCIe hosts/PHYs, pinctrl/GPIO resources, NETSYS, MAC0/MAC1, SGMII1 and its analog PHY/PLL. A minimal independent subset is encoded with status=disabled; proprietary GPIO initialization/pinmux tables and provider drivers are not included"
+    },
+    "lk_memory_preparation": {
+      "status": "observed_separate_test_boot",
+      "evidence": "A separate Test20 slot-A LK log reports 2 GiB total DRAM, memory-reg setup from mblock information, and reserved-memory append before Linux entry; final FDT and Linux map readback are unavailable"
     },
     "usable_memory_map": {
       "status": "conflicting",
