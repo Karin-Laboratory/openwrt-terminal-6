@@ -29,6 +29,8 @@ jobs:
         run: |
           if test -f board/sbat6d-dts-evidence.json; then
             python3 tools/check_sbat6d_dts_evidence.py board/sbat6d-dts-evidence.json
+            python3 tools/report_sbat6d_dts_evidence.py board/sbat6d-dts-evidence.json --output /tmp/sbat6d-dts-checklist.md
+            cat /tmp/sbat6d-dts-checklist.md >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Check OpenWrt kernel compatibility gate fails closed
         shell: bash
