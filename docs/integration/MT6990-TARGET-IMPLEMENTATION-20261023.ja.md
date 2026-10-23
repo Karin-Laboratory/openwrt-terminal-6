@@ -27,10 +27,13 @@ make target/linux/prepare V=s
 make -j2 toolchain/install V=s
 # The first Kconfig sync may need to resolve new upstream symbols using defaults.
 tree="$(find build_dir -type d -path '*/linux-mediatek_mt6990/linux-6.18.55' -print -quit)"
-toolchain_bin="$(find staging_dir -type d -path '*/toolchain-aarch64_generic_*/bin' -print -quit)"
-PATH="$PWD/$toolchain_bin:$PATH" make -C "$tree" ARCH=arm64 \
-  CROSS_COMPILE=aarch64-openwrt-linux-musl- \
-  HOSTCC=gcc HOSTCXX=g++ HOSTLD=ld HOSTAS=as olddefconfig
+toolchain_dir="$(find staging_dir -maxdepth 1 -type d -name 'toolchain-aarch64_generic_*' -print -quit)"
+toolchain_bin="$PWD/$toolchain_dir/bin"
+make -C "$tree" ARCH=arm64 \
+  CC="$toolchain_bin/aarch64-openwrt-linux-musl-gcc" \
+  CROSS_COMPILE="$toolchain_bin/aarch64-openwrt-linux-musl-" \
+  HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++ \
+  HOSTLD=/usr/bin/ld HOSTAS=/usr/bin/as olddefconfig
 make -j2 target/linux/compile V=s
 ```
 

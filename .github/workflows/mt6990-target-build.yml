@@ -1,8 +1,6 @@
 name: Experimental MT6990 generic target build
 
 on:
-  push:
-    branches: [integration/openwrt-source-gate]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -67,12 +65,15 @@ jobs:
           set -euo pipefail
           tree="$(find build_dir -type d -path '*/linux-mediatek_mt6990/linux-6.18.55' -print -quit)"
           test -n "$tree"
-          toolchain_bin="$(find staging_dir -type d -path '*/toolchain-aarch64_generic_*/bin' -print -quit)"
-          test -n "$toolchain_bin"
-          export PATH="$PWD/$toolchain_bin:$PATH"
+          toolchain_dir="$(find staging_dir -maxdepth 1 -type d -name 'toolchain-aarch64_generic_*' -print -quit)"
+          test -n "$toolchain_dir"
+          toolchain_bin="$PWD/$toolchain_dir/bin"
+          cc="$toolchain_bin/aarch64-openwrt-linux-musl-gcc"
+          test -x "$cc"
           make -C "$tree" ARCH=arm64 \
-            CROSS_COMPILE=aarch64-openwrt-linux-musl- \
-            HOSTCC=gcc HOSTCXX=g++ HOSTLD=ld HOSTAS=as olddefconfig
+            CC="$cc" CROSS_COMPILE="$toolchain_bin/aarch64-openwrt-linux-musl-" \
+            HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++ \
+            HOSTLD=/usr/bin/ld HOSTAS=/usr/bin/as olddefconfig
 
       - name: Compile ARM64 kernel and MediaTek Ethernet driver
         working-directory: openwrt
