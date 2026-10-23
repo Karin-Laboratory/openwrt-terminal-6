@@ -52,7 +52,7 @@ jobs:
             git -C pinned init -q
             git -C pinned add drivers/net/ethernet/mediatek/mtk_eth_soc.c drivers/net/ethernet/mediatek/mtk_eth_soc.h
             git -C pinned -c user.name='RFC review' -c user.email='noreply@example.invalid' commit -qm 'Pinned source blobs'
-            bash scripts/apply-public-rfc-series.sh pinned
+            bash integration/preflight-openwrt-rfc.sh pinned
             bash scripts/apply-public-rfc-series.sh --apply pinned
             python3 tools/check_mediatek_rfc_series.py --source pinned
             git -C pinned diff --check
