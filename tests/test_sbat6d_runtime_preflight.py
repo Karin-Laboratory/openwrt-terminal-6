@@ -16,7 +16,7 @@ class RuntimeDtsPreflightTests(unittest.TestCase):
         self.assertEqual(result["status"], "TEXT_INVENTORY_ONLY")
 
     def test_present_nodes_still_not_approved(self):
-        dts = '/ { sgmiisys@11305000 { compatible = "syscon"; }; sgmiiphy@11E60000 { compatible = "syscon"; }; };'
+        dts = '/ {\nsgmiisys@11305000 {\n compatible = "syscon";\n};\nsgmiiphy@11E60000 {\n compatible = "syscon";\n};\n};'
         result = mod.assess(dts)
         self.assertFalse(result["missing"])
         self.assertEqual(result["status"], "TEXT_INVENTORY_ONLY")
