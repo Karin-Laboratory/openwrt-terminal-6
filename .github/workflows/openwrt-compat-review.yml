@@ -50,6 +50,13 @@ jobs:
             curl -fLsS --retry 3 https://raw.githubusercontent.com/torvalds/linux/v6.18/drivers/net/ethernet/mediatek/mtk_eth_soc.c -o pinned/drivers/net/ethernet/mediatek/mtk_eth_soc.c
             curl -fLsS --retry 3 https://raw.githubusercontent.com/torvalds/linux/v6.18/drivers/net/ethernet/mediatek/mtk_eth_soc.h -o pinned/drivers/net/ethernet/mediatek/mtk_eth_soc.h
             python3 tools/check_openwrt_rfc_compat.py pinned --require-exact
+            git -C pinned init -q
+            git -C pinned add drivers/net/ethernet/mediatek/mtk_eth_soc.c drivers/net/ethernet/mediatek/mtk_eth_soc.h
+            git -C pinned -c user.name='RFC review' -c user.email='noreply@example.invalid' commit -qm 'Pinned source blobs'
+            bash scripts/apply-public-rfc-series.sh pinned
+            bash scripts/apply-public-rfc-series.sh --apply pinned
+            python3 tools/check_mediatek_rfc_series.py --source pinned
+            git -C pinned diff --check
           fi
       - name: Scope
         if: always()
