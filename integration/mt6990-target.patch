@@ -13,10 +13,10 @@ index 2515948b6..f821426a5 100644
  KERNEL_PATCHVER:=6.18
 diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-observed-peripherals.dtsi b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-observed-peripherals.dtsi
 new file mode 100644
-index 000000000..393614dd3
+index 000000000..2ee1b2102
 --- /dev/null
 +++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-observed-peripherals.dtsi
-@@ -0,0 +1,308 @@
+@@ -0,0 +1,330 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +
 +/*
@@ -69,6 +69,28 @@ index 000000000..393614dd3
 +		compatible = "mediatek,mt6990-scpsys", "syscon";
 +		reg = <0x0 0x12001000 0x0 0x1000>;
 +		#power-domain-cells = <1>;
++		status = "disabled";
++	};
++
++	pinctrl@10004000 {
++		compatible = "mediatek,mt69xx-pinctrl";
++		reg = <0x0 0x10004000 0x0 0x1000>,
++		      <0x0 0x11c00000 0x0 0x1000>,
++		      <0x0 0x11c10000 0x0 0x1000>,
++		      <0x0 0x11d00000 0x0 0x1000>,
++		      <0x0 0x11d10000 0x0 0x1000>,
++		      <0x0 0x11d20000 0x0 0x1000>,
++		      <0x0 0x11d30000 0x0 0x1000>,
++		      <0x0 0x11e80000 0x0 0x1000>,
++		      <0x0 0x11e90000 0x0 0x1000>,
++		      <0x0 0x11eb0000 0x0 0x1000>;
++		reg-names = "gpio", "iocfg_rt_8", "iocfg_rt_9", "iocfg_bm_4",
++			    "iocfg_bm_5", "iocfg_bm_6", "iocfg_bm_7", "iocfg_lt_0",
++			    "iocfg_lt_1", "iocfg_lt_3";
++		gpio-controller;
++		#gpio-cells = <2>;
++		interrupt-controller;
++		#interrupt-cells = <2>;
 +		status = "disabled";
 +	};
 +
@@ -438,10 +460,10 @@ index 000000000..f419deee4
 +# exist. This intentionally prevents creation of installable device images.
 diff --git a/target/linux/mediatek/mt6990/config-6.18 b/target/linux/mediatek/mt6990/config-6.18
 new file mode 100644
-index 000000000..29c1a61b4
+index 000000000..b86659f36
 --- /dev/null
 +++ b/target/linux/mediatek/mt6990/config-6.18
-@@ -0,0 +1,265 @@
+@@ -0,0 +1,266 @@
 +CONFIG_64BIT=y
 +# CONFIG_AIROHA_EN8801SC_PHY is not set
 +# CONFIG_AIR_AN8855_PHY is not set
@@ -485,6 +507,7 @@ index 000000000..29c1a61b4
 +CONFIG_BUILTIN_RETURN_ADDRESS_STRIPS_PAC=y
 +CONFIG_CC_HAVE_SHADOW_CALL_STACK=y
 +CONFIG_CC_HAVE_STACKPROTECTOR_SYSREG=y
++CONFIG_STACKPROTECTOR_PER_TASK=y
 +CONFIG_CLKSRC_MMIO=y
 +CONFIG_CLONE_BACKWARDS=y
 +# CONFIG_CMDLINE_OVERRIDE is not set
@@ -948,3 +971,19 @@ index 000000000..37e424106
 +       - items:
 +           - enum:
 +               - bananapi,bpi-r64
+diff --git a/target/linux/mediatek/patches-6.18/981-dt-bindings-serial-mediatek-add-observed-mt6873-uart-compatible.patch b/target/linux/mediatek/patches-6.18/981-dt-bindings-serial-mediatek-add-observed-mt6873-uart-compatible.patch
+new file mode 100644
+index 000000000..cef75f716
+--- /dev/null
++++ b/target/linux/mediatek/patches-6.18/981-dt-bindings-serial-mediatek-add-observed-mt6873-uart-compatible.patch
+@@ -0,0 +1,10 @@
++--- a/Documentation/devicetree/bindings/serial/mediatek,uart.yaml
+++++ b/Documentation/devicetree/bindings/serial/mediatek,uart.yaml
++@@ -31,6 +31,7 @@
++               - mediatek,mt6589-uart
++               - mediatek,mt6755-uart
++               - mediatek,mt6765-uart
+++              - mediatek,mt6873-uart
++               - mediatek,mt6779-uart
++               - mediatek,mt6795-uart
++               - mediatek,mt6797-uart
