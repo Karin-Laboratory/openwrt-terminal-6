@@ -48,6 +48,7 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y device-tree-compiler
+          python3 tools/validate_candidate_dts.py board/sbat6d-incomplete.dts --require-pass
           printf '/dts-v1/;\n/ { compatible = "test,syntax-only"; };\n' > /tmp/dts-syntax-fixture.dts
           python3 tools/validate_candidate_dts.py /tmp/dts-syntax-fixture.dts --require-pass
       - name: Scope

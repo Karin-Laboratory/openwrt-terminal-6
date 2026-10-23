@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/dts-v1/;
+
+/*
+ * Incomplete, non-bootable SBAT6D Device Tree scaffold.
+ *
+ * The only hardware compatibility fact currently published for this board
+ * is the observed MT6990 SoC. Memory, CPUs, interrupt controller, clocks,
+ * resets, power domains, storage and board wiring are intentionally absent.
+ * Do not use this DTB to boot or package firmware.
+ */
+/ {
+	model = "SoftBank Air Terminal 6 (incomplete research DTS)";
+	compatible = "mediatek,mt6990";
+};
