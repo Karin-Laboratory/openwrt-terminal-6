@@ -45,10 +45,11 @@ jobs:
           git -C upstream init -q
           git -C upstream add drivers/net/ethernet/mediatek/mtk_eth_soc.c drivers/net/ethernet/mediatek/mtk_eth_soc.h
           git -C upstream -c user.name='RFC check' -c user.email='noreply@example.invalid' commit -qm 'Pinned Linux v6.18 files'
+          before_c="$(git -C upstream hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.c)"
+          before_h="$(git -C upstream hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.h)"
           bash scripts/apply-public-rfc-series.sh upstream
-          git -C upstream apply --check "$GITHUB_WORKSPACE/patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch"
-          git -C upstream apply "$GITHUB_WORKSPACE/patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch"
-          git -C upstream apply --check "$GITHUB_WORKSPACE/patches/rfc/0002-mediatek-serialize-reset-requeue.patch"
-          git -C upstream apply "$GITHUB_WORKSPACE/patches/rfc/0002-mediatek-serialize-reset-requeue.patch"
+          test "$(git -C upstream hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.c)" = "$before_c"
+          test "$(git -C upstream hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.h)" = "$before_h"
+          bash scripts/apply-public-rfc-series.sh --apply upstream
           python3 tools/check_mediatek_rfc_series.py --source upstream
           git -C upstream diff --check
