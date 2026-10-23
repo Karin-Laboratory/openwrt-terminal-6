@@ -12,7 +12,7 @@ The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported k
 
 ## Upstream-anchored Ethernet RFC patches / 公開中のEthernet RFC
 
-- [RFC 0001](patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch) reorders worker cancellation ahead of cleanup and hardware deinit. Its prior ARM64 object build was user-reported successful. [RFC 0002](patches/rfc/0002-mediatek-serialize-reset-requeue.patch) is regenerated from the Linux `v6.18` C/header sources and gates timeout/monitor requeue against teardown. It now has sequential source-apply and static-check coverage. The three-state baseline/RFC1/RFC1+RFC2 ARM64 object build is pending the current Actions run; runtime behavior remains unverified. See [RFC 2 review notes](docs/RFC-2-RESET-REQUEUE.ja.md). These patches are review-only and do not make this a complete MT6990 driver or installable port.
+- [RFC 0001](patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch) reorders worker cancellation ahead of cleanup and hardware deinit. [RFC 0002](patches/rfc/0002-mediatek-serialize-reset-requeue.patch) was regenerated from the Linux `v6.18` C/header sources and gates timeout/monitor requeue against teardown. Both patches apply in order, pass static lifecycle checks, and compile `mtk_eth_soc.o` for ARM64 with upstream baseline/RFC1/RFC1+RFC2 compared; see [apply result](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158897), [compile result](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158871), and [RFC 2 review notes](docs/RFC-2-RESET-REQUEUE.ja.md). Runtime behavior remains unverified; these review patches do not make this a complete MT6990 driver or installable port.
 
 ## Public C source experiment / 公開Cコード
 

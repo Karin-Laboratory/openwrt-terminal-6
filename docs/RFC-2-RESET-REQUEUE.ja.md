@@ -1,6 +1,6 @@
 # MediaTek Ethernet RFC第2弾：reset work再投入と終了処理の直列化
 
-状態: **ソースRFC。v6.18への順次適用はローカル確認済み。3段階ARM64 object buildはGitHub Actionsで検証中。実機未検証。**
+状態: **ソースRFC。v6.18への順次適用、静的検査、3段階ARM64 object buildはGitHub ActionsでPASS。実機未検証。**
 
 対象はLinux `torvalds/linux` tag `v6.18`の次の公開ファイルである。
 
@@ -45,4 +45,21 @@ RFC第2弾は[`0001` cleanup ordering](../patches/rfc/0001-mediatek-quiesce-work
 
 [`tools/check_mediatek_rfc_series.py`](../tools/check_mediatek_rfc_series.py)は2パッチを実ソースへ適用した後、producer/stop順序、probe unwindのdrain位置、header状態を静的に検査する。GitHub Actionsはupstream source/header blob IDを検査し、`0001`→`0002`の順にapplyする。ARM64 workflowは同じ`.config`でbaseline、RFC1のみ、RFC1+RFC2の`mtk_eth_soc.o`を順にコンパイルし、各object SHA-256をsummaryへ出す。
 
-適用・静的検査のローカル結果はPASS。ARM64 3状態buildとGitHub Actionsの結果は、本書確定時点では未確認とする。
+### GitHub Actions結果（2026-10-23）
+
+| 検証 | 結果 | 実行 |
+|---|---|---|
+| upstream v6.18 C/header blob照合、RFC1→RFC2順次適用、静的検査 | PASS | [RFC MediaTek patch apply check](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158897) |
+| Public source checks | PASS | [run](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158855) |
+| Publication safety gate | PASS | [run](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158860) |
+| ARM64 baseline/RFC1/RFC1+RFC2 object compile | PASS | [RFC MediaTek kernel object compile](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158871) |
+
+ビルドはLinux `v6.18`、`ARCH=arm64`、`CONFIG_COMPILE_TEST=y`、`CONFIG_NET_MEDIATEK_SOC=m`で同じ`.config`を使い、対象`mtk_eth_soc.o`を各段階で再生成した。結果のobject SHA-256:
+
+| 状態 | `mtk_eth_soc.o` SHA-256 |
+|---|---|
+| upstream baseline | `a6dc88aed0f0dbb542a8e6a494135c1f9af69357cf1dff97d54113e78718288c` |
+| RFC 0001 | `a9e9cda3fe5c235998d4cb9bdbd46474bff40aa0c5e8ca2229676f1dd781a0e5` |
+| RFC 0001 + RFC 0002 | `01a28c7a14744f3993206eec3482c3aa24f3284ab1217445674b7152d2dd6bb1` |
+
+この結果はdriver objectのARM64 compile成功を示す。kernel全体のbuild、実機起動、remove時のhot-unplug、watchdog発火、fault-injection、lockdepは検証しておらず、RFCの実行時安全性やMT6990対応を証明しない。
