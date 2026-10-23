@@ -46,8 +46,8 @@ jobs:
           if test -f tools/check_openwrt_rfc_compat.py; then
             set -euo pipefail
             mkdir -p pinned/drivers/net/ethernet/mediatek
-            curl -fLsS --retry 3 https://raw.githubusercontent.com/torvalds/linux/v6.18/drivers/net/ethernet/mediatek/mtk_eth_soc.c -o pinned/drivers/net/ethernet/mediatek/mtk_eth_soc.c
-            curl -fLsS --retry 3 https://raw.githubusercontent.com/torvalds/linux/v6.18/drivers/net/ethernet/mediatek/mtk_eth_soc.h -o pinned/drivers/net/ethernet/mediatek/mtk_eth_soc.h
+            curl -fLsS --retry 3 https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/drivers/net/ethernet/mediatek/mtk_eth_soc.c?h=v6.18 -o pinned/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+            curl -fLsS --retry 3 https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/drivers/net/ethernet/mediatek/mtk_eth_soc.h?h=v6.18 -o pinned/drivers/net/ethernet/mediatek/mtk_eth_soc.h
             python3 tools/check_openwrt_rfc_compat.py pinned --require-exact
             git -C pinned init -q
             git -C pinned add drivers/net/ethernet/mediatek/mtk_eth_soc.c drivers/net/ethernet/mediatek/mtk_eth_soc.h

@@ -2,6 +2,7 @@
 """Check lifecycle invariants in a v6.18 tree after applying RFC 0001/0002."""
 import argparse
 from pathlib import Path
+import re
 import sys
 
 
@@ -10,6 +11,26 @@ def body(source: str, start: str, end: str) -> str:
         return source.split(start, 1)[1].split(end, 1)[0]
     except IndexError as exc:
         raise ValueError(f"function boundary not found: {start}") from exc
+
+
+def unguarded_pending_work_lines(source: str) -> list[int]:
+    """Find direct pending_work queue calls outside the serialized helper.
+
+    This catches downstream kernel patches that add a new producer, even when
+    the two expected v6.18 producer functions still look correct.
+    """
+    start_marker = "static void __mtk_queue_reset_work("
+    end_marker = "static void mtk_queue_reset_work("
+    start = source.find(start_marker)
+    end = source.find(end_marker, start + len(start_marker)) if start >= 0 else -1
+    if start < 0 or end < 0:
+        raise ValueError("serialized reset-work helper boundary not found")
+
+    allowed = range(start, end)
+    needle = "schedule_work(&eth->pending_work)"
+    return [source.count("\n", 0, match.start()) + 1
+            for match in re.finditer(re.escape(needle), source)
+            if match.start() not in allowed]
 
 
 def check(root: Path) -> None:
@@ -28,6 +49,12 @@ def check(root: Path) -> None:
         raise ValueError("pending_work producer does not test stop latch")
     if "schedule_work(&eth->pending_work)" not in queue_inner:
         raise ValueError("guarded helper does not queue pending_work")
+    extra_producers = unguarded_pending_work_lines(c)
+    if extra_producers:
+        raise ValueError(
+            "unguarded pending_work producer(s) outside serialized helper at line(s): "
+            + ", ".join(map(str, extra_producers))
+        )
     if "spin_lock_irqsave(&eth->reset_queue_lock, flags)" not in queue or "__mtk_queue_reset_work(eth);" not in queue:
         raise ValueError("monitor reset work producer is not protected by reset_queue_lock")
     if "schedule_work(&eth->pending_work)" in tx or "schedule_work(&eth->pending_work)" in monitor:
