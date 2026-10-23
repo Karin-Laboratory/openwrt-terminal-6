@@ -122,7 +122,7 @@ jobs:
             -u "$tree/Documentation/devicetree/bindings" \
             -s "$tree/Documentation/devicetree/bindings/processed-schema.json" "$dtb"
           "$tree/scripts/dtc/dtc" -I dtb -O dts "$dtb" -o /tmp/mt6990-sbat6d-incomplete.dts
-          grep -Fq 'compatible = "mediatek,mt6990";' /tmp/mt6990-sbat6d-incomplete.dts
+          grep -Fq 'compatible = "mediatek,evb6990_cpe_mt7990_emmc", "mediatek,mt6990";' /tmp/mt6990-sbat6d-incomplete.dts
           grep -Fq 'model = "SoftBank Air Terminal 6 (SBA6D, research DTS)";' /tmp/mt6990-sbat6d-incomplete.dts
           grep -Fq 'compatible = "arm,cortex-a55";' /tmp/mt6990-sbat6d-incomplete.dts
           grep -Fq 'compatible = "arm,gic-v3";' /tmp/mt6990-sbat6d-incomplete.dts
