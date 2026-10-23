@@ -5,6 +5,7 @@ This is NOT a bootable image. Refuse missing inputs and symbolic links.
 """
 import argparse
 import hashlib
+import gzip
 import io
 import json
 from pathlib import Path
@@ -39,15 +40,17 @@ def pack(root: Path, output: Path) -> dict:
     }
     entries["manifest.json"] = (json.dumps(manifest, sort_keys=True, indent=2) + "\n").encode()
     output.parent.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(output, "w:gz", format=tarfile.PAX_FORMAT) as tar:
-        for name, data in sorted(entries.items()):
-            info = tarfile.TarInfo(f"{BASE}/{name}")
-            info.size = len(data)
-            info.mode = 0o644
-            info.uid = info.gid = 0
-            info.uname = info.gname = ""
-            info.mtime = 0
-            tar.addfile(info, io.BytesIO(data))
+    with output.open("wb") as destination:
+        with gzip.GzipFile(fileobj=destination, mode="wb", filename="", mtime=0) as zipped:
+            with tarfile.open(fileobj=zipped, mode="w", format=tarfile.PAX_FORMAT) as tar:
+                for name, data in sorted(entries.items()):
+                    info = tarfile.TarInfo(f"{BASE}/{name}")
+                    info.size = len(data)
+                    info.mode = 0o644
+                    info.uid = info.gid = 0
+                    info.uname = info.gname = ""
+                    info.mtime = 0
+                    tar.addfile(info, io.BytesIO(data))
     return manifest
 
 
