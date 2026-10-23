@@ -13,3 +13,7 @@ python3 tools/check_openwrt_rfc_compat.py /path/to/openwrt/build_dir/target-.../
 ```
 
 Only if both Git blob IDs match the exact pinned upstream Linux v6.18 files should the RFC1→RFC2 sequence be tested. For other kernel versions, a separate rebase plus full driver compilation and source-review is required. No vendor image target, package definition, board DTS or firmware output is implied.
+
+## Source metadata preflight
+
+For a locally checked-out OpenWrt source tree, run `python3 tools/check_openwrt_kernel_version.py /path/to/openwrt/include/kernel-version.mk` first. This prints reported kernel versions but **never** confers direct patch applicability. Confirm the exact prepared kernel C/header blobs separately via `check_openwrt_rfc_compat.py`.
