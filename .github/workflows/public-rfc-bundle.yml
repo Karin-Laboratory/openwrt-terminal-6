@@ -45,7 +45,7 @@ jobs:
               assert all(x.startswith('openwrt-terminal-6-source-rfc/') for x in members)
               manifest = json.load(t.extractfile('openwrt-terminal-6-source-rfc/manifest.json'))
               assert manifest['flashable'] is False
-              assert len(manifest['files']) == 5
+              assert len(manifest['files']) == 6
           print('SOURCE_ONLY_BUNDLE_PASS')
           PY
       - name: Upload source-only artifact
