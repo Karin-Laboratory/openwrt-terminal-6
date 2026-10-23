@@ -11,6 +11,422 @@ index 2515948b6..f821426a5 100644
  FEATURES:=dt-overlay emmc fpu gpio nand pci pcie rootfs-part separate_ramdisk squashfs usb
  
  KERNEL_PATCHVER:=6.18
+diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-observed-peripherals.dtsi b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-observed-peripherals.dtsi
+new file mode 100644
+index 000000000..393614dd3
+--- /dev/null
++++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-observed-peripherals.dtsi
+@@ -0,0 +1,308 @@
++// SPDX-License-Identifier: GPL-2.0-only
++
++/*
++ * Read-only B-unit boot_b FDT observations. All peripheral nodes in this
++ * include are deliberately disabled: Linux 6.18.55 does not provide the
++ * verified MT6990 clock, reset, power-domain, pinctrl and device bindings
++ * needed to enable them safely. Properties are transcribed as hardware facts,
++ * not as a claim that this tree can initialize the devices.
++ *
++ * RAM is omitted here. The same FDT contains two root memory nodes at
++ * 0x80000000 with different lengths; neither is selected as Linux-usable RAM.
++ */
++
++/ {
++	clk26m: clock-26m {
++		compatible = "fixed-clock";
++		#clock-cells = <0>;
++		clock-frequency = <26000000>;
++	};
++
++	pericfg_ao: syscon@11036000 {
++		compatible = "mediatek,mt6990-pericfg_ao", "syscon";
++		reg = <0x0 0x11036000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	topckgen: syscon@10000000 {
++		compatible = "mediatek,mt6990-topckgen", "syscon";
++		reg = <0x0 0x10000000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	vlpcfg: syscon@1200C000 {
++		compatible = "mediatek,mt6990-vlpcfg", "syscon";
++		reg = <0x0 0x1200c000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	vlp_cksys: syscon@12013000 {
++		compatible = "mediatek,mt6990-vlp_cksys", "syscon";
++		reg = <0x0 0x12013000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	scpsys: power-controller@12001000 {
++		compatible = "mediatek,mt6990-scpsys", "syscon";
++		reg = <0x0 0x12001000 0x0 0x1000>;
++		#power-domain-cells = <1>;
++		status = "disabled";
++	};
++
++	serial@11002000 {
++		compatible = "mediatek,mt6873-uart", "mediatek,mt6577-uart";
++		reg = <0x0 0x11002000 0x0 0x1000>;
++		interrupts = <0 232 4>;
++		clocks = <&clk26m>, <&pericfg_ao 0>;
++		clock-names = "baud", "bus";
++		status = "disabled";
++	};
++
++	mmc@11230000 {
++		compatible = "mediatek,mt6990-mmc";
++		reg = <0x0 0x11230000 0x0 0x1000>,
++		      <0x0 0x11f00000 0x0 0x1000>;
++		interrupts = <0 260 4>;
++		clocks = <&pericfg_ao 0x18>, <&pericfg_ao 0x19>,
++			 <&pericfg_ao 0x1b>, <&pericfg_ao 0x1a>;
++		clock-names = "source", "hclk", "axi_clk", "ahb_clk";
++		power-domains = <&scpsys 0x06>;
++		bus-width = <8>;
++		non-removable;
++		status = "disabled";
++	};
++
++	pcie@11280000 {
++		compatible = "mediatek,mt6990-pcie";
++		reg = <0x0 0x11280000 0x0 0x2000>;
++		reg-names = "pcie-mac";
++		linux,pci-domain = <0>;
++		#address-cells = <3>;
++		#size-cells = <2>;
++		interrupts = <0 288 4>;
++		clocks = <&pericfg_ao 0x45>, <&vlpcfg 0>, <&vlpcfg 1>,
++			 <&vlpcfg 2>, <&vlpcfg 3>, <&vlpcfg 4>, <&vlpcfg 5>,
++			 <&vlpcfg 6>, <&vlp_cksys 0x10>;
++		power-domains = <&scpsys 0x0f>;
++		bus-range = <0x0 0xff>;
++		ranges = <0x82000000 0x0 0x30000000 0x0 0x30000000 0x0 0x10000000>;
++		phys = <&pcie_phy0>;
++		phy-names = "pcie-phy";
++		#interrupt-cells = <1>;
++		interrupt-map-mask = <0 0 0 7>;
++		interrupt-map = <0 0 0 1 &pcie0_intc 0>,
++				<0 0 0 2 &pcie0_intc 1>,
++				<0 0 0 3 &pcie0_intc 2>,
++				<0 0 0 4 &pcie0_intc 3>;
++		status = "disabled";
++
++		pcie0_intc: interrupt-controller {
++			interrupt-controller;
++			#address-cells = <0>;
++			#interrupt-cells = <1>;
++		};
++	};
++
++	pcie@11288000 {
++		compatible = "mediatek,mt6990-pcie";
++		reg = <0x0 0x11288000 0x0 0x2000>;
++		reg-names = "pcie-mac";
++		linux,pci-domain = <1>;
++		#address-cells = <3>;
++		#size-cells = <2>;
++		interrupts = <0 278 4>;
++		clocks = <&pericfg_ao 0x2f>, <&pericfg_ao 0x30>,
++			 <&pericfg_ao 0x31>, <&pericfg_ao 0x32>,
++			 <&pericfg_ao 0x33>, <&topckgen 0x18>,
++			 <&topckgen 0x3d>;
++		power-domains = <&scpsys 0x0d>;
++		bus-range = <0x0 0xff>;
++		ranges = <0x82000000 0x0 0x40000000 0x0 0x40000000 0x0 0x04000000>;
++		phys = <&pcie_phy1>;
++		phy-names = "pcie-phy";
++		#interrupt-cells = <1>;
++		interrupt-map-mask = <0 0 0 7>;
++		interrupt-map = <0 0 0 1 &pcie1_intc 0>,
++				<0 0 0 2 &pcie1_intc 1>,
++				<0 0 0 3 &pcie1_intc 2>,
++				<0 0 0 4 &pcie1_intc 3>;
++		status = "disabled";
++
++		pcie1_intc: interrupt-controller {
++			interrupt-controller;
++			#address-cells = <0>;
++			#interrupt-cells = <1>;
++		};
++	};
++
++	pcie@11290000 {
++		compatible = "mediatek,mt6990-pcie";
++		reg = <0x0 0x11290000 0x0 0x2000>;
++		reg-names = "pcie-mac";
++		linux,pci-domain = <2>;
++		#address-cells = <3>;
++		#size-cells = <2>;
++		interrupts = <0 279 4>;
++		clocks = <&pericfg_ao 0x34>, <&pericfg_ao 0x35>,
++			 <&pericfg_ao 0x36>, <&pericfg_ao 0x37>,
++			 <&pericfg_ao 0x38>, <&topckgen 0x18>,
++			 <&topckgen 0x3d>;
++		power-domains = <&scpsys 0x0e>;
++		bus-range = <0x0 0xff>;
++		ranges = <0x82000000 0x0 0x44000000 0x0 0x44000000 0x0 0x04000000>;
++		phys = <&pcie_phy2>;
++		phy-names = "pcie-phy";
++		#interrupt-cells = <1>;
++		interrupt-map-mask = <0 0 0 7>;
++		interrupt-map = <0 0 0 1 &pcie2_intc 0>,
++				<0 0 0 2 &pcie2_intc 1>,
++				<0 0 0 3 &pcie2_intc 2>,
++				<0 0 0 4 &pcie2_intc 3>;
++		status = "disabled";
++
++		pcie2_intc: interrupt-controller {
++			interrupt-controller;
++			#address-cells = <0>;
++			#interrupt-cells = <1>;
++		};
++	};
++
++	pcie_phy0: phy@11310000 {
++		compatible = "mediatek,mt6980-pcie-phy";
++		reg = <0x0 0x11310000 0x0 0x10000>;
++		#phy-cells = <0>;
++		phy-id = <0>;
++		power-domains = <&scpsys 0x0f>;
++		status = "disabled";
++	};
++
++	pcie_phy1: phy@11e00000 {
++		compatible = "mediatek,mt6980-pcie-phy";
++		reg = <0x0 0x11e00000 0x0 0x10000>;
++		#phy-cells = <0>;
++		phy-id = <1>;
++		power-domains = <&scpsys 0x0d>;
++		status = "disabled";
++	};
++
++	pcie_phy2: phy@11e20000 {
++		compatible = "mediatek,mt6980-pcie-phy";
++		reg = <0x0 0x11e20000 0x0 0x10000>;
++		#phy-cells = <0>;
++		phy-id = <2>;
++		power-domains = <&scpsys 0x0e>;
++		status = "disabled";
++	};
++
++	netsys@15100000 {
++		compatible = "mediatek,mt6990-netsys";
++		reg = <0x0 0x15100000 0x0 0x20000>;
++		clocks = <&topckgen 0x2a>, <&topckgen 0x29>,
++			 <&topckgen 0x2d>, <&topckgen 0x2c>,
++			 <&topckgen 0x2b>;
++		clock-names = "net_sel", "net_500_sel", "med_mcu_sel",
++			      "wed_mcu_sel", "net_2x_sel";
++		power-domains = <&scpsys 0x09>;
++		#address-cells = <2>;
++		#size-cells = <2>;
++		ranges;
++		status = "disabled";
++
++		ethernet@15100000 {
++			compatible = "mediatek,mt6990-eth", "syscon";
++			reg = <0x0 0x15100000 0x0 0x30000>;
++			clocks = <&topckgen 0x2e>, <&topckgen 0x2f>,
++				 <&topckgen 0x30>, <&topckgen 0x31>,
++				 <&topckgen 0x32>, <&topckgen 0x33>;
++			clock-names = "sgmii_0_sel", "sgmii_sbus_0_sel",
++				      "sgmii_1_sel", "sgmii_sbus_1_sel",
++				      "usxgmii_sbus_0_sel", "usxgmii_sbus_1_sel";
++			mediatek,ethsys = <&ethsys>;
++			#address-cells = <1>;
++			#size-cells = <0>;
++			status = "disabled";
++
++			mac@0 {
++				compatible = "mediatek,eth-mac";
++				reg = <0>;
++				phy-mode = "2500base-x";
++				status = "disabled";
++			};
++
++			mac@1 {
++				compatible = "mediatek,eth-mac";
++				reg = <1>;
++				phy-mode = "2500base-x";
++				status = "disabled";
++			};
++		};
++	};
++
++	ethsys: ethsys@15000000 {
++		compatible = "mediatek,leopard-ethsys", "syscon", "simple-mfd";
++		reg = <0x0 0x15000000 0x0 0x1000>;
++		#clock-cells = <1>;
++		#reset-cells = <1>;
++		status = "disabled";
++
++		reset-controller {
++			compatible = "ti,syscon-reset";
++			#reset-cells = <1>;
++			ti,reset-bits = <0x34 0x04 0x34 0x04 0x34 0x04 0x28>;
++			status = "disabled";
++		};
++	};
++
++	sgmiisys0: sgmiisys@11304000 {
++		compatible = "mediatek,colgin-sgmiisys_0", "syscon";
++		reg = <0x0 0x11304000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmiisys1: sgmiisys@11305000 {
++		compatible = "mediatek,colgin-sgmiisys_1", "syscon";
++		reg = <0x0 0x11305000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmiiphy0: sgmiiphy@11E50000 {
++		compatible = "mediatek,colgin-sgmiisys_phy_0", "syscon";
++		reg = <0x0 0x11e50000 0x0 0x10000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmiiphy1: sgmiiphy@11E60000 {
++		compatible = "mediatek,colgin-sgmiisys_phy_1", "syscon";
++		reg = <0x0 0x11e60000 0x0 0x10000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmiiuxphy0: sgmiiphy@11306000 {
++		compatible = "mediatek,colgin-sgmiisys_uxphy_0", "syscon";
++		reg = <0x0 0x11306000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmiiuxphy1: sgmiiphy@11307000 {
++		compatible = "mediatek,colgin-sgmiisys_uxphy_1", "syscon";
++		reg = <0x0 0x11307000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmii_pll: sgmiipll@10014000 {
++		compatible = "mediatek,colgin-sgmiisys_pll", "syscon";
++		reg = <0x0 0x10014000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++};
+diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts
+new file mode 100644
+index 000000000..231cb6921
+--- /dev/null
++++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts
+@@ -0,0 +1,15 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/dts-v1/;
++
++/include/ "mt6990.dtsi"
++/include/ "mt6990-observed-peripherals.dtsi"
++
++/*
++ * Partial, non-bootable SBAT6D research tree. The board compatible string is
++ * recorded from the B-unit boot_b FDT; it is not a claim that this product is
++ * a MediaTek EVB. No memory map or peripheral wiring is enabled here.
++ */
++/ {
++	model = "SoftBank Air Terminal 6 (SBA6D, research DTS)";
++	compatible = "mediatek,evb6990_cpe_mt7990_emmc", "mediatek,mt6990";
++};
+diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi
+new file mode 100644
+index 000000000..861fcf15a
+--- /dev/null
++++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi
+@@ -0,0 +1,75 @@
++// SPDX-License-Identifier: GPL-2.0-only
++
++
++/*
++ * Independently authored MT6990 SoC facts taken from the B-unit boot_b FDT.
++ * Only the CPU interface, PSCI, GICv3 and architected timer are represented.
++ * Memory is deliberately absent: the preserved FDT contains overlapping
++ * memory nodes and does not establish the Linux-usable physical map.
++ * Peripheral providers and dependencies are not yet modeled here.
++ */
++
++/ {
++	#address-cells = <2>;
++	#size-cells = <2>;
++	interrupt-parent = <&gic>;
++
++	psci {
++		compatible = "arm,psci-1.0";
++		method = "smc";
++	};
++
++	cpus {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		cpu@0 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x000>;
++			enable-method = "psci";
++		};
++
++		cpu@100 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x100>;
++			enable-method = "psci";
++		};
++
++		cpu@200 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x200>;
++			enable-method = "psci";
++		};
++
++		cpu@300 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x300>;
++			enable-method = "psci";
++		};
++	};
++
++	gic: interrupt-controller@c000000 {
++		compatible = "arm,gic-v3";
++		#interrupt-cells = <3>;
++		#address-cells = <2>;
++		#size-cells = <2>;
++		#redistributor-regions = <1>;
++		interrupt-controller;
++		reg = <0x0 0x0c000000 0x0 0x00040000>,
++		      <0x0 0x0c040000 0x0 0x00200000>;
++		/* GIC PPI type 1, maintenance IRQ 9, level-high flags 4. */
++		interrupts = <1 9 4>;
++	};
++
++	timer {
++		compatible = "arm,armv8-timer";
++		/* GIC PPI type 1, level-high flags 4; order follows arch-timer binding. */
++		interrupts = <1 13 4>, <1 14 4>, <1 11 4>, <1 10 4>;
++		/* Recorded in the B-unit FDT; firmware CNTFRQ behavior is untested. */
++		clock-frequency = <13000000>;
++	};
++};
 diff --git a/target/linux/mediatek/image/mt6990.mk b/target/linux/mediatek/image/mt6990.mk
 new file mode 100644
 index 000000000..f419deee4
@@ -497,117 +913,19 @@ index 000000000..2fb68c0d0
 +@@ -1412,0 +1415,2 @@ struct mtk_eth {
 ++	spinlock_t			reset_queue_lock;
 ++	bool				reset_queue_stopping;
-diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi
-new file mode 100644
---- /dev/null
-+++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi
-@@ -0,0 +1,75 @@
-+// SPDX-License-Identifier: GPL-2.0-only
-+
-+
-+/*
-+ * Independently authored MT6990 SoC facts taken from the B-unit boot_b FDT.
-+ * Only the CPU interface, PSCI, GICv3 and architected timer are represented.
-+ * Memory is deliberately absent: the preserved FDT contains overlapping
-+ * memory nodes and does not establish the Linux-usable physical map.
-+ * Peripheral providers and dependencies are not yet modeled here.
-+ */
-+
-+/ {
-+	#address-cells = <2>;
-+	#size-cells = <2>;
-+	interrupt-parent = <&gic>;
-+
-+	psci {
-+		compatible = "arm,psci-1.0";
-+		method = "smc";
-+	};
-+
-+	cpus {
-+		#address-cells = <1>;
-+		#size-cells = <0>;
-+
-+		cpu@0 {
-+			device_type = "cpu";
-+			compatible = "arm,cortex-a55";
-+			reg = <0x000>;
-+			enable-method = "psci";
-+		};
-+
-+		cpu@100 {
-+			device_type = "cpu";
-+			compatible = "arm,cortex-a55";
-+			reg = <0x100>;
-+			enable-method = "psci";
-+		};
-+
-+		cpu@200 {
-+			device_type = "cpu";
-+			compatible = "arm,cortex-a55";
-+			reg = <0x200>;
-+			enable-method = "psci";
-+		};
-+
-+		cpu@300 {
-+			device_type = "cpu";
-+			compatible = "arm,cortex-a55";
-+			reg = <0x300>;
-+			enable-method = "psci";
-+		};
-+	};
-+
-+	gic: interrupt-controller@c000000 {
-+		compatible = "arm,gic-v3";
-+		#interrupt-cells = <3>;
-+		#address-cells = <2>;
-+		#size-cells = <2>;
-+		#redistributor-regions = <1>;
-+		interrupt-controller;
-+		reg = <0x0 0x0c000000 0x0 0x00040000>,
-+		      <0x0 0x0c040000 0x0 0x00200000>;
-+		/* GIC PPI type 1, maintenance IRQ 9, level-high flags 4. */
-+		interrupts = <1 9 4>;
-+	};
-+
-+	timer {
-+		compatible = "arm,armv8-timer";
-+		/* GIC PPI type 1, level-high flags 4; order follows arch-timer binding. */
-+		interrupts = <1 13 4>, <1 14 4>, <1 11 4>, <1 10 4>;
-+		/* Recorded in the B-unit FDT; firmware CNTFRQ behavior is untested. */
-+		clock-frequency = <13000000>;
-+	};
-+};
-diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts
-new file mode 100644
---- /dev/null
-+++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts
-@@ -0,0 +1,14 @@
-+// SPDX-License-Identifier: GPL-2.0-only
-+/dts-v1/;
-+
-+/include/ "mt6990.dtsi"
-+
-+/*
-+ * Partial, non-bootable SBAT6D research tree. The board compatible string is
-+ * recorded from the B-unit boot_b FDT; it is not a claim that this product is
-+ * a MediaTek EVB. No memory map or peripheral wiring is enabled here.
-+ */
-+/ {
-+	model = "SoftBank Air Terminal 6 (SBA6D, research DTS)";
-+	compatible = "mediatek,evb6990_cpe_mt7990_emmc", "mediatek,mt6990";
-+};
 diff --git a/target/linux/mediatek/patches-6.18/980-mt6990-incomplete-dtb-registration.patch b/target/linux/mediatek/patches-6.18/980-mt6990-incomplete-dtb-registration.patch
 new file mode 100644
+index 000000000..37e424106
 --- /dev/null
 +++ b/target/linux/mediatek/patches-6.18/980-mt6990-incomplete-dtb-registration.patch
 @@ -0,0 +1,29 @@
 +From: Karin-Laboratory contributors
 +Subject: [RFC] arm64: dts: mediatek: add partial MT6990 research tree
 +
-+Compile the independently transcribed CPU, PSCI, GICv3 and architected timer
-+facts as a non-bootable research DTB, and document the exact compatible strings
-+reported by the B-unit boot_b FDT. This does not add memory or enable board
-+peripherals, nor does it make an installable SBAT6D image.
++Compile independently transcribed CPU, PSCI, GICv3, architected timer and
++disabled peripheral observations as a non-bootable research DTB. Document the
++root compatible strings reported by the B-unit boot_b FDT. This does not select
++a usable RAM map, enable peripheral nodes, or create an installable image.
 +
 +diff --git a/arch/arm64/boot/dts/mediatek/Makefile b/arch/arm64/boot/dts/mediatek/Makefile
 +--- a/arch/arm64/boot/dts/mediatek/Makefile

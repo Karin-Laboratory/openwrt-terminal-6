@@ -114,20 +114,33 @@ jobs:
           dt-doc-validate "$binding"
           make -C "$tree" dt_binding_check \
             DT_SCHEMA_FILES=Documentation/devicetree/bindings/arm/mediatek.yaml
+          make -C "$tree" dt_binding_check \
+            DT_SCHEMA_FILES=Documentation/devicetree/bindings/serial/mediatek,uart.yaml
           make -C "$tree" CHECK_DTBS=y \
             DT_SCHEMA_FILES=Documentation/devicetree/bindings/arm/mediatek.yaml \
             ARCH=arm64 HOSTCC=/usr/bin/gcc \
             mediatek/mt6990-sbat6d-incomplete.dtb
-          dt-validate -l mediatek.yaml \
-            -u "$tree/Documentation/devicetree/bindings" \
+          dt-validate -u "$tree/Documentation/devicetree/bindings" \
             -s "$tree/Documentation/devicetree/bindings/processed-schema.json" "$dtb"
           "$tree/scripts/dtc/dtc" -I dtb -O dts "$dtb" -o /tmp/mt6990-sbat6d-incomplete.dts
           grep -Fq 'compatible = "mediatek,evb6990_cpe_mt7990_emmc", "mediatek,mt6990";' /tmp/mt6990-sbat6d-incomplete.dts
           grep -Fq 'model = "SoftBank Air Terminal 6 (SBA6D, research DTS)";' /tmp/mt6990-sbat6d-incomplete.dts
           grep -Fq 'compatible = "arm,cortex-a55";' /tmp/mt6990-sbat6d-incomplete.dts
           grep -Fq 'compatible = "arm,gic-v3";' /tmp/mt6990-sbat6d-incomplete.dts
+          for observed_node in 'serial@11002000' 'mmc@11230000' \
+            'pcie@11280000' 'pcie@11288000' 'pcie@11290000' \
+            'ethernet@15100000' 'mac@0' 'mac@1' 'sgmiisys@11305000'; do
+            grep -Fq "$observed_node {" /tmp/mt6990-sbat6d-incomplete.dts
+          done
+          disabled_count="$(grep -c 'status = \"disabled\";' /tmp/mt6990-sbat6d-incomplete.dts)"
+          test "$disabled_count" -ge 20
+          if grep -Eq '^[[:space:]]*memory(@[^[:space:]]*)?[[:space:]]*\{' /tmp/mt6990-sbat6d-incomplete.dts; then
+            echo 'The partial DTS must not choose either conflicting RAM range.' >&2
+            exit 1
+          fi
           sha256sum "$dtb" | tee -a "$GITHUB_STEP_SUMMARY"
-          echo 'Linux Kbuild and targeted schema validation passed for a partial, non-bootable research DTB. This is not a complete SBAT6D board DTB.' >> "$GITHUB_STEP_SUMMARY"
+          echo "Disabled observed peripheral/provider nodes: $disabled_count" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Linux Kbuild and targeted schema validation passed for a partial, non-bootable research DTB. This does not validate missing MT6990 peripheral bindings or establish a complete SBAT6D board DTB.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build package and rootfs staging
         working-directory: openwrt
