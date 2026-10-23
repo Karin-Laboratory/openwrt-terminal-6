@@ -8,6 +8,8 @@ from check_sbat6d_dts_evidence import REQUIRED, audit
 def render(document):
     result = audit(document)
     checks = document.get("checks", {})
+    if not isinstance(checks, dict):
+        checks = {}
     lines = ["# SBAT6D Device Tree evidence checklist", "",
              "Research only. No official DTS, firmware or write instructions.", "",
              "| Dependency | Evidence status | Next required proof |",
