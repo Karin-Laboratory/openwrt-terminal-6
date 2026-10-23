@@ -59,6 +59,22 @@ python3 tools/verify_public_rfc.py ../openwrt-terminal-6-source-rfc.tar.gz
 
 The verifier checks the exact member list, refuses links and unexpected entries, checks the non-flashable manifest flag, and verifies every file's byte count and digest. A successful check does not prove authenticity independently of the GitHub workflow or authorize device flashing.
 
+## Safer RFC staging for a Linux source checkout
+
+A [source-only staging helper](../scripts/apply-public-rfc-series.sh) can check the exact Linux v6.18 `mtk_eth_soc.c/.h` blobs and test the RFC1→RFC2 application sequence without modifying the supplied kernel tree:
+
+```sh
+bash scripts/apply-public-rfc-series.sh /path/to/linux-v6.18
+```
+
+To apply only the public RFC source changes after a successful preflight:
+
+```sh
+bash scripts/apply-public-rfc-series.sh --apply /path/to/linux-v6.18
+```
+
+The helper refuses unknown input blobs and preexisting changes to the target files. Its `--apply` mode edits **kernel source**, not device storage, and produces no installable images. The helper is designed for the pristine upstream v6.18 files, not vendor derivatives or an arbitrary OpenWrt kernel tree.
+
 ## Verification boundaries
 
 | Capability | Public evidence | Status |
