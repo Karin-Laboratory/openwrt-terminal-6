@@ -68,11 +68,13 @@ jobs:
           test -s arch/arm64/boot/Image
           test -s vmlinux
           test -s drivers/net/ethernet/mediatek/mtk_eth_soc.o
-          aarch64-linux-gnu-nm vmlinux | grep -E ' [tT] mtk_probe([.]|$)' || {
+          aarch64-linux-gnu-nm vmlinux > /tmp/vmlinux-symbols.txt
+          grep -E ' [tT] mtk_probe([.]|$)' /tmp/vmlinux-symbols.txt || {
             echo 'ERROR: MediaTek probe not linked into vmlinux' >&2
             exit 1
           }
           sha256sum arch/arm64/boot/Image | tee /tmp/image.sha256
+          sha256sum drivers/net/ethernet/mediatek/mtk_eth_soc.o | tee /tmp/mediatek-object.sha256
           {
             echo '### ARM64 upstream kernel build with RFC1 and RFC2'
             echo 'MediaTek Ethernet built into vmlinux; this is NOT SBAT6D firmware.'
