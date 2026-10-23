@@ -6,7 +6,7 @@ Updated: 2026-10-23
 
 `integration/mt6990-target.patch` adds `mediatek/mt6990` to the pinned OpenWrt MediaTek target. It selects the generic AArch64 userspace/toolchain, Linux `Image`, `CONFIG_ARCH_MEDIATEK`, `CONFIG_DTC`, and `CONFIG_NET_MEDIATEK_SOC`. The MT7531 observation is represented by the upstream MT7530 DSA family and MediaTek tagger configuration for compile coverage; it does not prove SBAT6D switch wiring or runtime operation. The MediaTek Ethernet cleanup/requeue RFC patches are added after OpenWrt's existing 6.18 patch series.
 
-The subtarget intentionally has no CPU microarchitecture selection, board profile, device-specific package set, DTS, image recipe, partition layout, signing or installation output. Its `image/mt6990.mk` is empty by design so that Kconfig does not advertise an unsupported device. This is a source-build target for generic kernel and package/rootfs work, not a bootable MT6990 port.
+The subtarget intentionally has no CPU microarchitecture selection, board profile, device-specific package set, DTS, image recipe, partition layout, signing or installation output. Its `image/mt6990.mk` is empty by design so that Kconfig does not advertise an unsupported device. The generic compile profile explicitly disables unverified SoC-specific clock, pinctrl, external-interrupt and watchdog drivers; CI rejects accidental selection of these families. This is a source-build target for generic kernel and package/rootfs work, not a bootable MT6990 port.
 
 ## Reproduction
 
@@ -56,13 +56,13 @@ PR #1 adds `board/sbat6d-incomplete.dts`, which contains only the reported MT699
 Using the pinned OpenWrt source above and the experimental `mt6990` subtarget:
 
 - `make -j2 toolchain/install V=s`: PASS; AArch64 generic musl toolchain installed.
-- Linux `target/linux/compile`: PASS with OpenWrt kernel 6.18.55 after resolving new Kconfig defaults with `olddefconfig`.
-- `.config` confirms `CONFIG_ARCH_MEDIATEK=y`, `CONFIG_EINT_MTK=y`, `CONFIG_NET_MEDIATEK_SOC=y`, `CONFIG_NET_DSA=y`, `CONFIG_NET_DSA_MT7530=y`, `CONFIG_NET_DSA_MT7530_MDIO=y`, and `CONFIG_NET_DSA_TAG_MTK=y`; unneeded Airoha pin control is explicitly disabled.
-- ARM64 `Image` SHA-256: `88ee4f9d4478b1a55cfe50c30c4a9cfc886b9d8543e50efd8783a0cc0a157a9b`.
-- `drivers/net/ethernet/mediatek/mtk_eth_soc.o` SHA-256: `699cc6dae14f72e6eb07009c6f20f606f5c4a91e7689cf39a52453fec7f610c4`.
+- Linux `target/linux/compile`: PASS with OpenWrt kernel 6.18.55 after resolving new Kconfig symbols through `make kernel_oldconfig`; unverified SoC-specific options were answered `n` and retained as explicit disables.
+- `.config` confirms `CONFIG_ARCH_MEDIATEK=y`, `CONFIG_NET_MEDIATEK_SOC=y`, `CONFIG_NET_DSA=y`, `CONFIG_NET_DSA_MT7530=y`, `CONFIG_NET_DSA_MT7530_MDIO=y`, and `CONFIG_NET_DSA_TAG_MTK=y`. SoC-specific clock, pinctrl, external-interrupt and watchdog drivers remain disabled because MT6990 implementations were not verified.
+- ARM64 `Image` SHA-256: `d47b3fb6e2b46f3d7a945aa138798cd186c5eb183236ec775f3c08b079492f83`.
+- `drivers/net/ethernet/mediatek/mtk_eth_soc.o` SHA-256: `41318e85d298a924698342a746158a35a5b7a89244c8bae61cba3ebe377a47c8`.
 - `make -j2 package/compile V=s`: PASS (77 package index entries produced).
 - `make -j2 package/install V=s`: PASS.
-- `make -j2 target/install V=s`: PASS; generic rootfs staging produced a 2.7 MiB squashfs and a 3.4 MiB tarball. The squashfs SHA-256 is `76d7e79f2bcc17356795820dc04ff477aae3e218cc922134212421d3e2ec9ef8`; the tarball SHA-256 is `f9e9ef2dd9351d117809509123b9fc97933ae4b847318d12cb1740da62830315`.
+- `make -j2 target/install V=s`: PASS; generic rootfs staging produced a 2,759,404-byte squashfs at `build_dir/target-aarch64_generic_musl/linux-mediatek_mt6990/root.squashfs` and a 3,468,211-byte tarball at `bin/targets/mediatek/mt6990/openwrt-mediatek-mt6990-default-rootfs.tar.gz`. Their SHA-256 values are `cc1f1b60776991d448c406905924603c19d7b2933b31479afcfdab3a69d51f29` and `7e3ec8ea1292d9c4c10303b2532f5555d813f34b11dacb3e8fba0080e8d003a2` respectively.
 - No SBAT6D device image, boot image, or flashable artifact was generated; `image/mt6990.mk` defines no device profiles.
 
 This proves a generic ARM64 Linux and Ethernet-driver compile against the selected OpenWrt source. It does not prove MT6990 boot support, DTS validity, switch topology, or device operation. The generated kernel is experimental and must not be installed on SBAT6D.
