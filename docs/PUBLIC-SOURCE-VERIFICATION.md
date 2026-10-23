@@ -44,6 +44,21 @@ git diff --check
 
 For the precise pinned CI host, configuration and recorded object digests, consult [the RFC2 report](RFC-2-RESET-REQUEUE.ja.md). Object hashes may change with compiler or build environment. Verify compiler success and source integrity first; do not treat differing object hashes from different toolchains as proof of failure.
 
+## Source-only archive distribution
+
+The [Public RFC source bundle workflow](../.github/workflows/public-rfc-bundle.yml) packages the two RFC patches, public instructions and Python source/checking tools. A manifest in the archive records exact sizes and SHA-256 values. The archive contains no firmware.
+
+On a Linux machine, after downloading the Actions artifact, compare `SHA256SUMS` with the downloaded archive:
+
+```sh
+sha256sum -c SHA256SUMS
+tar -xzf openwrt-terminal-6-source-rfc.tar.gz
+cd openwrt-terminal-6-source-rfc
+python3 tools/verify_public_rfc.py ../openwrt-terminal-6-source-rfc.tar.gz
+```
+
+The verifier checks the exact member list, refuses links and unexpected entries, checks the non-flashable manifest flag, and verifies every file's byte count and digest. A successful check does not prove authenticity independently of the GitHub workflow or authorize device flashing.
+
 ## Verification boundaries
 
 | Capability | Public evidence | Status |
