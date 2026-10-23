@@ -6,6 +6,7 @@ on:
       - 'patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch'
       - 'patches/rfc/0002-mediatek-serialize-reset-requeue.patch'
       - '.github/workflows/rfc-mediatek-patch.yml'
+      - 'scripts/apply-public-rfc-series.sh'
   pull_request:
     paths:
       - 'patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch'
@@ -44,6 +45,7 @@ jobs:
           git -C upstream init -q
           git -C upstream add drivers/net/ethernet/mediatek/mtk_eth_soc.c drivers/net/ethernet/mediatek/mtk_eth_soc.h
           git -C upstream -c user.name='RFC check' -c user.email='noreply@example.invalid' commit -qm 'Pinned Linux v6.18 files'
+          bash scripts/apply-public-rfc-series.sh upstream
           git -C upstream apply --check "$GITHUB_WORKSPACE/patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch"
           git -C upstream apply "$GITHUB_WORKSPACE/patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch"
           git -C upstream apply --check "$GITHUB_WORKSPACE/patches/rfc/0002-mediatek-serialize-reset-requeue.patch"
