@@ -35,16 +35,12 @@ git -C "$TEMP" apply --check "$P2"
 git -C "$TEMP" apply "$P2"
 echo "PASS: RFC1 then RFC2 apply to pinned upstream files"
 if [[ "$MODE" == apply ]]; then
-  git -C "$SOURCE" apply --check "$P1"
-  git -C "$SOURCE" apply "$P1"
-  if ! git -C "$SOURCE" apply --check "$P2"; then
-    echo "FAIL: RFC2 apply unexpectedly failed; restoring source files" >&2
-    git -C "$SOURCE" restore -- "$C" "$H"
-    exit 6
-  fi
-  git -C "$SOURCE" apply "$P2"
+  # Prepare final output entirely off-tree. Copy only after both patches pass.
+  # This avoids leaving half-applied RFC1 changes if RFC2 fails.
+  cp "$TEMP/$C" "$SOURCE/$C"
+  cp "$TEMP/$H" "$SOURCE/$H"
   git -C "$SOURCE" diff --check
-  echo "PASS: source-only RFC series applied to checked-out kernel; no firmware produced"
+  echo "PASS: verified RFC series copied into source tree; no firmware produced"
 else
   echo "CHECK ONLY: no source files were modified; use --apply for explicit source changes"
 fi
