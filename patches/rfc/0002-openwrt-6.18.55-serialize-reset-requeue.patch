@@ -3,27 +3,22 @@ Subject: [RFC PATCH] net: mediatek: rebase reset-work serialization for OpenWrt 
 SPDX-License-Identifier: GPL-2.0-only
 
 Rebased RFC 0002 for the exact OpenWrt prepared kernel source at
-openwrt/openwrt a25fb079b1463cd5d7d69c6d9a1c28d873291ebb. Includes
-the OpenWrt mtk_mac_config reset-work producer. Apply after RFC 0001 and
-only after the OpenWrt source fingerprint gate passes.
+openwrt/openwrt a25fb079b1463cd5d7d69c6d9a1c28d873291ebb. Includes the
+OpenWrt mtk_mac_config reset-work producer and a forward declaration for
+the helper used before its definition. Apply after RFC 0001 and only after
+the OpenWrt source fingerprint gate passes.
 
 diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
-index c8196cd..1164e5c 100644
+index c8196cd75a2735380d8cee8f31bf475534621fa2..98594f7eb67030ecd20aebd55e26ae7621b8f7e9 100644
 --- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
 +++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
-@@ -715,7 +715,7 @@ static void mtk_mac_config(struct phylink_config *config, unsigned int mode,
- 		     mac->interface == PHY_INTERFACE_MODE_NA) &&
- 		    !mtk_check_gmac23_idle(mac) &&
- 		    !test_bit(MTK_RESETTING, &eth->state))
+@@ -40,0 +41,2 @@
++static void mtk_queue_reset_work(struct mtk_eth *eth);
++
+@@ -718 +720 @@ static void mtk_mac_config(struct phylink_config *config, unsigned int mode,
 -			schedule_work(&eth->pending_work);
 +			mtk_queue_reset_work(eth);
- 	}
- 
- 	mac->interface = state->interface;
-@@ -3614,21 +3614,52 @@ static bool mtk_hw_reset_check(struct mtk_eth *eth)
- 	       (val & MTK_FE_INT_TSO_ALIGN) || (val & MTK_FE_INT_TSO_ILLEGAL);
- }
- 
+@@ -3616,0 +3619,28 @@ static bool mtk_hw_reset_check(struct mtk_eth *eth)
 +/* Caller holds reset_queue_lock. */
 +static void __mtk_queue_reset_work(struct mtk_eth *eth)
 +{
@@ -52,12 +47,9 @@ index c8196cd..1164e5c 100644
 +	cancel_delayed_work_sync(&eth->reset.monitor_work);
 +}
 +
- static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
- {
- 	struct mtk_mac *mac = netdev_priv(dev);
- 	struct mtk_eth *eth = mac->hw;
+@@ -3620,0 +3651 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
 +	unsigned long flags;
- 
+@@ -3622,4 +3653,4 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
 -	if (test_bit(MTK_RESETTING, &eth->state))
 -		return;
 -
@@ -66,27 +58,19 @@ index c8196cd..1164e5c 100644
 +	if (eth->reset_queue_stopping || test_bit(MTK_RESETTING, &eth->state) ||
 +	    !mtk_hw_reset_check(eth)) {
 +		spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
- 		return;
+@@ -3626,0 +3658 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
 +	}
- 
- 	eth->netdev[mac->id]->stats.tx_errors++;
+@@ -3629 +3661,2 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
 -	netif_err(eth, tx_err, dev, "transmit timed out\n");
 +	__mtk_queue_reset_work(eth);
 +	spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
- 
+@@ -3631 +3664 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
 -	schedule_work(&eth->pending_work);
 +	netif_err(eth, tx_err, dev, "transmit timed out\n");
- }
- 
- static int mtk_get_irqs(struct platform_device *pdev, struct mtk_eth *eth)
-@@ -4484,11 +4515,19 @@ static void mtk_hw_reset_monitor_work(struct work_struct *work)
- 
- 	/* DMA stuck checks */
- 	if (mtk_hw_check_dma_hang(eth))
+@@ -4487 +4520 @@ static void mtk_hw_reset_monitor_work(struct work_struct *work)
 -		schedule_work(&eth->pending_work);
 +		mtk_queue_reset_work(eth);
- 
- out:
+@@ -4490,2 +4523,10 @@ out:
 -	schedule_delayed_work(&eth->reset.monitor_work,
 -			      MTK_DMA_MONITOR_TIMEOUT);
 +	/* Serialize monitor rearm with the remove and probe-unwind stop. */
@@ -99,58 +83,26 @@ index c8196cd..1164e5c 100644
 +					     MTK_DMA_MONITOR_TIMEOUT);
 +		spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
 +	}
- }
- 
- static int mtk_hw_init(struct mtk_eth *eth, bool reset)
-@@ -5622,6 +5661,7 @@ static int mtk_probe(struct platform_device *pdev)
- 	struct resource *res = NULL;
- 	struct device_node *mac_np;
- 	struct mtk_eth *eth;
+@@ -5624,0 +5666 @@ static int mtk_probe(struct platform_device *pdev)
 +	unsigned long registered_netdevs = 0;
- 	int err, i;
- 
- 	eth = devm_kzalloc(&pdev->dev, sizeof(*eth), GFP_KERNEL);
-@@ -5654,6 +5694,8 @@ static int mtk_probe(struct platform_device *pdev)
- 	spin_lock_init(&eth->tx_irq_lock);
- 	spin_lock_init(&eth->rx_irq_lock);
- 	spin_lock_init(&eth->dim_lock);
+@@ -5656,0 +5699,2 @@ static int mtk_probe(struct platform_device *pdev)
 +	spin_lock_init(&eth->reset_queue_lock);
 +	eth->reset_queue_stopping = false;
- 
- 	eth->rx_dim.mode = DIM_CQ_PERIOD_MODE_START_FROM_EQE;
- 	INIT_WORK(&eth->rx_dim.work, mtk_dim_rx);
-@@ -5875,11 +5917,13 @@ static int mtk_probe(struct platform_device *pdev)
- 		err = register_netdev(eth->netdev[i]);
- 		if (err) {
- 			dev_err(eth->dev, "error bringing up device\n");
+@@ -5878,2 +5922,3 @@ static int mtk_probe(struct platform_device *pdev)
 -			goto err_unreg_netdev;
 -		} else
 +			goto err_deinit_ppe;
 +		} else {
 +			set_bit(i, &registered_netdevs);
- 			netif_info(eth, probe, eth->netdev[i],
- 				   "mediatek frame engine at 0x%08lx, irq %d\n",
- 				   eth->netdev[i]->base_addr, eth->irq[MTK_FE_IRQ_SHARED]);
+@@ -5882,0 +5928 @@ static int mtk_probe(struct platform_device *pdev)
 +		}
- 	}
- 
- 	/* we run 2 devices on the same DMA ring so we need a dummy device
-@@ -5889,7 +5933,7 @@ static int mtk_probe(struct platform_device *pdev)
- 	if (!eth->dummy_dev) {
- 		err = -ENOMEM;
- 		dev_err(eth->dev, "failed to allocated dummy device\n");
+@@ -5892 +5938 @@ static int mtk_probe(struct platform_device *pdev)
 -		goto err_unreg_netdev;
 +		goto err_deinit_ppe;
- 	}
- 	eth->dummy_dev->threaded = 1;
- 	strcpy(eth->dummy_dev->name, "mtk_eth");
-@@ -5902,9 +5946,20 @@ static int mtk_probe(struct platform_device *pdev)
- 
- 	return 0;
- 
+@@ -5905,2 +5950,0 @@ static int mtk_probe(struct platform_device *pdev)
 -err_unreg_netdev:
 -	mtk_unreg_dev(eth);
- err_deinit_ppe:
+@@ -5907,0 +5952,13 @@ err_deinit_ppe:
 +	/* Stop producers before unregistering devices or freeing reset resources. */
 +	mtk_stop_reset_work(eth);
 +	for (i = 0; i < MTK_MAX_DEVS; i++) {
@@ -164,48 +116,21 @@ index c8196cd..1164e5c 100644
 +		if (test_bit(i, &registered_netdevs))
 +			unregister_netdev(eth->netdev[i]);
 +	}
- 	mtk_ppe_deinit(eth);
- 	mtk_mdio_cleanup(eth);
- err_free_dev:
-@@ -5925,6 +5980,9 @@ static void mtk_remove(struct platform_device *pdev)
- 	struct mtk_mac *mac;
- 	int i;
- 
+@@ -5927,0 +5985,3 @@ static void mtk_remove(struct platform_device *pdev)
 +	/* Latch producers off and drain work before touching devices or hardware. */
 +	mtk_stop_reset_work(eth);
 +
- 	/* stop all devices to make sure that dma is properly shut down */
- 	for (i = 0; i < MTK_MAX_DEVS; i++) {
- 		if (!eth->netdev[i])
-@@ -5934,9 +5992,6 @@ static void mtk_remove(struct platform_device *pdev)
- 		phylink_disconnect_phy(mac->phylink);
- 	}
- 
+@@ -5937,3 +5996,0 @@ static void mtk_remove(struct platform_device *pdev)
 -	cancel_work_sync(&eth->pending_work);
 -	cancel_delayed_work_sync(&eth->reset.monitor_work);
 -
- 	mtk_wed_exit();
- 	mtk_hw_deinit(eth);
- 
 diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.h b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
-index accf484..c58ba74 100644
+index accf4849979e4bf57ebefa9eb5199656fbee71b7..c58ba74bc000b508573148e00e6932302b1bbe72 100644
 --- a/drivers/net/ethernet/mediatek/mtk_eth_soc.h
 +++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
-@@ -1372,6 +1372,8 @@ struct mtk_soc_data {
-  * @clks:		clock array for all clocks required
-  * @mii_bus:		If there is a bus we need to create an instance for it
-  * @pending_work:	The workqueue used to reset the dma ring
+@@ -1374,0 +1375,2 @@ struct mtk_soc_data {
 + * @reset_queue_lock:	Serializes reset-work producers with teardown
 + * @reset_queue_stopping:	Prevents new reset-work scheduling during teardown
-  * @state:		Initialization and runtime state of the device
-  * @soc:		Holding specific data among various SoCs
-  */
-@@ -1410,6 +1412,8 @@ struct mtk_eth {
- 	struct mii_bus			*mii_bus;
- 	unsigned int			mdc_divider;
- 	struct work_struct		pending_work;
+@@ -1412,0 +1415,2 @@ struct mtk_eth {
 +	spinlock_t			reset_queue_lock;
 +	bool				reset_queue_stopping;
- 	unsigned long			state;
- 
- 	const struct mtk_soc_data	*soc;
