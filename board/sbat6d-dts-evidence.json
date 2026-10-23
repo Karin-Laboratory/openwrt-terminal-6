@@ -1,16 +1,16 @@
 {
   "schema": "sbat6d-dts-evidence-v1",
   "board": "SoftBank Air Terminal 6",
-  "status": "EVIDENCE_INCOMPLETE",
-  "notes": "Do not use this record as a Device Tree. Evidence must be independently reviewed and legally shareable.",
+  "status": "PARTIAL_DTS_IMPLEMENTED",
+  "notes": "Machine facts below were independently transcribed from a read-only B-unit boot_b FDT payload. See DT-HARDWARE-FACTS.md for provenance, limitations and omitted dependencies. This record is not a complete or bootable Device Tree.",
   "checks": {
     "board_identity": {
-      "status": "unknown",
-      "evidence": null
+      "status": "observed",
+      "evidence": "B-unit boot_b FDT reports model MediaTek evb6990_cpe_mt7990_emmc and compatibles mediatek,evb6990_cpe_mt7990_emmc / mediatek,mt6990; retail-board equivalence is not implied"
     },
     "runtime_fdt_provenance": {
-      "status": "unknown",
-      "evidence": null
+      "status": "verified_boot_b_payload",
+      "evidence": "Read-only B-unit boot_b FDT capture record; raw FDT and its unit-specific digest remain local"
     },
     "complete_node_inventory": {
       "status": "unknown",
@@ -37,8 +37,12 @@
       "evidence": null
     },
     "kernel_binding_validation": {
-      "status": "unknown",
-      "evidence": null
+      "status": "targeted_schema_pass",
+      "evidence": "Linux 6.18.55 dt_binding_check and dt-doc-validate passed for mediatek.yaml; isolated dt-validate passed for the generated partial MT6990 DTB. Full MediaTek-wide checks include unrelated legacy warnings."
+    },
+    "cpu_psci_gic_timer": {
+      "status": "observed_and_partially_implemented",
+      "evidence": "Four Cortex-A55 CPU MPIDRs, PSCI SMC, GICv3 register ranges/maintenance PPI, and architected timer PPIs were transcribed to mt6990.dtsi; memory map and peripheral providers remain incomplete"
     }
   }
 }

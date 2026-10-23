@@ -1,0 +1,75 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
+
+/*
+ * Independently authored MT6990 SoC facts taken from the B-unit boot_b FDT.
+ * Only the CPU interface, PSCI, GICv3 and architected timer are represented.
+ * Memory is deliberately absent: the preserved FDT contains overlapping
+ * memory nodes and does not establish the Linux-usable physical map.
+ * Peripheral providers and dependencies are not yet modeled here.
+ */
+
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	interrupt-parent = <&gic>;
+
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x000>;
+			enable-method = "psci";
+		};
+
+		cpu@100 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x100>;
+			enable-method = "psci";
+		};
+
+		cpu@200 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x200>;
+			enable-method = "psci";
+		};
+
+		cpu@300 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x300>;
+			enable-method = "psci";
+		};
+	};
+
+	gic: interrupt-controller@c000000 {
+		compatible = "arm,gic-v3";
+		#interrupt-cells = <3>;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		#redistributor-regions = <1>;
+		interrupt-controller;
+		reg = <0x0 0x0c000000 0x0 0x00040000>,
+		      <0x0 0x0c040000 0x0 0x00200000>;
+		/* GIC PPI type 1, maintenance IRQ 9, level-high flags 4. */
+		interrupts = <1 9 4>;
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		/* GIC PPI type 1, level-high flags 4; order follows arch-timer binding. */
+		interrupts = <1 13 4>, <1 14 4>, <1 11 4>, <1 10 4>;
+		/* Recorded in the B-unit FDT; firmware CNTFRQ behavior is untested. */
+		clock-frequency = <13000000>;
+	};
+};

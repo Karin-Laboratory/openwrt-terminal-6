@@ -1,20 +1,18 @@
 # Compile-only Device Tree experiment
 
-`sbat6d-incomplete.dts` includes `mt6990-identity-only.dtsi`. The include
-contains only the observed SoC compatible; it intentionally has no memory,
-CPUs, interrupt controller, clocks, resets, power domains, storage or enabled
-peripherals. The pair compiles into a DTB with both standalone `dtc` and the
-Linux 6.18.55 Kbuild DTB target. It remains a non-bootable syntax checkpoint,
-not a formal or installable board DTS.
+`sbat6d-incomplete.dts` includes `mt6990.dtsi`. It records four Cortex-A55
+CPU nodes, PSCI, GICv3 and the architected timer from the read-only B-unit
+boot_b FDT. The ambiguous memory map and peripherals with unresolved MT6990
+provider dependencies are omitted. This is a non-bootable partial tree.
 
-The Linux 6.18.55 MediaTek root binding has no `mediatek,mt6990` root
-compatible entry, and no verified board-specific compatible is available in
-this repository. The Kbuild schema-check path was attempted with
-`CHECK_DTBS=y DT_SCHEMA_FILES=mediatek.yaml`; it stopped before validating the
-DTB because `dt-doc-validate` from the `dtschema` package is not installed in
-the local environment. Therefore `dtbs_check` is **not run / not passed**. A
-passing schema result cannot be claimed; do not add a guessed compatible or
-weaken the upstream binding to make the scaffold appear valid.
+`board/patches/0001-arm-dt-mediatek-add-mt6990-root-compatible.patch` adds the
+two root compatible strings observed in the B-unit FDT. Linux 6.18.55 Kbuild
+generated the DTB, `dt_binding_check` and `dt-doc-validate` passed for the
+modified MediaTek root binding, and the target DTB passed an isolated
+`dt-validate` run against the processed schema. A full MediaTek `dtbs_check`
+also traverses unrelated existing boards and reports pre-existing schema
+errors; those are not attributed to this target. The SoC peripheral providers
+and their bindings are still missing.
 
 The file `mt6990-air-terminal-6-sgmii1-experimental.dtso` is a **disabled Device Tree overlay source**, not a flashable or deployable board DTS. The two exact runtime node paths were noted in the Test25 plan following live FDT inspection. This work does **not** copy or redistribute a full OEM device tree.
 
@@ -28,7 +26,9 @@ bash scripts/check-dtso.sh
 
 Limitations: `dtc -@` can compile an overlay, but this does not prove a valid target path on arbitrary device revisions, correct overlay application, `dtbs_check`, driver binding, rootfs success, kernel safety or network operation. Overlay target paths are case-sensitive; the source currently records the developer-observed `/sgmiiphy@11E60000` and `/sgmiisys@11305000` strings pending an independent FDT recheck.
 
-**Next**: review current FDT and phandle dependencies off-device, build an independently authored full board DTS, verify bindings, review SDK-related PHY/PCS rights, compile kernel with no signed output, then perform separately approved live tests.
+**Next**: resolve usable RAM/reserved-memory, implement licensed MT6990 clock,
+reset, genpd and pinctrl support, then add dependent eMMC/PCIe/Ethernet nodes
+and verify every new node through `dtbs_check`. Do not use this tree to boot.
 
 ## Offline dependency inspection
 
