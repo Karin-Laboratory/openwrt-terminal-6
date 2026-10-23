@@ -17,6 +17,7 @@ FILES = (
     "docs/RFC-2-RESET-REQUEUE.ja.md",
     "docs/PUBLIC-SOURCE-VERIFICATION.md",
     "tools/check_mediatek_rfc_series.py",
+    "tools/verify_public_rfc.py",
 )
 BASE = "openwrt-terminal-6-source-rfc"
 
