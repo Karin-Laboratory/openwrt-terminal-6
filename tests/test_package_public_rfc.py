@@ -58,6 +58,29 @@ class BundleTests(unittest.TestCase):
             with self.assertRaises((ValueError, tarfile.TarError, EOFError, OSError, json.JSONDecodeError, zlib.error)):
                 verifier.verify(archive)
 
+    def test_rejects_valid_archive_with_changed_source(self):
+        with tempfile.TemporaryDirectory() as work:
+            root = Path(work) / "src"
+            root.mkdir()
+            for name in mod.FILES:
+                p = root / name
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text("original\n")
+            original = Path(work) / "original.tar.gz"
+            changed = Path(work) / "changed.tar.gz"
+            mod.pack(root, original)
+            with tarfile.open(original, "r:gz") as reader:
+                with tarfile.open(changed, "w:gz") as writer:
+                    for member in reader.getmembers():
+                        contents = reader.extractfile(member).read()
+                        if member.name.endswith(mod.FILES[0]):
+                            contents = b"tampered\n"
+                        member.size = len(contents)
+                        import io
+                        writer.addfile(member, io.BytesIO(contents))
+            with self.assertRaisesRegex(ValueError, "Integrity check failed"):
+                verifier.verify(changed)
+
     def test_refuses_missing_input(self):
         with tempfile.TemporaryDirectory() as work:
             with self.assertRaises(ValueError):
