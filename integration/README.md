@@ -1,8 +1,10 @@
-# OpenWrt integration workstream (source only)
+# OpenWrt integration workstream
 
-This directory is a *pre-integration* track, not a board profile or firmware builder. The Linux v6.18 RFC patches may only be applied to the exact pinned upstream blobs. An arbitrary OpenWrt patchset or kernel version must **not** be silently treated as compatible. See `scripts/apply-public-rfc-series.sh` for the hash-checked source gate.
+This branch now carries an experimental `mediatek/mt6990` source-build target in `mt6990-target.patch`. It enables a generic AArch64 Linux build and the common MediaTek Ethernet driver, and integrates the public cleanup/requeue patches into OpenWrt's 6.18 patch series. It intentionally defines no board profile, Device Tree, boot image, flash layout or installable firmware.
 
-Milestones: obtain independently reviewed SBAT6D board DTS; identify exact OpenWrt kernel target/version; compare MediaTek Ethernet C/header blob IDs; rebase patches if needed; build modules and full kernel in public CI; verify rootfs and hardware separately. The existing LG6851F donor image definition must never be renamed to SBAT6D or flashed.
+The exact pinned OpenWrt base is `openwrt/openwrt` commit `a25fb079b1463cd5d7d69c6d9a1c28d873291ebb`; kernel preparation yields Linux 6.18.55. Do not silently apply the target patch to another OpenWrt revision or kernel patch set.
+
+Remaining milestones: add licensed MT6990 clock/reset/power/PCIe/SoC support, complete an independently authored SBAT6D board DTS, produce a generic rootfs staging image without device packaging, then validate each subsystem separately. The LG6851F donor image definition must never be renamed to SBAT6D or flashed.
 
 ## Locate an OpenWrt prepared kernel tree
 
