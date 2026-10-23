@@ -22,6 +22,8 @@ REQUIRED = (
 
 def audit(document):
     checks = document.get("checks", {})
+    if not isinstance(checks, dict):
+        checks = {}
     approved = []
     blockers = []
     for name in REQUIRED:
@@ -35,7 +37,8 @@ def audit(document):
                      and isinstance(evidence.get("sha256"), str)
                      and len(evidence["sha256"]) == 64
                      and all(ch in "0123456789abcdef" for ch in evidence["sha256"])
-                     and evidence.get("reviewed") is True)
+                     and evidence.get("reviewed") is True
+                     and evidence["source"].startswith(("https://", "docs/", "board/")))
         if not isinstance(item, dict) or item.get("status") != "verified" or not supported:
             blockers.append(name)
         else:
