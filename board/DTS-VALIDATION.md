@@ -1,22 +1,29 @@
 # Compile-only Device Tree experiment
 
-`sbat6d-incomplete.dts` includes `mt6990.dtsi`. It records four Cortex-A55
-CPU nodes, PSCI, GICv3 and the architected timer from the read-only B-unit
-boot_b FDT. The ambiguous memory map and peripherals with unresolved MT6990
-provider dependencies are omitted. This is a non-bootable partial tree.
+`sbat6d-incomplete.dts` includes `mt6990.dtsi` and
+`mt6990-observed-peripherals.dtsi`. It records CPU/PSCI/GIC/timer plus a
+sanitized inventory of observed UART0, eMMC, PCIe roots/PHYs, Ethernet MACs
+and SGMII resources. All peripheral/provider nodes are `status = "disabled"`;
+the conflicting RAM map is omitted. Firmware-specific SGMII relationship
+properties without an upstream consumer binding are documented, not copied
+into this tree. This is a non-bootable partial tree.
 
 `board/patches/0001-arm-dt-mediatek-add-mt6990-root-compatible.patch` adds the
 two root compatible strings observed in the B-unit FDT. Linux 6.18.55 Kbuild
-generated the DTB, `dt_binding_check` and `dt-doc-validate` passed for the
-modified MediaTek root binding, and the target DTB passed an isolated
-`dt-validate` run against the processed schema. A full MediaTek `dtbs_check`
-also traverses unrelated existing boards and reports pre-existing schema
-errors; those are not attributed to this target. The SoC peripheral providers
-and their bindings are still missing.
+generated `mt6990-sbat6d-incomplete.dtb` (SHA-256
+`82c8d70a7a89dc66cf04df80b1a72eb946e8391a390c530de99c55d6412241be`). The
+target DTB passed isolated `dt-validate` with no diagnostics. Targeted
+`dt_binding_check` completed for the modified MediaTek root binding and the
+documented UART compatible alias; dtschema reported an unrelated existing
+Realtek schema warning and skipped yamllint because it is not installed. A
+full MediaTek `CHECK_DTBS=y dtbs` walk exited zero but printed schema errors
+for unrelated existing MT7988 boards; it is not a clean full-tree pass and
+those errors did not name this target. Peripheral providers, subsystem
+bindings and drivers remain incomplete.
 
-The file `mt6990-air-terminal-6-sgmii1-experimental.dtso` is a **disabled Device Tree overlay source**, not a flashable or deployable board DTS. The two exact runtime node paths were noted in the Test25 plan following live FDT inspection. This work does **not** copy or redistribute a full OEM device tree.
+The file `mt6990-air-terminal-6-sgmii1-experimental.dtso` remains a **disabled Device Tree overlay source**, not a flashable or deployable board DTS. This work does **not** copy or redistribute a full OEM device tree.
 
-The candidate deliberately only marks compatible identifiers and `#phy-cells = <0>` while keeping both nodes **disabled**. It DOES NOT wire `phys`, power domains, clocks, resets, MMIO ranges, interrupt lines, MAC/DSA interfaces or signing details: those are pending evidence. Never change `status` to okay or apply this overlay without verifying the target running DT and complete dependencies.
+Never change an observed peripheral's `status` to `okay` or apply the overlay without implementing and verifying all required providers, drivers and board dependencies.
 
 Syntax-only check on an isolated host with dtc:
 

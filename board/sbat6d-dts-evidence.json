@@ -43,6 +43,14 @@
     "cpu_psci_gic_timer": {
       "status": "observed_and_partially_implemented",
       "evidence": "Four Cortex-A55 CPU MPIDRs, PSCI SMC, GICv3 register ranges/maintenance PPI, and architected timer PPIs were transcribed to mt6990.dtsi; memory map and peripheral providers remain incomplete"
+    },
+    "peripheral_inventory": {
+      "status": "observed_and_disabled",
+      "evidence": "Same B-unit boot_b FDT records UART0, eMMC, three PCIe hosts/PHYs, NETSYS, MAC0/MAC1, SGMII1 and its analog PHY/PLL. A minimal independent subset is encoded with status=disabled; providers and drivers are not claimed"
+    },
+    "usable_memory_map": {
+      "status": "conflicting",
+      "evidence": "The same FDT has two root memory descriptions at 0x80000000 with lengths 0x3e605000 and 0x1e800000; neither is selected in the DTS"
     }
   }
 }

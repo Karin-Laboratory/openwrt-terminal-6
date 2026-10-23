@@ -2,6 +2,7 @@
 /dts-v1/;
 
 /include/ "mt6990.dtsi"
+/include/ "mt6990-observed-peripherals.dtsi"
 
 /*
  * Partial, non-bootable SBAT6D research tree. The board compatible string is
