@@ -1,0 +1,54 @@
+name: OpenWrt prepared source integration review
+
+on:
+  push:
+    branches: [integration/openwrt-source-gate]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepared-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout this research branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout the pinned public OpenWrt source
+        uses: actions/checkout@v4
+        with:
+          repository: openwrt/openwrt
+          ref: a25fb079b1463cd5d7d69c6d9a1c28d873291ebb
+          path: openwrt
+          persist-credentials: false
+
+      - name: Install OpenWrt host prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang flex bison g++ gawk gettext git \
+            libncurses-dev libssl-dev python3-setuptools rsync swig \
+            unzip zlib1g-dev file wget python3 python3-yaml
+
+      - name: Prepare the pinned MediaTek Filogic kernel source
+        working-directory: openwrt
+        run: |
+          make -j2 defconfig
+          make -j2 target/linux/prepare V=s
+
+      - name: Fingerprint, apply and statically audit the rebased RFC series
+        run: |
+          set -euo pipefail
+          tree="$(find openwrt/build_dir -type d -path '*/linux-mediatek_filogic/linux-6.18.55' -print -quit)"
+          test -n "$tree"
+          bash scripts/apply-openwrt-prepared-rfc-series.sh "$tree"
+          rg -n 'schedule_work\(&eth->pending_work\)' "$tree/drivers/net/ethernet/mediatek/mtk_eth_soc.c" | tee /tmp/reset-work-producer.txt
+          test "$(wc -l < /tmp/reset-work-producer.txt)" -eq 1
+          echo 'The sole direct schedule_work call must remain inside __mtk_queue_reset_work.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Prepared-source static check only. No kernel compile, SBAT6D target image or device test is claimed.' >> "$GITHUB_STEP_SUMMARY"

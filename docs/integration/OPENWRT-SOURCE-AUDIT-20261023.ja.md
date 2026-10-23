@@ -19,14 +19,21 @@ OpenWrtの準備済みカーネルに含まれるMediaTek Ethernetファイル�
 
 従って、既存の厳密なupstream blob gateはOpenWrtソースに対し正しくNO-GOとなる。OpenWrtのgeneric/mediatek 6.18パッチ群が同ドライバを変更しているため、バージョン番号だけでRFCの直接適用可能性を判断できない。
 
-## 適用試験で見つかった問題
+## 適用試験とOpenWrt向けrebase
 
 - RFC #1の`git apply --check`はOpenWrt準備済みツリーで通る。
 - RFC #2の`git apply --check`は`mtk_eth_soc.c`のprobe cleanup付近で失敗する。
 - `patch`のfuzzを許して適用すると、probe失敗経路に存在しない`err_unreg_netdev`へのgotoが残る一方、そのlabelは除去される。従ってfuzz適用結果はコンパイル可能な統合とは見なせない。
 - OpenWrt側の追加変更には`mtk_mac_finish()`からの3番目の`pending_work`投入箇所がある。RFC #2のupstream版だけではこれを止めるゲートに通さない。
 
-統合ブランチの静的検査を強化し、共通の直列化helperの外にある直接投入を検出する。これはOpenWrt固有変更を含むカーネルを再確認するためのゲートであり、上記のOpenWrt差分を修正したことや実行時安全性を示すものではない。
+上記に対し、OpenWrtの準備済み6.18.55ソースからRFC #2を手作業で再生成し、次を加えた。
+
+- `mtk_probe()`の実際の失敗goto/label構成に合わせてrebaseし、登録済みnetdevを追跡する。
+- OpenWrtが追加した`mtk_mac_config()`の第三producerを、同じ停止フラグとspinlockを使う`mtk_queue_reset_work()`へ集約する。
+- `scripts/apply-openwrt-prepared-rfc-series.sh`でC/headerの両方が上記blob IDに一致する場合だけRFC #1とOpenWrt向けRFC #2を順番に適用する。
+- 3 producerの静的検査と、追加producerを検出するunit testを追加する。
+
+2026-10-23のローカル準備済みツリーでsource fingerprint、fuzzなしpatch dry-run/apply、`check_mediatek_rfc_series.py`はPASSした。これはsource patchの適用と静的検査であり、まだCコンパイルや実行時安全性の証明ではない。新しいGitHub workflowも同じOpenWrt commitで準備・適用・静的監査を行う。
 
 ## ビルド状況
 
