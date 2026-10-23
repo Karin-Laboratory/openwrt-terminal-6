@@ -45,5 +45,10 @@ jobs:
           assert fn.count("cancel_work_sync(&eth->pending_work)") == 1
           assert fn.count("cancel_delayed_work_sync(&eth->reset.monitor_work)") == 1
           assert fn.index("cancel_work_sync") < fn.index("mtk_free_dev")
-          print("RFC APPLY AND ORDER CHECK PASS; kernel compilation not performed")
+          remove = s.split("static void mtk_remove(struct platform_device *pdev)", 1)[1].split("static const struct mtk_soc_data mt2701_data", 1)[0]
+          assert remove.count("cancel_work_sync(&eth->pending_work)") == 1
+          assert remove.count("cancel_delayed_work_sync(&eth->reset.monitor_work)") == 1
+          assert remove.index("cancel_work_sync(&eth->pending_work)") < remove.index("mtk_hw_deinit(eth)")
+          assert remove.index("cancel_delayed_work_sync(&eth->reset.monitor_work)") < remove.index("mtk_hw_deinit(eth)")
+          print("RFC BOTH CLEANUP/REMOVE ORDER CHECK PASS; no runtime safety proof")
           PY
