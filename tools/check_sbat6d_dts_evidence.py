@@ -26,7 +26,17 @@ def audit(document):
     blockers = []
     for name in REQUIRED:
         item = checks.get(name)
-        if not isinstance(item, dict) or item.get("status") != "verified" or not item.get("evidence"):
+        evidence = item.get("evidence") if isinstance(item, dict) else None
+        # A simple placeholder string is not proof. Require a traceable source,
+        # recorded hash, and a reviewer statement for each technical claim.
+        supported = (isinstance(evidence, dict)
+                     and isinstance(evidence.get("source"), str)
+                     and evidence["source"].strip()
+                     and isinstance(evidence.get("sha256"), str)
+                     and len(evidence["sha256"]) == 64
+                     and all(ch in "0123456789abcdef" for ch in evidence["sha256"])
+                     and evidence.get("reviewed") is True)
+        if not isinstance(item, dict) or item.get("status") != "verified" or not supported:
             blockers.append(name)
         else:
             approved.append(name)
