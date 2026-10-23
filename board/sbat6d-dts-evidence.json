@@ -1,0 +1,44 @@
+{
+  "schema": "sbat6d-dts-evidence-v1",
+  "board": "SoftBank Air Terminal 6",
+  "status": "EVIDENCE_INCOMPLETE",
+  "notes": "Do not use this record as a Device Tree. Evidence must be independently reviewed and legally shareable.",
+  "checks": {
+    "board_identity": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "runtime_fdt_provenance": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "complete_node_inventory": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "ethernet_mac_switch_wiring": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "clock_providers_and_ids": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "power_domain_providers_and_ids": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "sgmii_pll_and_phy_binding": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "pinmux_resets_regulators": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "kernel_binding_validation": {
+      "status": "unknown",
+      "evidence": null
+    }
+  }
+}
