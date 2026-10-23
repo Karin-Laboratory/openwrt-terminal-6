@@ -35,6 +35,9 @@ jobs:
             build-essential clang flex bison g++ gawk gettext git \
             libncurses-dev libssl-dev python3-setuptools rsync swig \
             unzip zlib1g-dev file wget python3 python3-yaml
+          python3 -m venv "$RUNNER_TEMP/dtschema"
+          "$RUNNER_TEMP/dtschema/bin/pip" install --disable-pip-version-check 'dtschema==2026.9'
+          echo "$RUNNER_TEMP/dtschema/bin" >> "$GITHUB_PATH"
 
       - name: Apply target patch and select MT6990 subtarget
         working-directory: openwrt
@@ -72,8 +75,11 @@ jobs:
           toolchain_bin="$PWD/$toolchain_dir/bin"
           cc="$toolchain_bin/aarch64-openwrt-linux-musl-gcc"
           test -x "$cc"
+          cross="$toolchain_bin/aarch64-openwrt-linux-musl-"
+          echo "OpenWrt kernel compiler: $cc"
+          "$cc" --version | head -n 1
           make -C "$tree" ARCH=arm64 \
-            CC="$cc" CROSS_COMPILE="$toolchain_bin/aarch64-openwrt-linux-musl-" \
+            CC="$cc" CROSS_COMPILE="$cross" \
             HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++ \
             HOSTLD=/usr/bin/ld HOSTAS=/usr/bin/as olddefconfig
 
@@ -81,7 +87,14 @@ jobs:
         working-directory: openwrt
         run: |
           set -euo pipefail
-          make -j2 target/linux/compile V=s
+          toolchain_dir="$(find staging_dir -maxdepth 1 -type d -name 'toolchain-aarch64_generic_*' -print -quit)"
+          test -n "$toolchain_dir"
+          toolchain_bin="$PWD/$toolchain_dir/bin"
+          cc="$toolchain_bin/aarch64-openwrt-linux-musl-gcc"
+          cross="$toolchain_bin/aarch64-openwrt-linux-musl-"
+          test -x "$cc"
+          make -j2 target/linux/compile \
+            KERNEL_CC="$cc" KERNEL_CROSS="$cross" V=s
           tree="$(find build_dir -type d -path '*/linux-mediatek_mt6990/linux-6.18.55' -print -quit)"
           test -n "$tree"
           grep -qx 'CONFIG_NET_MEDIATEK_SOC=y' "$tree/.config"
@@ -97,19 +110,40 @@ jobs:
             mediatek/mt6990-sbat6d-incomplete.dtb
           dtb="$tree/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dtb"
           test -s "$dtb"
+          binding="$tree/Documentation/devicetree/bindings/arm/mediatek.yaml"
+          dt-doc-validate "$binding"
+          make -C "$tree" dt_binding_check \
+            DT_SCHEMA_FILES=Documentation/devicetree/bindings/arm/mediatek.yaml
+          make -C "$tree" CHECK_DTBS=y \
+            DT_SCHEMA_FILES=Documentation/devicetree/bindings/arm/mediatek.yaml \
+            ARCH=arm64 HOSTCC=/usr/bin/gcc \
+            mediatek/mt6990-sbat6d-incomplete.dtb
+          dt-validate -l mediatek.yaml \
+            -u "$tree/Documentation/devicetree/bindings" \
+            -s "$tree/Documentation/devicetree/bindings/processed-schema.json" "$dtb"
           "$tree/scripts/dtc/dtc" -I dtb -O dts "$dtb" -o /tmp/mt6990-sbat6d-incomplete.dts
           grep -Fq 'compatible = "mediatek,mt6990";' /tmp/mt6990-sbat6d-incomplete.dts
-          grep -Fq 'model = "SoftBank Air Terminal 6 (incomplete research DTS)";' /tmp/mt6990-sbat6d-incomplete.dts
+          grep -Fq 'model = "SoftBank Air Terminal 6 (SBA6D, research DTS)";' /tmp/mt6990-sbat6d-incomplete.dts
+          grep -Fq 'compatible = "arm,cortex-a55";' /tmp/mt6990-sbat6d-incomplete.dts
+          grep -Fq 'compatible = "arm,gic-v3";' /tmp/mt6990-sbat6d-incomplete.dts
           sha256sum "$dtb" | tee -a "$GITHUB_STEP_SUMMARY"
-          echo 'Linux Kbuild generated an identity-only, non-bootable research DTB. This is not a complete SoC DTSI or SBAT6D board DTB.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Linux Kbuild and targeted schema validation passed for a partial, non-bootable research DTB. This is not a complete SBAT6D board DTB.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build package and rootfs staging
         working-directory: openwrt
         run: |
           set -euo pipefail
-          make -j2 package/compile V=s
-          make -j2 package/install V=s
-          make -j2 target/install V=s
+          toolchain_dir="$(find staging_dir -maxdepth 1 -type d -name 'toolchain-aarch64_generic_*' -print -quit)"
+          test -n "$toolchain_dir"
+          toolchain_bin="$PWD/$toolchain_dir/bin"
+          cc="$toolchain_bin/aarch64-openwrt-linux-musl-gcc"
+          cross="$toolchain_bin/aarch64-openwrt-linux-musl-"
+          test -x "$cc"
+          echo "External kernel modules use the same compiler as the kernel: $cc"
+          "$cc" --version | head -n 1
+          make -j2 package/compile KERNEL_CC="$cc" KERNEL_CROSS="$cross" V=s
+          make -j2 package/install KERNEL_CC="$cc" KERNEL_CROSS="$cross" V=s
+          make -j2 target/install KERNEL_CC="$cc" KERNEL_CROSS="$cross" V=s
           rootfs="$(find build_dir/target-aarch64_generic_musl -path '*/root.squashfs' -type f -print -quit)"
           test -n "$rootfs"
           test -s "$rootfs"

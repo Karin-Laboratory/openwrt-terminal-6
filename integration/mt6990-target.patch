@@ -497,57 +497,117 @@ index 000000000..2fb68c0d0
 +@@ -1412,0 +1415,2 @@ struct mtk_eth {
 ++	spinlock_t			reset_queue_lock;
 ++	bool				reset_queue_stopping;
-diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-identity-only.dtsi b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-identity-only.dtsi
+diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi
 new file mode 100644
 --- /dev/null
-+++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-identity-only.dtsi
-@@ -0,0 +1,13 @@
++++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi
+@@ -0,0 +1,75 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +
++
 +/*
-+ * MT6990 identity-only include for the incomplete SBAT6D research DTS.
-+ *
-+ * This is not a SoC hardware description: no CPU, memory, interrupt,
-+ * clock, reset, power-domain, bus, or peripheral nodes are known well enough
-+ * to publish here. Keep this file separate so verified SoC data can be added
-+ * without pretending that the board-level model string is SoC metadata.
++ * Independently authored MT6990 SoC facts taken from the B-unit boot_b FDT.
++ * Only the CPU interface, PSCI, GICv3 and architected timer are represented.
++ * Memory is deliberately absent: the preserved FDT contains overlapping
++ * memory nodes and does not establish the Linux-usable physical map.
++ * Peripheral providers and dependencies are not yet modeled here.
 + */
++
 +/ {
-+	compatible = "mediatek,mt6990";
++	#address-cells = <2>;
++	#size-cells = <2>;
++	interrupt-parent = <&gic>;
++
++	psci {
++		compatible = "arm,psci-1.0";
++		method = "smc";
++	};
++
++	cpus {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		cpu@0 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x000>;
++			enable-method = "psci";
++		};
++
++		cpu@100 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x100>;
++			enable-method = "psci";
++		};
++
++		cpu@200 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x200>;
++			enable-method = "psci";
++		};
++
++		cpu@300 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x300>;
++			enable-method = "psci";
++		};
++	};
++
++	gic: interrupt-controller@c000000 {
++		compatible = "arm,gic-v3";
++		#interrupt-cells = <3>;
++		#address-cells = <2>;
++		#size-cells = <2>;
++		#redistributor-regions = <1>;
++		interrupt-controller;
++		reg = <0x0 0x0c000000 0x0 0x00040000>,
++		      <0x0 0x0c040000 0x0 0x00200000>;
++		/* GIC PPI type 1, maintenance IRQ 9, level-high flags 4. */
++		interrupts = <1 9 4>;
++	};
++
++	timer {
++		compatible = "arm,armv8-timer";
++		/* GIC PPI type 1, level-high flags 4; order follows arch-timer binding. */
++		interrupts = <1 13 4>, <1 14 4>, <1 11 4>, <1 10 4>;
++		/* Recorded in the B-unit FDT; firmware CNTFRQ behavior is untested. */
++		clock-frequency = <13000000>;
++	};
 +};
 diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts
 new file mode 100644
 --- /dev/null
 +++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/dts-v1/;
 +
-+/include/ "mt6990-identity-only.dtsi"
++/include/ "mt6990.dtsi"
 +
 +/*
-+ * Incomplete, non-bootable SBAT6D Device Tree scaffold.
-+ *
-+ * The only hardware compatibility fact currently published for this board
-+ * is the observed MT6990 SoC. Memory, CPUs, interrupt controller, clocks,
-+ * resets, power domains, storage and board wiring are intentionally absent.
-+ * Do not use this DTB to boot or package firmware.
++ * Partial, non-bootable SBAT6D research tree. The board compatible string is
++ * recorded from the B-unit boot_b FDT; it is not a claim that this product is
++ * a MediaTek EVB. No memory map or peripheral wiring is enabled here.
 + */
 +/ {
-+	model = "SoftBank Air Terminal 6 (incomplete research DTS)";
++	model = "SoftBank Air Terminal 6 (SBA6D, research DTS)";
++	compatible = "mediatek,evb6990_cpe_mt7990_emmc", "mediatek,mt6990";
 +};
 diff --git a/target/linux/mediatek/patches-6.18/980-mt6990-incomplete-dtb-registration.patch b/target/linux/mediatek/patches-6.18/980-mt6990-incomplete-dtb-registration.patch
 new file mode 100644
 --- /dev/null
 +++ b/target/linux/mediatek/patches-6.18/980-mt6990-incomplete-dtb-registration.patch
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,29 @@
 +From: Karin-Laboratory contributors
-+Subject: [RFC] arm64: dts: mediatek: compile the incomplete SBAT6D identity tree
++Subject: [RFC] arm64: dts: mediatek: add partial MT6990 research tree
 +
-+Register the identity-only research DTB so the experimental MT6990 source
-+target exercises the Linux 6.18.55 Device Tree compiler. This DTB intentionally
-+contains no hardware description and is not attached to an OpenWrt device
-+profile. It must not be treated as bootable or installed on a device.
++Compile the independently transcribed CPU, PSCI, GICv3 and architected timer
++facts as a non-bootable research DTB, and document the exact compatible strings
++reported by the B-unit boot_b FDT. This does not add memory or enable board
++peripherals, nor does it make an installable SBAT6D image.
 +
 +diff --git a/arch/arm64/boot/dts/mediatek/Makefile b/arch/arm64/boot/dts/mediatek/Makefile
 +--- a/arch/arm64/boot/dts/mediatek/Makefile
@@ -555,3 +615,18 @@ new file mode 100644
 +@@ -184,1 +184,2 @@
 + DTC_FLAGS_mt8395-radxa-nio-12l := -@
 ++dtb-$(CONFIG_ARCH_MEDIATEK) += mt6990-sbat6d-incomplete.dtb
++
++diff --git a/Documentation/devicetree/bindings/arm/mediatek.yaml b/Documentation/devicetree/bindings/arm/mediatek.yaml
++--- a/Documentation/devicetree/bindings/arm/mediatek.yaml
+++++ b/Documentation/devicetree/bindings/arm/mediatek.yaml
++@@ -71,6 +71,10 @@ properties:
++               - archermind,mt6797-x20-dev
++               - mediatek,mt6797-evb
++           - const: mediatek,mt6797
+++      - items:
+++          - const: mediatek,evb6990_cpe_mt7990_emmc
+++          - const: mediatek,mt6990
+++
++       - items:
++           - enum:
++               - bananapi,bpi-r64
