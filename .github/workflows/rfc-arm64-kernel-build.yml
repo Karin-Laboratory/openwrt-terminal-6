@@ -58,10 +58,61 @@ jobs:
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
           scripts/config --enable CONFIG_COMPILE_TEST \
             --enable CONFIG_NET_VENDOR_MEDIATEK \
-            --module CONFIG_NET_MEDIATEK_SOC \
-            --enable CONFIG_NET_DSA
+            --enable CONFIG_PHYLINK \
+            --enable CONFIG_NET_DSA \
+            --disable CONFIG_MODULES \
+            --enable CONFIG_NET_MEDIATEK_SOC
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-          grep -Eq '^CONFIG_NET_MEDIATEK_SOC=(m|y)$' .config
+          grep -Eq '^CONFIG_NET_MEDIATEK_SOC=y
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 Image
+          # Require the MediaTek driver object in a built-in (y) configuration.
+          test -s drivers/net/ethernet/mediatek/mtk_eth_soc.o
+          test -s vmlinux
+          aarch64-linux-gnu-nm vmlinux | grep -E ' [tT] mtk_probe
+          test -s arch/arm64/boot/Image
+          sha256sum arch/arm64/boot/Image | tee /tmp/kernel-image.sha256
+          echo "### Full upstream Linux v6.18 ARM64 Image" >> "$GITHUB_STEP_SUMMARY"
+          echo 'RFC1 + RFC2 applied. This is not an SBAT6D/OpenWrt firmware image.' >> "$GITHUB_STEP_SUMMARY"
+          echo "Image SHA-256: $(cut -d' ' -f1 /tmp/kernel-image.sha256)" >> "$GITHUB_STEP_SUMMARY"
+          echo "MediaTek Ethernet: $(grep '^CONFIG_NET_MEDIATEK_SOC=' .config)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Explicit scope
+        if: always()
+        run: |
+          echo 'No board DTS, rootfs, installable boot image, signing, device operation, or release artifact.' >> "$GITHUB_STEP_SUMMARY"
+ .config || {
+            echo 'ERROR: MediaTek Ethernet must be linked into kernel Image' >&2
+            exit 1
+          }
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 Image
+          # With NET_MEDIATEK_SOC=m, the driver is not linked into Image.
+          # Compile the driver object explicitly under the same kernel config.
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 drivers/net/ethernet/mediatek/mtk_eth_soc.o
+          test -s drivers/net/ethernet/mediatek/mtk_eth_soc.o
+          test -s arch/arm64/boot/Image
+          sha256sum arch/arm64/boot/Image | tee /tmp/kernel-image.sha256
+          echo "### Full upstream Linux v6.18 ARM64 Image" >> "$GITHUB_STEP_SUMMARY"
+          echo 'RFC1 + RFC2 applied. This is not an SBAT6D/OpenWrt firmware image.' >> "$GITHUB_STEP_SUMMARY"
+          echo "Image SHA-256: $(cut -d' ' -f1 /tmp/kernel-image.sha256)" >> "$GITHUB_STEP_SUMMARY"
+          echo "MediaTek Ethernet: $(grep '^CONFIG_NET_MEDIATEK_SOC=' .config)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Explicit scope
+        if: always()
+        run: |
+          echo 'No board DTS, rootfs, installable boot image, signing, device operation, or release artifact.' >> "$GITHUB_STEP_SUMMARY"
+
+          test -s arch/arm64/boot/Image
+          sha256sum arch/arm64/boot/Image | tee /tmp/kernel-image.sha256
+          echo "### Full upstream Linux v6.18 ARM64 Image" >> "$GITHUB_STEP_SUMMARY"
+          echo 'RFC1 + RFC2 applied. This is not an SBAT6D/OpenWrt firmware image.' >> "$GITHUB_STEP_SUMMARY"
+          echo "Image SHA-256: $(cut -d' ' -f1 /tmp/kernel-image.sha256)" >> "$GITHUB_STEP_SUMMARY"
+          echo "MediaTek Ethernet: $(grep '^CONFIG_NET_MEDIATEK_SOC=' .config)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Explicit scope
+        if: always()
+        run: |
+          echo 'No board DTS, rootfs, installable boot image, signing, device operation, or release artifact.' >> "$GITHUB_STEP_SUMMARY"
+ .config || {
+            echo 'ERROR: MediaTek Ethernet must be linked into kernel Image' >&2
+            exit 1
+          }
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 Image
           # With NET_MEDIATEK_SOC=m, the driver is not linked into Image.
           # Compile the driver object explicitly under the same kernel config.
