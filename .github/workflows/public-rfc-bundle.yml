@@ -8,6 +8,7 @@ on:
       - 'docs/RFC-2-RESET-REQUEUE.ja.md'
       - 'docs/PUBLIC-SOURCE-VERIFICATION.md'
       - 'tools/package_public_rfc.py'
+      - 'tools/verify_public_rfc.py'
       - 'tests/test_package_public_rfc.py'
       - '.github/workflows/public-rfc-bundle.yml'
   workflow_dispatch:
@@ -34,6 +35,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/package_public_rfc.py --output dist/openwrt-terminal-6-source-rfc.tar.gz
+          python3 tools/verify_public_rfc.py dist/openwrt-terminal-6-source-rfc.tar.gz
           sha256sum dist/openwrt-terminal-6-source-rfc.tar.gz | tee dist/SHA256SUMS
           python3 - <<'PY'
           import json, tarfile
