@@ -9,6 +9,9 @@ on:
       - 'docs/PUBLIC-SOURCE-VERIFICATION.md'
       - 'tools/package_public_rfc.py'
       - 'tools/verify_public_rfc.py'
+      - 'tools/check_release_scope.py'
+      - 'tests/test_release_scope.py'
+      - 'board/air-terminal-6.json'
       - 'tests/test_package_public_rfc.py'
       - '.github/workflows/public-rfc-bundle.yml'
   workflow_dispatch:
@@ -31,6 +34,8 @@ jobs:
           python3 scripts/check-publication-history.py
       - name: Test source bundle reproducibility
         run: python3 -m unittest discover -s tests -p test_package_public_rfc.py -v
+      - name: Enforce non-flashable source release scope
+        run: python3 tools/check_release_scope.py --require source-rfc --output dist/release-readiness.json
       - name: Package public RFC
         run: |
           set -euo pipefail
@@ -55,6 +60,7 @@ jobs:
           path: |
             dist/openwrt-terminal-6-source-rfc.tar.gz
             dist/SHA256SUMS
+            dist/release-readiness.json
           if-no-files-found: error
           retention-days: 30
       - name: Explain scope
