@@ -57,7 +57,7 @@ Using the pinned OpenWrt source above and the experimental `mt6990` subtarget:
 
 - `make -j2 toolchain/install V=s`: PASS; AArch64 generic musl toolchain installed.
 - Linux `target/linux/compile`: PASS with OpenWrt kernel 6.18.55 after resolving new Kconfig defaults with `olddefconfig`.
-- `.config` confirms `CONFIG_ARCH_MEDIATEK=y`, `CONFIG_NET_MEDIATEK_SOC=y`, `CONFIG_NET_DSA=y`, `CONFIG_NET_DSA_MT7530=y`, `CONFIG_NET_DSA_MT7530_MDIO=y`, and `CONFIG_NET_DSA_TAG_MTK=y`.
+- `.config` confirms `CONFIG_ARCH_MEDIATEK=y`, `CONFIG_EINT_MTK=y`, `CONFIG_NET_MEDIATEK_SOC=y`, `CONFIG_NET_DSA=y`, `CONFIG_NET_DSA_MT7530=y`, `CONFIG_NET_DSA_MT7530_MDIO=y`, and `CONFIG_NET_DSA_TAG_MTK=y`; unneeded Airoha pin control is explicitly disabled.
 - ARM64 `Image` SHA-256: `88ee4f9d4478b1a55cfe50c30c4a9cfc886b9d8543e50efd8783a0cc0a157a9b`.
 - `drivers/net/ethernet/mediatek/mtk_eth_soc.o` SHA-256: `699cc6dae14f72e6eb07009c6f20f606f5c4a91e7689cf39a52453fec7f610c4`.
 - `make -j2 package/compile V=s`: PASS (77 package index entries produced).

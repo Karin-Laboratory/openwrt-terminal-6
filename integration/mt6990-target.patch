@@ -22,10 +22,10 @@ index 0000000000000000000000000000000000000000..f419deee417b8f32d759f4b00c107454
 +# exist. This intentionally prevents creation of installable device images.
 diff --git a/target/linux/mediatek/mt6990/config-6.18 b/target/linux/mediatek/mt6990/config-6.18
 new file mode 100644
-index 0000000000000000000000000000000000000000..b0a1762d39c60679678aaa3e1d14f47490a6677d
+index 0000000000000000000000000000000000000000..843ada0a01ba50e2a581eddf9ba1c09c22e92e6d
 --- /dev/null
 +++ b/target/linux/mediatek/mt6990/config-6.18
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,42 @@
 +CONFIG_64BIT=y
 +CONFIG_ARCH_MEDIATEK=y
 +CONFIG_ARM64_4K_PAGES=y
@@ -64,6 +64,10 @@ index 0000000000000000000000000000000000000000..b0a1762d39c60679678aaa3e1d14f474
 +# CONFIG_NET_DSA_MT7530_MMIO is not set
 +# Keep the MediaTek 8250-compatible UART controller available for console support.
 +CONFIG_SERIAL_8250_MT6577=y
++# Keep the MediaTek external interrupt controller available for this SoC family.
++CONFIG_EINT_MTK=y
++# This target does not use Airoha EN7581 pin control.
++# CONFIG_PINCTRL_AIROHA is not set
 diff --git a/target/linux/mediatek/mt6990/target.mk b/target/linux/mediatek/mt6990/target.mk
 new file mode 100644
 index 0000000000000000000000000000000000000000..ce786712dfab8a994989f82d025cbf6db4c2880c

@@ -83,6 +83,9 @@ jobs:
           tree="$(find build_dir -type d -path '*/linux-mediatek_mt6990/linux-6.18.55' -print -quit)"
           test -n "$tree"
           grep -qx 'CONFIG_NET_MEDIATEK_SOC=y' "$tree/.config"
+          grep -qx 'CONFIG_EINT_MTK=y' "$tree/.config"
+          grep -qx 'CONFIG_NET_DSA=y' "$tree/.config"
+          grep -qx 'CONFIG_NET_DSA_MT7530=y' "$tree/.config"
           test -s "$tree/arch/arm64/boot/Image"
           test -s "$tree/drivers/net/ethernet/mediatek/mtk_eth_soc.o"
 
