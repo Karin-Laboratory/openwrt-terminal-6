@@ -141,9 +141,16 @@ jobs:
           test -x "$cc"
           echo "External kernel modules use the same compiler as the kernel: $cc"
           "$cc" --version | head -n 1
-          make -j2 package/compile KERNEL_CC="$cc" KERNEL_CROSS="$cross" V=s
-          make -j2 package/install KERNEL_CC="$cc" KERNEL_CROSS="$cross" V=s
-          make -j2 target/install KERNEL_CC="$cc" KERNEL_CROSS="$cross" V=s
+          tree="$(find build_dir -type d -path '*/linux-mediatek_mt6990/linux-6.18.55' -print -quit)"
+          test -n "$tree"
+          grep -qx 'CONFIG_STACKPROTECTOR_PER_TASK=y' "$tree/.config"
+          canary_offset="$(awk '$1 == "#define" && $2 == "TSK_STACK_CANARY" { print $3 }' "$tree/include/generated/asm-offsets.h")"
+          [[ "$canary_offset" =~ ^[0-9]+$ ]]
+          canary_flags="-mstack-protector-guard=sysreg -mstack-protector-guard-reg=sp_el0 -mstack-protector-guard-offset=$canary_offset"
+          echo "Per-task arm64 stack-canary flags for external modules: $canary_flags" | tee -a "$GITHUB_STEP_SUMMARY"
+          make -j2 package/compile KERNEL_CC="$cc" KERNEL_CROSS="$cross" CONFIG_KERNEL_CFLAGS="$canary_flags" V=s
+          make -j2 package/install KERNEL_CC="$cc" KERNEL_CROSS="$cross" CONFIG_KERNEL_CFLAGS="$canary_flags" V=s
+          make -j2 target/install KERNEL_CC="$cc" KERNEL_CROSS="$cross" CONFIG_KERNEL_CFLAGS="$canary_flags" V=s
           rootfs="$(find build_dir/target-aarch64_generic_musl -path '*/root.squashfs' -type f -print -quit)"
           test -n "$rootfs"
           test -s "$rootfs"
