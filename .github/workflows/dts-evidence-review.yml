@@ -42,6 +42,14 @@ jobs:
               exit 1
             fi
           fi
+      - name: Validate standalone DTS syntax fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y device-tree-compiler
+          printf '/dts-v1/;\n/ { compatible = "test,syntax-only"; };\n' > /tmp/dts-syntax-fixture.dts
+          python3 tools/validate_candidate_dts.py /tmp/dts-syntax-fixture.dts --require-pass
       - name: Scope
         if: always()
         run: echo 'Source validation only; not a board DTS, firmware build or flashing test' >> "$GITHUB_STEP_SUMMARY"
