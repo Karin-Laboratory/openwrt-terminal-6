@@ -61,6 +61,19 @@ jobs:
         working-directory: openwrt
         run: make -j2 toolchain/install V=s
 
+      - name: Resolve new Linux Kconfig defaults non-interactively
+        working-directory: openwrt
+        run: |
+          set -euo pipefail
+          tree="$(find build_dir -type d -path '*/linux-mediatek_mt6990/linux-6.18.55' -print -quit)"
+          test -n "$tree"
+          toolchain_bin="$(find staging_dir -type d -path '*/toolchain-aarch64_generic_*/bin' -print -quit)"
+          test -n "$toolchain_bin"
+          export PATH="$PWD/$toolchain_bin:$PATH"
+          make -C "$tree" ARCH=arm64 \
+            CROSS_COMPILE=aarch64-openwrt-linux-musl- \
+            HOSTCC=gcc HOSTCXX=g++ HOSTLD=ld HOSTAS=as olddefconfig
+
       - name: Compile ARM64 kernel and MediaTek Ethernet driver
         working-directory: openwrt
         run: |

@@ -22,10 +22,10 @@ index 0000000000000000000000000000000000000000..f419deee417b8f32d759f4b00c107454
 +# exist. This intentionally prevents creation of installable device images.
 diff --git a/target/linux/mediatek/mt6990/config-6.18 b/target/linux/mediatek/mt6990/config-6.18
 new file mode 100644
-index 0000000000000000000000000000000000000000..b7f9d43495ff6733e7d338eaeda7093479e911b0
+index 0000000000000000000000000000000000000000..b0a1762d39c60679678aaa3e1d14f47490a6677d
 --- /dev/null
 +++ b/target/linux/mediatek/mt6990/config-6.18
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,38 @@
 +CONFIG_64BIT=y
 +CONFIG_ARCH_MEDIATEK=y
 +CONFIG_ARM64_4K_PAGES=y
@@ -33,10 +33,37 @@ index 0000000000000000000000000000000000000000..b7f9d43495ff6733e7d338eaeda70934
 +CONFIG_ARM64_VA_BITS_39=y
 +CONFIG_CPU_LITTLE_ENDIAN=y
 +CONFIG_ARM64=y
++CONFIG_ARM64_TAGGED_ADDR_ABI=y
 +CONFIG_UNMAP_KERNEL_AT_EL0=y
++CONFIG_CMDLINE=""
++# CONFIG_CMDLINE_OVERRIDE is not set
++# CONFIG_COMPAT_32BIT_TIME is not set
 +CONFIG_DTC=y
 +CONFIG_NR_CPUS=512
++CONFIG_PAGE_BLOCK_MAX_ORDER=10
 +CONFIG_NET_MEDIATEK_SOC=y
++CONFIG_NET_FLOW_LIMIT=y
++CONFIG_NET_VENDOR_MEDIATEK=y
++CONFIG_RFS_ACCEL=y
++CONFIG_RPS=y
++CONFIG_SMP=y
++CONFIG_ZONE_DMA32=y
++CONFIG_XPS=y
++# This experimental target does not enable an unverified NAND layout.
++# CONFIG_MTD_NAND_ECC_MEDIATEK is not set
++# CONFIG_AIROHA_EN8801SC_PHY is not set
++
++# Disable unrelated, unverified PHY drivers in the generic MT6990 compile profile.
++# CONFIG_AIR_AN8855_PHY is not set
++# The observed MT7531 switch uses the generic MT7530 DSA driver family.
++CONFIG_NET_DSA=y
++CONFIG_NET_DSA_MT7530=y
++CONFIG_NET_DSA_MT7530_MDIO=y
++CONFIG_NET_DSA_TAG_MTK=y
++# The observed switch is managed over MDIO; do not enable the unverified MMIO interface.
++# CONFIG_NET_DSA_MT7530_MMIO is not set
++# Keep the MediaTek 8250-compatible UART controller available for console support.
++CONFIG_SERIAL_8250_MT6577=y
 diff --git a/target/linux/mediatek/mt6990/target.mk b/target/linux/mediatek/mt6990/target.mk
 new file mode 100644
 index 0000000000000000000000000000000000000000..ce786712dfab8a994989f82d025cbf6db4c2880c
