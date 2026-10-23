@@ -14,7 +14,7 @@ generated `mt6990-sbat6d-incomplete.dtb` (SHA-256
 `82c8d70a7a89dc66cf04df80b1a72eb946e8391a390c530de99c55d6412241be`). The
 target DTB passed isolated `dt-validate` with no diagnostics. Targeted
 `dt_binding_check` completed for the modified MediaTek root binding and the
-documented UART compatible alias; dtschema reported an unrelated existing
+standard MediaTek UART binding; dtschema reported an unrelated existing
 Realtek schema warning and skipped yamllint because it is not installed. A
 full MediaTek `CHECK_DTBS=y dtbs` walk exited zero but printed schema errors
 for unrelated existing MT7988 boards; it is not a clean full-tree pass and
