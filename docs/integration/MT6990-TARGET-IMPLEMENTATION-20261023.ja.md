@@ -69,7 +69,7 @@ Using the pinned OpenWrt source above and the experimental `mt6990` subtarget:
 
 - GitHub Actions run [39943757295](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39943757295): PASS on source commit `019da51c79bc5859ab1980b0d1bda0911c5d984e`.
 - The run completed the generic AArch64 toolchain, new Kconfig normalization, Linux 6.18.55 kernel and MediaTek Ethernet object compile, package compile/install, and generic rootfs staging.
-- The heavy workflow is limited to changes in `integration/mt6990-target.patch`; documentation-only commits do not repeat this 1-hour build. `workflow_dispatch` remains available.
+- The heavy workflow has a `pull_request` path filter for `integration/mt6990-target.patch`, plus `workflow_dispatch`. Because this Draft PR already changes that path relative to `main`, GitHub may still start the heavy job on documentation-only follow-up commits until the PR is merged.
 - This remains compile evidence only. It does not establish that the generated generic artifacts boot MT6990 or SBAT6D.
 
 This proves a generic ARM64 Linux and Ethernet-driver compile against the selected OpenWrt source. It does not prove MT6990 boot support, DTS validity, switch topology, or device operation. The generated kernel is experimental and must not be installed on SBAT6D.
