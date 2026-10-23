@@ -4,11 +4,11 @@ Community-maintained experimental port of OpenWrt for the **SoftBank Air Termina
 
 > **Experimental / not ready for general installation.** A working developer unit is not proof that a third-party device can be flashed or recovered safely. Do not flash images without verifying exact hardware identity, partition layout, current boot slot, backup integrity and a tested recovery path.
 
-[開発成果（日本語）](docs/PROGRESS.ja.md) · [日本語](#日本語) · [Measured hardware findings](board/SBAT6D-HARDWARE-FINDINGS.md) · [Release readiness](RELEASE-READINESS.md) · [Build](BUILDING.md) · [Install safety](INSTALL.md) · [Recovery](RECOVERY.md) · [Verification](tests/README.md) · [Licensing](LICENSES/README.md) · [Contributing](CONTRIBUTING.md)
+[開発成果（日本語）](docs/PROGRESS.ja.md) · [日本語](#日本語) · [Measured hardware findings](board/SBAT6D-HARDWARE-FINDINGS.md) · [Release readiness](RELEASE-READINESS.md) · [Build](BUILDING.md) · [Reproduce public RFC](docs/PUBLIC-SOURCE-VERIFICATION.md) · [Install safety](INSTALL.md) · [Recovery](RECOVERY.md) · [Verification](tests/README.md) · [Licensing](LICENSES/README.md) · [Contributing](CONTRIBUTING.md)
 
 ## Public research snapshot / 公開中の研究成果
 
-The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported kernel/userspace boots, Ethernet and Wi-Fi observations, and the remaining blockers. It is **not an installable release**. The synthetic DTS example and offline tests are open for review now; full source patches and an independently reproducible build remain pending.
+The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported kernel/userspace boots, Ethernet and Wi-Fi observations, and the remaining blockers. It is **not an installable release**. The synthetic DTS example, offline tests, and two upstream-anchored MediaTek Ethernet RFC patches are open for review. The pinned Linux v6.18 ARM64 driver-object build passes public CI; a complete bootable OpenWrt build from public sources remains pending.
 
 ## Upstream-anchored Ethernet RFC patches / 公開中のEthernet RFC
 
