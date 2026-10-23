@@ -1,0 +1,123 @@
+From: Karin-Laboratory contributors
+Subject: [RFC PATCH 2/2] net: mediatek: serialize reset requeue and monitor teardown
+Base: torvalds/linux v6.18 plus RFC 0001 (two-hunk cleanup ordering)
+
+Source-only RFC. Introduce a per-driver spinlock and stop latch to make
+schedule_work and DMA monitor rearm mutually exclusive with remove-path
+shutdown. The workqueue cancellation in RFC 0001 must follow setting the
+latch. This does NOT establish safe device removal, driver lifetime, or
+race-free operation: queued work may still run during netdev shutdown;
+probe error paths and RTNL/deadlock analysis need separate review.
+No hardware testing. DO NOT FLASH.
+
+diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+@@ -3329,7 +3329,17 @@
+ }
+ 
+ 
+-static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
++static void mtk_queue_reset_work(struct mtk_eth *eth)
++{
++	unsigned long flags;
++
++	spin_lock_irqsave(&eth->reset_queue_lock, flags);
++	if (!eth->reset_queue_stopping)
++		schedule_work(&eth->pending_work);
++	spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
++}
++
++static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
+ 
+ {
+ 	struct mtk_mac *mac = netdev_priv(dev);
+@@ -3343,10 +3353,10 @@
+ 	netif_err(eth, tx_err, dev, "transmit timed out\n");
+ 
+ 
+-	schedule_work(&eth->pending_work);
+-}
+-
+-static int mtk_get_irqs
++	mtk_queue_reset_work(eth);
++}
++
++static int mtk_get_irqs
+ (struct platform_device *pdev, struct mtk_eth *eth)
+ {
+ 	int i;
+@@ -4073,12 +4083,20 @@
+ 
+ 	/* DMA stuck checks */
+ 
+-	if (mtk_hw_check_dma_hang(eth))
+-		schedule_work(&eth->pending_work);
+-
+-out:
+-	schedule_delayed_work(&eth->reset.monitor_work,
+-			      MTK_DMA_MONITOR_TIMEOUT);
++	if (mtk_hw_check_dma_hang(eth))
++		mtk_queue_reset_work(eth);
++
++out:
++	/* Serialize monitor rearm with the remove-path stop declaration. */
++	{
++		unsigned long flags;
++
++		spin_lock_irqsave(&eth->reset_queue_lock, flags);
++		if (!eth->reset_queue_stopping)
++			schedule_delayed_work(&eth->reset.monitor_work,
++					      MTK_DMA_MONITOR_TIMEOUT);
++		spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
++	}
+ 
+ }
+ 
+@@ -5074,7 +5092,8 @@
+ 	spin_lock_init(&eth->tx_irq_lock);
+ 	spin_lock_init(&eth->rx_irq_lock);
+ 
+-	spin_lock_init(&eth->dim_lock);
++	spin_lock_init(&eth->dim_lock);
++	spin_lock_init(&eth->reset_queue_lock);
+ 
+ 
+ 	eth->rx_dim.mode = DIM_CQ_PERIOD_MODE_START_FROM_EQE;
+@@ -5318,10 +5337,16 @@
+ {
+ 	struct mtk_eth *eth = platform_get_drvdata(pdev);
+ 
+-	struct mtk_mac *mac;
+-	int i;
+-
+-	/* stop all devices to make sure that dma is properly shut down */
++	struct mtk_mac *mac;
++	unsigned long flags;
++	int i;
++
++	/* Serialize shutdown with reset producers and monitor self-rearm. */
++	spin_lock_irqsave(&eth->reset_queue_lock, flags);
++	eth->reset_queue_stopping = true;
++	spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
++
++	/* stop all devices to make sure that dma is properly shut down */
+ 
+ 	for (i = 0; i < MTK_MAX_DEVS; i++) {
+ 		if (!eth->netdev[i])
+diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.h b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
+--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.h
++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
+@@ -1321,8 +1321,10 @@
+ 	struct mii_bus			*mii_bus;
+ 	unsigned int			mdc_divider;
+ 
+-	struct work_struct		pending_work;
+-	unsigned long			state;
++	struct work_struct		pending_work;
++	spinlock_t			reset_queue_lock;
++	bool				reset_queue_stopping;
++	unsigned long			state;
+ 
+ 
+ 	const struct mtk_soc_data	*soc;
