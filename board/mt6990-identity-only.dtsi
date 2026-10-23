@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
+/*
+ * MT6990 identity-only include for the incomplete SBAT6D research DTS.
+ *
+ * This is not a SoC hardware description: no CPU, memory, interrupt,
+ * clock, reset, power-domain, bus, or peripheral nodes are known well enough
+ * to publish here. Keep this file separate so verified SoC data can be added
+ * without pretending that the board-level model string is SoC metadata.
+ */
+/ {
+	compatible = "mediatek,mt6990";
+};

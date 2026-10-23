@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /dts-v1/;
 
+/include/ "mt6990-identity-only.dtsi"
+
 /*
  * Incomplete, non-bootable SBAT6D Device Tree scaffold.
  *
@@ -11,5 +13,4 @@
  */
 / {
 	model = "SoftBank Air Terminal 6 (incomplete research DTS)";
-	compatible = "mediatek,mt6990";
 };

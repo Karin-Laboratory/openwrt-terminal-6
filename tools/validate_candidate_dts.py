@@ -20,7 +20,8 @@ def validate(source: Path):
     with tempfile.TemporaryDirectory() as d:
         dest = Path(d) / "probe.dtb"
         proc = subprocess.run([dtc, "-@", "-I", "dts", "-O", "dtb",
-                               "-o", str(dest), str(source)],
+                               "-i", str(source.resolve().parent),
+                               "-o", str(dest), str(source.resolve())],
                               text=True, capture_output=True, timeout=90)
         return {"pass": proc.returncode == 0 and dest.is_file(),
                 "returncode": proc.returncode,

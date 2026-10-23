@@ -1,11 +1,20 @@
 # Compile-only Device Tree experiment
 
-`sbat6d-incomplete.dts` is an independently authored, **non-bootable research
-scaffold**. It records only the observed SoC compatible and board model string.
-It intentionally has no memory, CPUs, interrupt controller, clocks, resets,
-power domains, storage or enabled peripherals. It compiles with `dtc` as a
-syntax checkpoint, but is not a formal or installable board DTS and must not be
-used to boot a device.
+`sbat6d-incomplete.dts` includes `mt6990-identity-only.dtsi`. The include
+contains only the observed SoC compatible; it intentionally has no memory,
+CPUs, interrupt controller, clocks, resets, power domains, storage or enabled
+peripherals. The pair compiles into a DTB with both standalone `dtc` and the
+Linux 6.18.55 Kbuild DTB target. It remains a non-bootable syntax checkpoint,
+not a formal or installable board DTS.
+
+The Linux 6.18.55 MediaTek root binding has no `mediatek,mt6990` root
+compatible entry, and no verified board-specific compatible is available in
+this repository. The Kbuild schema-check path was attempted with
+`CHECK_DTBS=y DT_SCHEMA_FILES=mediatek.yaml`; it stopped before validating the
+DTB because `dt-doc-validate` from the `dtschema` package is not installed in
+the local environment. Therefore `dtbs_check` is **not run / not passed**. A
+passing schema result cannot be claimed; do not add a guessed compatible or
+weaken the upstream binding to make the scaffold appear valid.
 
 The file `mt6990-air-terminal-6-sgmii1-experimental.dtso` is a **disabled Device Tree overlay source**, not a flashable or deployable board DTS. The two exact runtime node paths were noted in the Test25 plan following live FDT inspection. This work does **not** copy or redistribute a full OEM device tree.
 
