@@ -5,6 +5,8 @@ on:
     branches:
       - research/sbat6d-dts-evidence
       - integration/openwrt-source-gate
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
