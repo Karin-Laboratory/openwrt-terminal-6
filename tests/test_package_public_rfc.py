@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tarfile
 import tempfile
+import zlib
 import unittest
 
 SCRIPT = Path(__file__).resolve().parents[1] / "tools/package_public_rfc.py"
@@ -54,7 +55,7 @@ class BundleTests(unittest.TestCase):
             data = bytearray(archive.read_bytes())
             data[len(data) // 2] ^= 0xFF
             archive.write_bytes(data)
-            with self.assertRaises((ValueError, tarfile.TarError, EOFError, OSError, json.JSONDecodeError)):
+            with self.assertRaises((ValueError, tarfile.TarError, EOFError, OSError, json.JSONDecodeError, zlib.error)):
                 verifier.verify(archive)
 
     def test_refuses_missing_input(self):
