@@ -57,6 +57,9 @@ Using the pinned OpenWrt source above and the experimental `mt6990` subtarget:
 - `.config` confirms `CONFIG_ARCH_MEDIATEK=y`, `CONFIG_NET_MEDIATEK_SOC=y`, `CONFIG_NET_DSA=y`, `CONFIG_NET_DSA_MT7530=y`, `CONFIG_NET_DSA_MT7530_MDIO=y`, and `CONFIG_NET_DSA_TAG_MTK=y`.
 - ARM64 `Image` SHA-256: `88ee4f9d4478b1a55cfe50c30c4a9cfc886b9d8543e50efd8783a0cc0a157a9b`.
 - `drivers/net/ethernet/mediatek/mtk_eth_soc.o` SHA-256: `699cc6dae14f72e6eb07009c6f20f606f5c4a91e7689cf39a52453fec7f610c4`.
-- Package compile/install and generic rootfs staging: pending at this revision.
+- `make -j2 package/compile V=s`: PASS (77 package index entries produced).
+- `make -j2 package/install V=s`: PASS.
+- `make -j2 target/install V=s`: PASS; generic rootfs staging produced a 2.7 MiB squashfs and a 3.4 MiB tarball. The squashfs SHA-256 is `76d7e79f2bcc17356795820dc04ff477aae3e218cc922134212421d3e2ec9ef8`; the tarball SHA-256 is `f9e9ef2dd9351d117809509123b9fc97933ae4b847318d12cb1740da62830315`.
+- No SBAT6D device image, boot image, or flashable artifact was generated; `image/mt6990.mk` defines no device profiles.
 
 This proves a generic ARM64 Linux and Ethernet-driver compile against the selected OpenWrt source. It does not prove MT6990 boot support, DTS validity, switch topology, or device operation. The generated kernel is experimental and must not be installed on SBAT6D.
