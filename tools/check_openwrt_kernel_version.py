@@ -11,8 +11,6 @@ def inspect(text):
         match = re.search(r"(?m)^" + re.escape(key) + r"\s*[:?+]?=\s*([^#\n]+)", text)
         if match:
             found[key] = match.group(1).strip()
-    direct = found.get("LINUX_VERSION", "")
-    exact_upstream = direct == "6.18"
     return {
         "status": "version-inventory-only",
         "linux_versions": found,
