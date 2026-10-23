@@ -25,7 +25,7 @@ def check(tree):
             matches[name] = {"state": "missing", "expected_git_blob": expected}
             continue
         data = source.read_bytes()
-        blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+        blob = hashlib.sha1(b"blob " + str(len(data)).encode() + bytes([0]) + data).hexdigest()
         matches[name] = {
             "state": "exact" if blob == expected else "different",
             "git_blob": blob,
