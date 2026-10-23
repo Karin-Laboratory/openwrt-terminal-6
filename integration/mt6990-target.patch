@@ -22,12 +22,15 @@ index 0000000000000000000000000000000000000000..f419deee417b8f32d759f4b00c107454
 +# exist. This intentionally prevents creation of installable device images.
 diff --git a/target/linux/mediatek/mt6990/config-6.18 b/target/linux/mediatek/mt6990/config-6.18
 new file mode 100644
-index 0000000000000000000000000000000000000000..cc6eaaf4c028a9a3e78000a11a72c1461348a404
+index 0000000000000000000000000000000000000000..3175b80c05a4d8994bf6fda6d931631b9a1039ca
 --- /dev/null
 +++ b/target/linux/mediatek/mt6990/config-6.18
-@@ -0,0 +1,5 @@
+@@ -0,0 +1,8 @@
 +CONFIG_64BIT=y
 +CONFIG_ARCH_MEDIATEK=y
++CONFIG_ARM64_4K_PAGES=y
++CONFIG_ARM64_PA_BITS_48=y
++CONFIG_ARM64_VA_BITS_39=y
 +CONFIG_ARM64=y
 +CONFIG_DTC=y
 +CONFIG_NET_MEDIATEK_SOC=y
