@@ -47,6 +47,15 @@ class ObservedPeripheralDtsTests(unittest.TestCase):
                 phy = node_body(self.source, f"pcie_phy{i}: phy@{addr}")
                 self.assertIn(f"phy-id = <{i}>", phy)
 
+    def test_ethsys_reset_provider_is_recorded_but_disabled(self):
+        ethsys = node_body(self.source, "ethsys: ethsys@15000000")
+        self.assertRegex(ethsys, r'\bstatus\s*=\s*"disabled"')
+        reset = node_body(self.source, "reset-controller")
+        self.assertIn('compatible = "ti,syscon-reset"', reset)
+        self.assertIn("#reset-cells = <1>", reset)
+        self.assertIn("ti,reset-bits = <0x34 0x04 0x34 0x04 0x34 0x04 0x28>", reset)
+        self.assertRegex(reset, r'\bstatus\s*=\s*"disabled"')
+
     def test_no_ram_range_is_selected(self):
         board = (ROOT / "board/sbat6d-incomplete.dts").read_text()
         self.assertNotRegex(board + self.source, r"memory(?:@80000000)?\s*\{")
