@@ -93,6 +93,15 @@ jobs:
           fi
           test -s "$tree/arch/arm64/boot/Image"
           test -s "$tree/drivers/net/ethernet/mediatek/mtk_eth_soc.o"
+          make -C "$tree" ARCH=arm64 HOSTCC=/usr/bin/gcc \
+            mediatek/mt6990-sbat6d-incomplete.dtb
+          dtb="$tree/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dtb"
+          test -s "$dtb"
+          "$tree/scripts/dtc/dtc" -I dtb -O dts "$dtb" -o /tmp/mt6990-sbat6d-incomplete.dts
+          grep -Fq 'compatible = "mediatek,mt6990";' /tmp/mt6990-sbat6d-incomplete.dts
+          grep -Fq 'model = "SoftBank Air Terminal 6 (incomplete research DTS)";' /tmp/mt6990-sbat6d-incomplete.dts
+          sha256sum "$dtb" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo 'Linux Kbuild generated an identity-only, non-bootable research DTB. This is not a complete SoC DTSI or SBAT6D board DTB.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build package and rootfs staging
         working-directory: openwrt

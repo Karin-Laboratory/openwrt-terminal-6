@@ -1,6 +1,8 @@
 # OpenWrt integration workstream
 
-This branch now carries an experimental `mediatek/mt6990` source-build target in `mt6990-target.patch`. It enables a generic AArch64 Linux build, the common MediaTek Ethernet driver, and upstream MT7530 DSA/tag support for compile coverage, and integrates the public cleanup/requeue patches into OpenWrt's 6.18 patch series. Unverified SoC-specific clock, pinctrl, external-interrupt, and watchdog drivers are kept disabled; CI checks this constraint. The DSA selection follows the observed MT7531 family but does not confirm board wiring or runtime support. It intentionally defines no board profile, Device Tree, boot image, flash layout or installable firmware.
+This branch carries an experimental `mediatek/mt6990` source-build target in `mt6990-target.patch`. It enables a generic AArch64 Linux build, the common MediaTek Ethernet driver, and upstream MT7530 DSA/tag support for compile coverage, and integrates the public cleanup/requeue patches into OpenWrt's 6.18 patch series. Unverified SoC-specific clock, pinctrl, external-interrupt, and watchdog drivers are kept disabled; CI checks this constraint. The DSA selection follows the observed MT7531 family but does not confirm board wiring or runtime support.
+
+The patch now registers and compiles an identity-only research DTB copied from PR #1. It contains only the observed MT6990 root compatible and an explicit incomplete model string. It has no SoC hardware nodes, no board-specific compatible, no OpenWrt device profile, and no image recipe. DTB generation is syntax/build integration evidence only, not `dtbs_check` compliance or a usable board tree.
 
 The exact pinned OpenWrt base is `openwrt/openwrt` commit `a25fb079b1463cd5d7d69c6d9a1c28d873291ebb`; kernel preparation yields Linux 6.18.55. Do not silently apply the target patch to another OpenWrt revision or kernel patch set.
 

@@ -6,7 +6,7 @@ Updated: 2026-10-23
 
 `integration/mt6990-target.patch` adds `mediatek/mt6990` to the pinned OpenWrt MediaTek target. It selects the generic AArch64 userspace/toolchain, Linux `Image`, `CONFIG_ARCH_MEDIATEK`, `CONFIG_DTC`, and `CONFIG_NET_MEDIATEK_SOC`. The MT7531 observation is represented by the upstream MT7530 DSA family and MediaTek tagger configuration for compile coverage; it does not prove SBAT6D switch wiring or runtime operation. The MediaTek Ethernet cleanup/requeue RFC patches are added after OpenWrt's existing 6.18 patch series.
 
-The subtarget intentionally has no CPU microarchitecture selection, board profile, device-specific package set, DTS, image recipe, partition layout, signing or installation output. Its `image/mt6990.mk` is empty by design so that Kconfig does not advertise an unsupported device. The generic compile profile explicitly disables unverified SoC-specific clock, pinctrl, external-interrupt and watchdog drivers; CI rejects accidental selection of these families. This is a source-build target for generic kernel and package/rootfs work, not a bootable MT6990 port.
+The subtarget has no CPU microarchitecture selection, board profile, device-specific package set, production DTS, image recipe, partition layout, signing or installation output. `files-6.18` now carries an identity-only research DTS/DTSI, and `image/mt6990.mk` remains empty so Kconfig does not advertise an unsupported device. The generic compile profile explicitly disables unverified SoC-specific clock, pinctrl, external-interrupt and watchdog drivers; CI rejects accidental selection of these families. This is a source-build target for generic kernel and package/rootfs work, not a bootable MT6990 port.
 
 ## Reproduction
 
@@ -35,13 +35,17 @@ make -C "$tree" ARCH=arm64 \
   HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++ \
   HOSTLD=/usr/bin/ld HOSTAS=/usr/bin/as olddefconfig
 make -j2 target/linux/compile V=s
+# The target build workflow separately compiles the research-only DTB:
+make -C "$tree" ARCH=arm64 mediatek/mt6990-sbat6d-incomplete.dtb
 ```
 
 Then `package/compile`, `package/install`, and `target/install` can be tested on the same configuration. No image from this target is a valid SBAT6D boot artifact. Do not interpret a generic ARM64 build as MT6990 SoC or board support.
 
 ## Device Tree status
 
-PR #1 adds `board/sbat6d-incomplete.dts`, which contains only the reported MT6990 root compatibility and a model string. It omits memory, CPUs, interrupt controller, clocks, resets, power domains, storage, and board devices. `dtc` syntax success is not `dtbs_check` success and does not establish bootability. The measured MAC1/SGMII1 observations remain isolated in the existing disabled overlay until their complete dependencies are resolved from a same-instance FDT.
+PR #1 splits the reported MT6990 root compatible into `board/mt6990-identity-only.dtsi`; `board/sbat6d-incomplete.dts` contains the research model string. The matching OpenWrt `files-6.18` sources are registered in Linux's MediaTek DTS Makefile, with no OpenWrt device profile. Linux 6.18.55 Kbuild generated this 181-byte identity-only DTB locally (SHA-256 `b6038335526da786e9fd83fd4f3d567b8aeff56fb755e37bbf50f3af78f35685`). It omits memory, CPUs, interrupt controller, clocks, resets, power domains, storage and board devices.
+
+The [upstream Linux 6.18.55 MediaTek root binding](https://github.com/gregkh/linux/blob/v6.18.55/Documentation/devicetree/bindings/arm/mediatek.yaml) has no `mediatek,mt6990` entry; the repository has no verified board-specific compatible. `CHECK_DTBS=y DT_SCHEMA_FILES=mediatek.yaml` was attempted, but Kbuild stopped before DT validation because local `dt-doc-validate` is unavailable. Thus `dtbs_check` is **not passed**. Syntax and DTB generation do not establish binding compliance or bootability. Measured MAC1/SGMII1 observations remain isolated in the disabled overlay until their complete dependencies are resolved from a same-instance FDT.
 
 ## Evidence and blockers
 
@@ -63,6 +67,9 @@ Using the pinned OpenWrt source above and the experimental `mt6990` subtarget:
 - `make -j2 package/compile V=s`: PASS (77 package index entries produced).
 - `make -j2 package/install V=s`: PASS.
 - `make -j2 target/install V=s`: PASS; generic rootfs staging produced a 2,759,404-byte squashfs at `build_dir/target-aarch64_generic_musl/linux-mediatek_mt6990/root.squashfs` and a 3,468,211-byte tarball at `bin/targets/mediatek/mt6990/openwrt-mediatek-mt6990-default-rootfs.tar.gz`. Their SHA-256 values are `cc1f1b60776991d448c406905924603c19d7b2933b31479afcfdab3a69d51f29` and `7e3ec8ea1292d9c4c10303b2532f5555d813f34b11dacb3e8fba0080e8d003a2` respectively.
+- Linux Kbuild DTB generation for the unbootable identity-only research DTS: PASS locally; source registration and both DTS files were staged in a temporary copy of the prepared kernel tree. DTB SHA-256: `b6038335526da786e9fd83fd4f3d567b8aeff56fb755e37bbf50f3af78f35685`.
+- OpenWrt outer patch and nested DTB-registration patch: `git apply --check` and application PASS against the pinned OpenWrt baseline and the Linux 6.18.55 MediaTek Makefile. The hosted CI for the new integration is pending.
+- `dtbs_check`: NOT PASSED / blocked as described above; no binding success is claimed.
 - No SBAT6D device image, boot image, or flashable artifact was generated; `image/mt6990.mk` defines no device profiles.
 
 ## Hosted CI evidence
