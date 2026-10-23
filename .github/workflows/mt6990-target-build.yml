@@ -156,24 +156,35 @@ jobs:
           "$cc" --version | head -n 1
           tree="$(find build_dir -type d -path '*/linux-mediatek_mt6990/linux-6.18.55' -print -quit)"
           test -n "$tree"
-          echo 'Kernel stack-protector configuration:'
-          grep -E '^CONFIG_STACKPROTECTOR(_PER_TASK)?=' "$tree/.config" || true
-          if ! grep -qx 'CONFIG_STACKPROTECTOR_PER_TASK=y' "$tree/.config"; then
-            echo 'Expected the MT6990 target to retain the arm64 per-task canary ABI.' >&2
+          echo 'Effective kernel stack-protector ABI:'
+          grep -E '^(CONFIG_(STACKPROTECTOR|STACKPROTECTOR_PER_TASK|CC_HAVE_STACKPROTECTOR_SYSREG)=|# CONFIG_STACKPROTECTOR_PER_TASK is not set)' "$tree/.config" || true
+          if ! grep -qx 'CONFIG_STACKPROTECTOR=y' "$tree/.config"; then
+            echo 'The kernel build must retain stack-protector instrumentation.' >&2
             grep -E 'STACKPROTECTOR' "$tree/.config" >&2 || true
             exit 1
           fi
-          make -C "$tree" ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" \
-            HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++ \
-            HOSTLD=/usr/bin/ld HOSTAS=/usr/bin/as prepare
-          canary_offset="$(awk '$1 == "#define" && $2 == "TSK_STACK_CANARY" { print $3 }' "$tree/include/generated/asm-offsets.h")"
-          if [[ ! "$canary_offset" =~ ^[0-9]+$ ]]; then
-            echo 'Could not derive TSK_STACK_CANARY from the prepared Linux tree.' >&2
-            grep -n 'TSK_STACK_CANARY' "$tree/include/generated/asm-offsets.h" >&2 || true
-            exit 1
+          if grep -qx 'CONFIG_STACKPROTECTOR_PER_TASK=y' "$tree/.config"; then
+            make -C "$tree" ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" \
+              HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++ \
+              HOSTLD=/usr/bin/ld HOSTAS=/usr/bin/as prepare
+            canary_offset="$(awk '$1 == "#define" && $2 == "TSK_STACK_CANARY" { print $3 }' "$tree/include/generated/asm-offsets.h")"
+            if [[ ! "$canary_offset" =~ ^[0-9]+$ ]]; then
+              echo 'Could not derive TSK_STACK_CANARY from the prepared Linux tree.' >&2
+              grep -n 'TSK_STACK_CANARY' "$tree/include/generated/asm-offsets.h" >&2 || true
+              exit 1
+            fi
+            canary_flags="-mstack-protector-guard=sysreg -mstack-protector-guard-reg=sp_el0 -mstack-protector-guard-offset=$canary_offset"
+            canary_mode='per-task sp_el0'
+          else
+            if ! awk '$2 == "__stack_chk_guard" && $4 == "EXPORT_SYMBOL" { found=1 } END { exit !found }' "$tree/Module.symvers"; then
+              echo 'Global stack-protector mode selected without an exported __stack_chk_guard.' >&2
+              grep -E 'STACKPROTECTOR|CC_HAVE_STACKPROTECTOR_SYSREG' "$tree/.config" >&2 || true
+              exit 1
+            fi
+            canary_flags='-mstack-protector-guard=global'
+            canary_mode='global exported __stack_chk_guard'
           fi
-          canary_flags="-mstack-protector-guard=sysreg -mstack-protector-guard-reg=sp_el0 -mstack-protector-guard-offset=$canary_offset"
-          echo "Per-task arm64 stack-canary flags for external modules: $canary_flags" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "External module stack-canary mode: $canary_mode ($canary_flags)" | tee -a "$GITHUB_STEP_SUMMARY"
           make -j2 package/compile KERNEL_CC="$cc" KERNEL_CROSS="$cross" CONFIG_KERNEL_CFLAGS="$canary_flags" V=s
           make -j2 package/install KERNEL_CC="$cc" KERNEL_CROSS="$cross" CONFIG_KERNEL_CFLAGS="$canary_flags" V=s
           make -j2 target/install KERNEL_CC="$cc" KERNEL_CROSS="$cross" CONFIG_KERNEL_CFLAGS="$canary_flags" V=s

@@ -460,10 +460,11 @@ index 000000000..f419deee4
 +# exist. This intentionally prevents creation of installable device images.
 diff --git a/target/linux/mediatek/mt6990/config-6.18 b/target/linux/mediatek/mt6990/config-6.18
 new file mode 100644
-index 000000000..b86659f36
+index 000000000..0e11d4166
 --- /dev/null
 +++ b/target/linux/mediatek/mt6990/config-6.18
-@@ -0,0 +1,266 @@
+@@ -0,0 +1,265 @@
++CONFIG_STACKPROTECTOR=y
 +CONFIG_64BIT=y
 +# CONFIG_AIROHA_EN8801SC_PHY is not set
 +# CONFIG_AIR_AN8855_PHY is not set
@@ -506,8 +507,6 @@ index 000000000..b86659f36
 +CONFIG_AUDIT_ARCH_COMPAT_GENERIC=y
 +CONFIG_BUILTIN_RETURN_ADDRESS_STRIPS_PAC=y
 +CONFIG_CC_HAVE_SHADOW_CALL_STACK=y
-+CONFIG_CC_HAVE_STACKPROTECTOR_SYSREG=y
-+CONFIG_STACKPROTECTOR_PER_TASK=y
 +CONFIG_CLKSRC_MMIO=y
 +CONFIG_CLONE_BACKWARDS=y
 +# CONFIG_CMDLINE_OVERRIDE is not set
