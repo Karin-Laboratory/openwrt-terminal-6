@@ -1,0 +1,61 @@
+name: Public RFC source bundle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'patches/rfc/**'
+      - 'docs/RFC-2-RESET-REQUEUE.ja.md'
+      - 'docs/PUBLIC-SOURCE-VERIFICATION.md'
+      - 'tools/package_public_rfc.py'
+      - 'tests/test_package_public_rfc.py'
+      - '.github/workflows/public-rfc-bundle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-bundle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Screen source files
+        run: |
+          python3 scripts/check-publication.py
+          python3 scripts/check-publication-history.py
+      - name: Test source bundle reproducibility
+        run: python3 -m unittest discover -s tests -p test_package_public_rfc.py -v
+      - name: Package public RFC
+        run: |
+          set -euo pipefail
+          python3 tools/package_public_rfc.py --output dist/openwrt-terminal-6-source-rfc.tar.gz
+          sha256sum dist/openwrt-terminal-6-source-rfc.tar.gz | tee dist/SHA256SUMS
+          python3 - <<'PY'
+          import json, tarfile
+          archive = 'dist/openwrt-terminal-6-source-rfc.tar.gz'
+          with tarfile.open(archive) as t:
+              members = t.getnames()
+              assert all(x.startswith('openwrt-terminal-6-source-rfc/') for x in members)
+              manifest = json.load(t.extractfile('openwrt-terminal-6-source-rfc/manifest.json'))
+              assert manifest['flashable'] is False
+              assert len(manifest['files']) == 5
+          print('SOURCE_ONLY_BUNDLE_PASS')
+          PY
+      - name: Upload source-only artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-terminal-6-rfc-sources
+          path: |
+            dist/openwrt-terminal-6-source-rfc.tar.gz
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+      - name: Explain scope
+        if: always()
+        run: |
+          echo 'Source-only RFC bundle. Not OpenWrt firmware; no boot image, keys, EEPROM, or flashing files.' >> "$GITHUB_STEP_SUMMARY"
