@@ -37,8 +37,8 @@
       "evidence": null
     },
     "kernel_binding_validation": {
-      "status": "targeted_schema_pass_with_local_uart_enum_patch",
-      "evidence": "Linux 6.18.55 mediatek.yaml validation passed. The unmodified upstream serial schema rejected the observed mt6873-uart compatible tuple; a minimal enum-only patch records it, while the existing driver generic fallback remains unchanged. The serial schema and isolated DTB must be revalidated after applying this patch. Full MediaTek-wide checks include unrelated legacy warnings."
+      "status": "schema_gap_patched_pending_revalidation",
+      "evidence": "The Linux 6.18.55 root compatible binding was targeted-validated previously. The earlier integration run showed that the unmodified UART schema rejects the observed mt6873-uart + mt6577-uart tuple. PR #1 now carries a minimal enum-only correction; isolated DTB validation against the patched schema is pending the Hosted rerun. Full MediaTek-wide checks have unrelated legacy warnings."
     },
     "cpu_psci_gic_timer": {
       "status": "observed_and_partially_implemented",
