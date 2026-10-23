@@ -1,0 +1,75 @@
+name: RFC full upstream ARM64 kernel build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rfc-arm64-kernel-build.yml'
+      - 'patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch'
+      - 'patches/rfc/0002-mediatek-serialize-reset-requeue.patch'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kernel-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install ARM64 compiler and build dependencies
+        run: |
+          # The hosted runner can include a Microsoft APT source that returns 403.
+          # Disable only that third-party source, leaving Ubuntu mirrors enabled.
+          while IFS= read -r file; do
+            case "$file" in
+              *.list)
+                sudo sed -i '/packages\\.microsoft\\.com/d' "$file"
+                ;;
+              *.sources)
+                sudo mv "$file" "$file.disabled"
+                ;;
+            esac
+          done < <(sudo grep -rl 'packages.microsoft.com' /etc/apt/sources.list.d --include='*.list' --include='*.sources' || true)
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            make bc bison flex libssl-dev libelf-dev
+      - name: Fetch pinned Linux v6.18 and apply public patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch v6.18 --single-branch https://github.com/torvalds/linux.git linux
+          cd linux
+          test "$(git hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.c)" = e68997a29191b2a8ce0868873dcfe95c79e10e56
+          test "$(git hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.h)" = 0168e2fbc6197a6aa9fe159767166e86915accbc
+          git apply --check ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
+          git apply ../patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch
+          git apply --check ../patches/rfc/0002-mediatek-serialize-reset-requeue.patch
+          git apply ../patches/rfc/0002-mediatek-serialize-reset-requeue.patch
+          git diff --check
+      - name: Build complete upstream ARM64 Image with MediaTek Ethernet enabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd linux
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+          scripts/config --enable CONFIG_COMPILE_TEST \
+            --enable CONFIG_NET_VENDOR_MEDIATEK \
+            --module CONFIG_NET_MEDIATEK_SOC \
+            --enable CONFIG_NET_DSA
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+          grep -Eq '^CONFIG_NET_MEDIATEK_SOC=(m|y)$' .config
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 Image
+          test -s arch/arm64/boot/Image
+          sha256sum arch/arm64/boot/Image | tee /tmp/kernel-image.sha256
+          echo "### Full upstream Linux v6.18 ARM64 Image" >> "$GITHUB_STEP_SUMMARY"
+          echo 'RFC1 + RFC2 applied. This is not an SBAT6D/OpenWrt firmware image.' >> "$GITHUB_STEP_SUMMARY"
+          echo "Image SHA-256: $(cut -d' ' -f1 /tmp/kernel-image.sha256)" >> "$GITHUB_STEP_SUMMARY"
+          echo "MediaTek Ethernet: $(grep '^CONFIG_NET_MEDIATEK_SOC=' .config)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Explicit scope
+        if: always()
+        run: |
+          echo 'No board DTS, rootfs, installable boot image, signing, device operation, or release artifact.' >> "$GITHUB_STEP_SUMMARY"
