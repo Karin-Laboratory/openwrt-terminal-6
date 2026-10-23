@@ -63,6 +63,10 @@ jobs:
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
           grep -Eq '^CONFIG_NET_MEDIATEK_SOC=(m|y)$' .config
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 Image
+          # With NET_MEDIATEK_SOC=m, the driver is not linked into Image.
+          # Compile the driver object explicitly under the same kernel config.
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 drivers/net/ethernet/mediatek/mtk_eth_soc.o
+          test -s drivers/net/ethernet/mediatek/mtk_eth_soc.o
           test -s arch/arm64/boot/Image
           sha256sum arch/arm64/boot/Image | tee /tmp/kernel-image.sha256
           echo "### Full upstream Linux v6.18 ARM64 Image" >> "$GITHUB_STEP_SUMMARY"
