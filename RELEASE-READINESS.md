@@ -6,7 +6,7 @@ Updated: 2026-10-23. This is an **evidence-based source-publication status**, no
 
 - Original project documentation and sanitized *reported* hardware findings, subject to per-file attribution and review.
 - Synthetic, **disabled** SGMII1 Device Tree examples and offline verification tooling.
-- Public CI definitions, which are attempts to validate these sources, **not evidence of a passing kernel build**.
+- Public Linux v6.18 MediaTek Ethernet RFC1/RFC2 patches with verified ARM64 driver-object compilation, **not evidence of a complete kernel build**.
 - A contribution process for source patches and redacted logs.
 
 ## Explicitly not ready
@@ -26,12 +26,13 @@ Updated: 2026-10-23. This is an **evidence-based source-publication status**, no
 | Offline DTS fixture tests | `.github/workflows/public-source-checks.yml` | Separate workflow PASS not yet verified; publication-gate DTS and phandle steps PASS in run #39841379271 |
 | Public donor PHY object | `.github/workflows/mt6990-phy-compile-probe.yml` | Experimental probe; no verified PASS; not the privately adapted Test25 driver |
 | Code provenance | `docs/SOURCE-AUDIT.md`, `LICENSES/README.md` | Hold unreviewed imports, especially SDK-derived code |
-| Reproducible build | `BUILDING.md` | NOT PASSED |
+| Reproducible Linux v6.18 Ethernet object | [Public verification](docs/PUBLIC-SOURCE-VERIFICATION.md) | **PASS**: [three-state ARM64 build #39877158871](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158871); [sequential apply #39877158897](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158897) |
+| Complete OpenWrt image build | `BUILDING.md` | NOT PASSED |
 | Installable image and recovery | `INSTALL.md`, `RECOVERY.md` | NOT PASSED |
 
 ## Release decision
 
-**Documentation/source research: candidate only. Installable binary: NO-GO.**
+**Public source RFC and reproduction instructions: available. Complete board port and installable binary: NO-GO.**
 Do not label an Actions run PASS until its exact workflow, commit SHA and final job status have been checked. A green documentation check does not validate kernel boot, network operation or secure recovery.
 
 Before a tagged documentation release: verify the final Actions run logs, manually review **all commits** for accidentally published material, record each imported file's origin/license, inspect public issue templates and confirm no private files appear in releases or artifacts. Do not rewrite published history without deliberate coordination.
