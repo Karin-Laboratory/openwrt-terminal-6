@@ -987,3 +987,13 @@ index 000000000..cef75f716
 +               - mediatek,mt6779-uart
 +               - mediatek,mt6795-uart
 +               - mediatek,mt6797-uart
+diff --git a/target/linux/generic/config-6.18 b/target/linux/generic/config-6.18
+index df8f70652c65b17392f57407854d37c117de0803..c6ad7cd48830d24df4c82970a23c3be130f3f44f 100644
+--- a/target/linux/generic/config-6.18
++++ b/target/linux/generic/config-6.18
+@@ -7051,5 +7051,4 @@ CONFIG_STACKPROTECTOR
+ # CONFIG_STACKPROTECTOR is not set
+-# CONFIG_STACKPROTECTOR_PER_TASK is not set
+ # CONFIG_STACKPROTECTOR_STRONG is not set
+ # CONFIG_STACKTRACE is not set
+ # CONFIG_STACKTRACE_BUILD_ID is not set
