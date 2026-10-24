@@ -82,6 +82,20 @@ jobs:
             CC="$cc" CROSS_COMPILE="$cross" \
             HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++ \
             HOSTLD=/usr/bin/ld HOSTAS=/usr/bin/as olddefconfig
+          grep -qx 'CONFIG_STACKPROTECTOR=y' "$tree/.config"
+          if ! grep -qx 'CONFIG_STACKPROTECTOR_PER_TASK=y' "$tree/.config"; then
+            echo 'The target requires the ARM64 per-task canary mode; Kconfig did not enable it.' >&2
+            grep -E 'STACKPROTECTOR|CC_HAVE_STACKPROTECTOR_SYSREG' "$tree/.config" >&2 || true
+            echo 'Checking the pinned cross compiler for the kernel canary ABI:' >&2
+            printf 'int canary_probe(void) { return 1; }\n' > "$RUNNER_TEMP/canary-probe.c"
+            "$cc" -c -fstack-protector \
+              -mstack-protector-guard=sysreg \
+              -mstack-protector-guard-reg=sp_el0 \
+              -mstack-protector-guard-offset=0 \
+              "$RUNNER_TEMP/canary-probe.c" -o "$RUNNER_TEMP/canary-probe.o" >&2 || true
+            exit 1
+          fi
+          grep -qx 'CONFIG_CC_HAVE_STACKPROTECTOR_SYSREG=y' "$tree/.config"
 
       - name: Compile ARM64 kernel and MediaTek Ethernet driver
         working-directory: openwrt
