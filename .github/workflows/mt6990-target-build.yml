@@ -125,19 +125,21 @@ jobs:
           fi
           test -s "$tree/arch/arm64/boot/Image"
           test -s "$tree/drivers/net/ethernet/mediatek/mtk_eth_soc.o"
-          make -C "$tree" ARCH=arm64 HOSTCC=/usr/bin/gcc \
+          make -C "$tree" ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" HOSTCC=/usr/bin/gcc \
             mediatek/mt6990-sbat6d-incomplete.dtb
           dtb="$tree/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dtb"
           test -s "$dtb"
           binding="$tree/Documentation/devicetree/bindings/arm/mediatek.yaml"
           dt-doc-validate "$binding"
-          make -C "$tree" dt_binding_check \
+          make -C "$tree" ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" \
+            HOSTCC=/usr/bin/gcc dt_binding_check \
             DT_SCHEMA_FILES=Documentation/devicetree/bindings/arm/mediatek.yaml
-          make -C "$tree" dt_binding_check \
+          make -C "$tree" ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" \
+            HOSTCC=/usr/bin/gcc dt_binding_check \
             DT_SCHEMA_FILES=Documentation/devicetree/bindings/serial/mediatek,uart.yaml
           make -C "$tree" CHECK_DTBS=y \
             DT_SCHEMA_FILES=Documentation/devicetree/bindings/arm/mediatek.yaml \
-            ARCH=arm64 HOSTCC=/usr/bin/gcc \
+            ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" HOSTCC=/usr/bin/gcc \
             mediatek/mt6990-sbat6d-incomplete.dtb
           dt-validate -u "$tree/Documentation/devicetree/bindings" \
             -s "$tree/Documentation/devicetree/bindings/processed-schema.json" "$dtb"

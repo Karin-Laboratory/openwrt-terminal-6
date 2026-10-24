@@ -32,6 +32,27 @@ class Arm64StackCanaryTests(unittest.TestCase):
         self.assertIn("target-aarch64_generic_musl/linux-mediatek_mt6990/linux-6.18.55", workflow)
         self.assertIn("HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++", workflow)
 
+    def test_direct_kernel_kbuild_calls_keep_the_cross_compiler(self):
+        workflow = (ROOT / ".github/workflows/mt6990-target-build.yml").read_text()
+        lines = workflow.splitlines()
+        invocations = []
+        i = 0
+        while i < len(lines):
+            if 'make -C "$tree"' not in lines[i]:
+                i += 1
+                continue
+            command = [lines[i]]
+            while command[-1].rstrip().endswith("\\") and i + 1 < len(lines):
+                i += 1
+                command.append(lines[i])
+            invocations.append(" ".join(command))
+            i += 1
+        self.assertGreaterEqual(len(invocations), 5)
+        for command in invocations:
+            with self.subTest(command=command[:100]):
+                self.assertIn('CC="$cc"', command)
+                self.assertIn('CROSS_COMPILE="$cross"', command)
+
 
 if __name__ == "__main__":
     unittest.main()
