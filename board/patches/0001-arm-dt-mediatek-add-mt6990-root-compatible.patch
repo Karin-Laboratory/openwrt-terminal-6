@@ -1,0 +1,23 @@
+From: Karin-Laboratory contributors
+Subject: [PATCH] dt-bindings: arm: mediatek: document the observed MT6990 platform
+
+The B-unit boot_b FDT reports the MediaTek MT6990 SoC and the
+mediatek,evb6990_cpe_mt7990_emmc platform compatible. Add those observed
+strings to the MediaTek root-node binding. This does not claim that SBAT6D is
+a MediaTek evaluation board; the board string is retained as the firmware's
+reported compatibility identifier.
+
+diff --git a/Documentation/devicetree/bindings/arm/mediatek.yaml b/Documentation/devicetree/bindings/arm/mediatek.yaml
+--- a/Documentation/devicetree/bindings/arm/mediatek.yaml
++++ b/Documentation/devicetree/bindings/arm/mediatek.yaml
+@@ -71,6 +71,10 @@ properties:
+               - archermind,mt6797-x20-dev
+               - mediatek,mt6797-evb
+           - const: mediatek,mt6797
++      - items:
++          - const: mediatek,evb6990_cpe_mt7990_emmc
++          - const: mediatek,mt6990
++
+       - items:
+           - enum:
+               - bananapi,bpi-r64

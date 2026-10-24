@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/dts-v1/;
+
+/include/ "mt6990.dtsi"
+/include/ "mt6990-observed-peripherals.dtsi"
+
+/*
+ * Partial, non-bootable SBAT6D research tree. The board compatible string is
+ * recorded from the B-unit boot_b FDT; it is not a claim that this product is
+ * a MediaTek EVB. No memory map or peripheral wiring is enabled here.
+ */
+/ {
+	model = "SoftBank Air Terminal 6 (SBA6D, research DTS)";
+	compatible = "mediatek,evb6990_cpe_mt7990_emmc", "mediatek,mt6990";
+};

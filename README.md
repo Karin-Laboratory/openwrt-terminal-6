@@ -8,7 +8,7 @@ Community-maintained experimental port of OpenWrt for the **SoftBank Air Termina
 
 ## Public research snapshot / 公開中の研究成果
 
-The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported kernel/userspace boots, Ethernet and Wi-Fi observations, and the remaining blockers. It is **not an installable release**. The synthetic DTS example, offline tests, and two upstream-anchored MediaTek Ethernet RFC patches are open for review. The pinned Linux v6.18 ARM64 driver-object build passes public CI; a complete bootable OpenWrt build from public sources remains pending.
+The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported kernel/userspace boots, Ethernet and Wi-Fi observations, and the remaining blockers. It is **not an installable release**. A partial, non-bootable MT6990 research DTS (CPU/PSCI/GIC/timer only), offline tests, and two upstream-anchored MediaTek Ethernet RFC patches are open for review. Targeted Linux 6.18.55 DTB/schema checks pass for that partial tree; full board support and a bootable OpenWrt build remain pending.
 
 ## Upstream-anchored Ethernet RFC patches / 公開中のEthernet RFC
 
@@ -20,7 +20,7 @@ The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported k
 
 ## Full upstream kernel compilation probe / ARM64カーネル全体ビルド検証
 
-A new [Linux v6.18 ARM64 Image build workflow](.github/workflows/rfc-arm64-kernel-build.yml) applies RFC1→RFC2 and attempts a complete upstream ARM64 kernel `Image` plus the MediaTek Ethernet driver object. **The upstream ARM64 Image build passed [Actions run #39885153830](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39885153830) (commit `1d8949d`, `CONFIG_NET_MEDIATEK_SOC=y`, Image SHA-256 `a99b89d680700e1cad4927d27238eaf0a9882b21968ac8bbb274a79b7aee6128`). This is not an SBAT6D firmware build and does not establish runtime safety.** No device-specific DTS, OpenWrt rootfs, OEM firmware or signed boot images are included.
+A new [Linux v6.18 ARM64 Image build workflow](.github/workflows/rfc-arm64-kernel-build.yml) applies RFC1→RFC2 and builds a complete upstream ARM64 kernel `Image` plus the MediaTek Ethernet driver object. **The upstream ARM64 Image build passed [Actions run #39885153830](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39885153830) (commit `1d8949d`, `CONFIG_NET_MEDIATEK_SOC=y`, Image SHA-256 `a99b89d680700e1cad4927d27238eaf0a9882b21968ac8bbb274a79b7aee6128`).** Separately, the partial DTS has targeted Linux 6.18.55 DTB/schema checks; it is research-only and not an SBAT6D firmware build. No complete board tree, OpenWrt image, OEM firmware or signed boot images are included.
 
 ## Public C source experiment / 公開Cコード
 
@@ -58,7 +58,7 @@ The strings `SBAT6A`, `SBA6D` and `SBAT6D` have appeared in research notes. Thei
 4. Traceable evidence for each supported feature.
 5. Minimal, reviewable patches suitable for upstream submission.
 
-**There is currently no distributable installation image and no endorsed flash command here.** This repository starts with documentation and publication gates; source/patches will be added only after legal, provenance and technical review.
+**There is currently no distributable installation image and no endorsed flash command here.** Published DTS facts are independently transcribed from a read-only B-unit capture with raw FDT withheld; the tree is incomplete and must not be used to boot. See [board hardware facts](board/DT-HARDWARE-FACTS.md) and [DTS validation](board/DTS-VALIDATION.md).
 
 ## Build and installation
 

@@ -1,0 +1,60 @@
+{
+  "schema": "sbat6d-dts-evidence-v1",
+  "board": "SoftBank Air Terminal 6",
+  "status": "PARTIAL_DTS_IMPLEMENTED",
+  "notes": "Machine facts below were independently transcribed from a read-only B-unit boot_b FDT payload. See DT-HARDWARE-FACTS.md for provenance, limitations and omitted dependencies. This record is not a complete or bootable Device Tree.",
+  "checks": {
+    "board_identity": {
+      "status": "observed",
+      "evidence": "B-unit boot_b FDT reports model MediaTek evb6990_cpe_mt7990_emmc and compatibles mediatek,evb6990_cpe_mt7990_emmc / mediatek,mt6990; retail-board equivalence is not implied"
+    },
+    "runtime_fdt_provenance": {
+      "status": "verified_boot_b_payload",
+      "evidence": "Read-only B-unit boot_b FDT capture record; raw FDT and its unit-specific digest remain local"
+    },
+    "complete_node_inventory": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "ethernet_mac_switch_wiring": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "clock_providers_and_ids": {
+      "status": "observed_not_implemented",
+      "evidence": "B-unit boot_b FDT identifies four clock-index providers and consumer indices; this records firmware values only, not upstream binding IDs or a Linux provider driver"
+    },
+    "power_domain_providers_and_ids": {
+      "status": "observed_not_implemented",
+      "evidence": "B-unit boot_b FDT identifies the mt6990-scpsys provider and consumer domain indices; Linux provider driver and binding remain unavailable in this workstream"
+    },
+    "sgmii_pll_and_phy_binding": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "pinmux_resets_regulators": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "kernel_binding_validation": {
+      "status": "targeted_schema_pass_with_local_uart_enum_patch",
+      "evidence": "Linux 6.18.55 root and serial dt_binding_check passed in Hosted run 40014932523. The patched partial DTB compiled and the workflow direct dt-validate command completed successfully with the observed mt6873-uart enum correction. This validates only the partial disabled-observation tree, not peripheral driver bindings or bootability. Full MediaTek-wide checks have unrelated legacy warnings."
+    },
+    "cpu_psci_gic_timer": {
+      "status": "observed_and_partially_implemented",
+      "evidence": "Four Cortex-A55 CPU MPIDRs, PSCI SMC, GICv3 register ranges/maintenance PPI, and architected timer PPIs were transcribed to mt6990.dtsi; memory map and peripheral providers remain incomplete"
+    },
+    "peripheral_inventory": {
+      "status": "observed_and_disabled",
+      "evidence": "Same B-unit boot_b FDT records UART0, eMMC, three PCIe hosts/PHYs, pinctrl/GPIO resources, NETSYS, MAC0/MAC1, SGMII1 and its analog PHY/PLL. A minimal independent subset is encoded with status=disabled; proprietary GPIO initialization/pinmux tables and provider drivers are not included"
+    },
+    "lk_memory_preparation": {
+      "status": "observed_separate_test_boot",
+      "evidence": "A separate Test20 slot-A LK log reports 2 GiB total DRAM, memory-reg setup from mblock information, and reserved-memory append before Linux entry; final FDT and Linux map readback are unavailable"
+    },
+    "usable_memory_map": {
+      "status": "conflicting",
+      "evidence": "The same FDT has two root memory descriptions at 0x80000000 with lengths 0x3e605000 and 0x1e800000; neither is selected in the DTS"
+    }
+  }
+}
