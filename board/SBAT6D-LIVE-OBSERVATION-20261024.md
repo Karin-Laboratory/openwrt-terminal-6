@@ -62,6 +62,27 @@ Read-only platform-device binding inspection found:
 | NETSYS (`15100000`) | `test23_netsys_fixedlink` |
 | SGMII system and analog PHY (`11305000`, `11e60000`) | no driver bound |
 
+The same read-only driver-link inspection found these clock/reset/power and
+pinctrl bindings in the running test kernel:
+
+| provider function | runtime driver |
+|---|---|
+| top clock syscon (`10000000`) | `clk-mt6990` |
+| peripheral clock syscon (`11036000`) | `clk-mt6990-peri` |
+| low-power clock syscon (`1200c000`) | `clk-mt6990-vlpcfg` |
+| VLP clock syscon (`12013000`) | `clk-mt6990` |
+| system power controller (`12001000`) | `mtk-scpsys` |
+| pinctrl (`10004000`) | `mt69xx-pinctrl` |
+| Ethernet reset controller (`15000000`) | `ti-syscon-reset` |
+| topckgen alias (`10000000`) | unbound |
+| Ethernet syscon (`15000000`) | unbound |
+| SGMII shared PLL (`10014000`) | unbound |
+
+These are runtime `driver` symlink observations only. They do not establish
+that these implementations are present in upstream Linux 6.18.55, that the
+firmware clock indices map to upstream binding IDs, or which Ethernet/SGMII
+consumer should use each reset or PLL reference.
+
 These bindings describe this Linux 6.18.44 A-slot test boot. The experimental
 NETSYS binding is not evidence of upstream Ethernet support. The observation
 does not establish clock/reset/genpd IDs or a complete consumer initialization
