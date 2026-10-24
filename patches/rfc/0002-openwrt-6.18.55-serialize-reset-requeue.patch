@@ -1,0 +1,136 @@
+From: Karin-Laboratory contributors
+Subject: [RFC PATCH] net: mediatek: rebase reset-work serialization for OpenWrt 6.18.55
+SPDX-License-Identifier: GPL-2.0-only
+
+Rebased RFC 0002 for the exact OpenWrt prepared kernel source at
+openwrt/openwrt a25fb079b1463cd5d7d69c6d9a1c28d873291ebb. Includes the
+OpenWrt mtk_mac_config reset-work producer and a forward declaration for
+the helper used before its definition. Apply after RFC 0001 and only after
+the OpenWrt source fingerprint gate passes.
+
+diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+index c8196cd75a2735380d8cee8f31bf475534621fa2..98594f7eb67030ecd20aebd55e26ae7621b8f7e9 100644
+--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+@@ -40,0 +41,2 @@
++static void mtk_queue_reset_work(struct mtk_eth *eth);
++
+@@ -718 +720 @@ static void mtk_mac_config(struct phylink_config *config, unsigned int mode,
+-			schedule_work(&eth->pending_work);
++			mtk_queue_reset_work(eth);
+@@ -3616,0 +3619,28 @@ static bool mtk_hw_reset_check(struct mtk_eth *eth)
++/* Caller holds reset_queue_lock. */
++static void __mtk_queue_reset_work(struct mtk_eth *eth)
++{
++	if (!eth->reset_queue_stopping)
++		schedule_work(&eth->pending_work);
++}
++
++static void mtk_queue_reset_work(struct mtk_eth *eth)
++{
++	unsigned long flags;
++
++	spin_lock_irqsave(&eth->reset_queue_lock, flags);
++	__mtk_queue_reset_work(eth);
++	spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
++}
++
++static void mtk_stop_reset_work(struct mtk_eth *eth)
++{
++	unsigned long flags;
++
++	spin_lock_irqsave(&eth->reset_queue_lock, flags);
++	eth->reset_queue_stopping = true;
++	spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
++
++	cancel_work_sync(&eth->pending_work);
++	cancel_delayed_work_sync(&eth->reset.monitor_work);
++}
++
+@@ -3620,0 +3651 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
++	unsigned long flags;
+@@ -3622,4 +3653,4 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
+-	if (test_bit(MTK_RESETTING, &eth->state))
+-		return;
+-
+-	if (!mtk_hw_reset_check(eth))
++	spin_lock_irqsave(&eth->reset_queue_lock, flags);
++	if (eth->reset_queue_stopping || test_bit(MTK_RESETTING, &eth->state) ||
++	    !mtk_hw_reset_check(eth)) {
++		spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
+@@ -3626,0 +3658 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
++	}
+@@ -3629 +3661,2 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
+-	netif_err(eth, tx_err, dev, "transmit timed out\n");
++	__mtk_queue_reset_work(eth);
++	spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
+@@ -3631 +3664 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
+-	schedule_work(&eth->pending_work);
++	netif_err(eth, tx_err, dev, "transmit timed out\n");
+@@ -4487 +4520 @@ static void mtk_hw_reset_monitor_work(struct work_struct *work)
+-		schedule_work(&eth->pending_work);
++		mtk_queue_reset_work(eth);
+@@ -4490,2 +4523,10 @@ out:
+-	schedule_delayed_work(&eth->reset.monitor_work,
+-			      MTK_DMA_MONITOR_TIMEOUT);
++	/* Serialize monitor rearm with the remove and probe-unwind stop. */
++	{
++		unsigned long flags;
++
++		spin_lock_irqsave(&eth->reset_queue_lock, flags);
++		if (!eth->reset_queue_stopping)
++			schedule_delayed_work(&eth->reset.monitor_work,
++					     MTK_DMA_MONITOR_TIMEOUT);
++		spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
++	}
+@@ -5624,0 +5666 @@ static int mtk_probe(struct platform_device *pdev)
++	unsigned long registered_netdevs = 0;
+@@ -5656,0 +5699,2 @@ static int mtk_probe(struct platform_device *pdev)
++	spin_lock_init(&eth->reset_queue_lock);
++	eth->reset_queue_stopping = false;
+@@ -5878,2 +5922,3 @@ static int mtk_probe(struct platform_device *pdev)
+-			goto err_unreg_netdev;
+-		} else
++			goto err_deinit_ppe;
++		} else {
++			set_bit(i, &registered_netdevs);
+@@ -5882,0 +5928 @@ static int mtk_probe(struct platform_device *pdev)
++		}
+@@ -5892 +5938 @@ static int mtk_probe(struct platform_device *pdev)
+-		goto err_unreg_netdev;
++		goto err_deinit_ppe;
+@@ -5905,2 +5950,0 @@ static int mtk_probe(struct platform_device *pdev)
+-err_unreg_netdev:
+-	mtk_unreg_dev(eth);
+@@ -5907,0 +5952,13 @@ err_deinit_ppe:
++	/* Stop producers before unregistering devices or freeing reset resources. */
++	mtk_stop_reset_work(eth);
++	for (i = 0; i < MTK_MAX_DEVS; i++) {
++		struct mtk_mac *mac;
++
++		if (!eth->netdev[i])
++			continue;
++		mac = netdev_priv(eth->netdev[i]);
++		if (MTK_HAS_CAPS(eth->soc->caps, MTK_QDMA))
++			unregister_netdevice_notifier(&mac->device_notifier);
++		if (test_bit(i, &registered_netdevs))
++			unregister_netdev(eth->netdev[i]);
++	}
+@@ -5927,0 +5985,3 @@ static void mtk_remove(struct platform_device *pdev)
++	/* Latch producers off and drain work before touching devices or hardware. */
++	mtk_stop_reset_work(eth);
++
+@@ -5937,3 +5996,0 @@ static void mtk_remove(struct platform_device *pdev)
+-	cancel_work_sync(&eth->pending_work);
+-	cancel_delayed_work_sync(&eth->reset.monitor_work);
+-
+diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.h b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
+index accf4849979e4bf57ebefa9eb5199656fbee71b7..c58ba74bc000b508573148e00e6932302b1bbe72 100644
+--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.h
++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
+@@ -1374,0 +1375,2 @@ struct mtk_soc_data {
++ * @reset_queue_lock:	Serializes reset-work producers with teardown
++ * @reset_queue_stopping:	Prevents new reset-work scheduling during teardown
+@@ -1412,0 +1415,2 @@ struct mtk_eth {
++	spinlock_t			reset_queue_lock;
++	bool				reset_queue_stopping;

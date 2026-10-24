@@ -1,0 +1,1000 @@
+diff --git a/target/linux/mediatek/Makefile b/target/linux/mediatek/Makefile
+index 2515948b6..f821426a5 100644
+--- a/target/linux/mediatek/Makefile
++++ b/target/linux/mediatek/Makefile
+@@ -5,7 +5,7 @@ include $(TOPDIR)/rules.mk
+ ARCH:=arm
+ BOARD:=mediatek
+ BOARDNAME:=MediaTek ARM
+-SUBTARGETS:=filogic mt7622 mt7623 mt7629
++SUBTARGETS:=filogic mt6990 mt7622 mt7623 mt7629
+ FEATURES:=dt-overlay emmc fpu gpio nand pci pcie rootfs-part separate_ramdisk squashfs usb
+ 
+ KERNEL_PATCHVER:=6.18
+diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-observed-peripherals.dtsi b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-observed-peripherals.dtsi
+new file mode 100644
+index 000000000..2ee1b2102
+--- /dev/null
++++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-observed-peripherals.dtsi
+@@ -0,0 +1,330 @@
++// SPDX-License-Identifier: GPL-2.0-only
++
++/*
++ * Read-only B-unit boot_b FDT observations. All peripheral nodes in this
++ * include are deliberately disabled: Linux 6.18.55 does not provide the
++ * verified MT6990 clock, reset, power-domain, pinctrl and device bindings
++ * needed to enable them safely. Properties are transcribed as hardware facts,
++ * not as a claim that this tree can initialize the devices.
++ *
++ * RAM is omitted here. The same FDT contains two root memory nodes at
++ * 0x80000000 with different lengths; neither is selected as Linux-usable RAM.
++ */
++
++/ {
++	clk26m: clock-26m {
++		compatible = "fixed-clock";
++		#clock-cells = <0>;
++		clock-frequency = <26000000>;
++	};
++
++	pericfg_ao: syscon@11036000 {
++		compatible = "mediatek,mt6990-pericfg_ao", "syscon";
++		reg = <0x0 0x11036000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	topckgen: syscon@10000000 {
++		compatible = "mediatek,mt6990-topckgen", "syscon";
++		reg = <0x0 0x10000000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	vlpcfg: syscon@1200C000 {
++		compatible = "mediatek,mt6990-vlpcfg", "syscon";
++		reg = <0x0 0x1200c000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	vlp_cksys: syscon@12013000 {
++		compatible = "mediatek,mt6990-vlp_cksys", "syscon";
++		reg = <0x0 0x12013000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	scpsys: power-controller@12001000 {
++		compatible = "mediatek,mt6990-scpsys", "syscon";
++		reg = <0x0 0x12001000 0x0 0x1000>;
++		#power-domain-cells = <1>;
++		status = "disabled";
++	};
++
++	pinctrl@10004000 {
++		compatible = "mediatek,mt69xx-pinctrl";
++		reg = <0x0 0x10004000 0x0 0x1000>,
++		      <0x0 0x11c00000 0x0 0x1000>,
++		      <0x0 0x11c10000 0x0 0x1000>,
++		      <0x0 0x11d00000 0x0 0x1000>,
++		      <0x0 0x11d10000 0x0 0x1000>,
++		      <0x0 0x11d20000 0x0 0x1000>,
++		      <0x0 0x11d30000 0x0 0x1000>,
++		      <0x0 0x11e80000 0x0 0x1000>,
++		      <0x0 0x11e90000 0x0 0x1000>,
++		      <0x0 0x11eb0000 0x0 0x1000>;
++		reg-names = "gpio", "iocfg_rt_8", "iocfg_rt_9", "iocfg_bm_4",
++			    "iocfg_bm_5", "iocfg_bm_6", "iocfg_bm_7", "iocfg_lt_0",
++			    "iocfg_lt_1", "iocfg_lt_3";
++		gpio-controller;
++		#gpio-cells = <2>;
++		interrupt-controller;
++		#interrupt-cells = <2>;
++		status = "disabled";
++	};
++
++	serial@11002000 {
++		compatible = "mediatek,mt6873-uart", "mediatek,mt6577-uart";
++		reg = <0x0 0x11002000 0x0 0x1000>;
++		interrupts = <0 232 4>;
++		clocks = <&clk26m>, <&pericfg_ao 0>;
++		clock-names = "baud", "bus";
++		status = "disabled";
++	};
++
++	mmc@11230000 {
++		compatible = "mediatek,mt6990-mmc";
++		reg = <0x0 0x11230000 0x0 0x1000>,
++		      <0x0 0x11f00000 0x0 0x1000>;
++		interrupts = <0 260 4>;
++		clocks = <&pericfg_ao 0x18>, <&pericfg_ao 0x19>,
++			 <&pericfg_ao 0x1b>, <&pericfg_ao 0x1a>;
++		clock-names = "source", "hclk", "axi_clk", "ahb_clk";
++		power-domains = <&scpsys 0x06>;
++		bus-width = <8>;
++		non-removable;
++		status = "disabled";
++	};
++
++	pcie@11280000 {
++		compatible = "mediatek,mt6990-pcie";
++		reg = <0x0 0x11280000 0x0 0x2000>;
++		reg-names = "pcie-mac";
++		linux,pci-domain = <0>;
++		#address-cells = <3>;
++		#size-cells = <2>;
++		interrupts = <0 288 4>;
++		clocks = <&pericfg_ao 0x45>, <&vlpcfg 0>, <&vlpcfg 1>,
++			 <&vlpcfg 2>, <&vlpcfg 3>, <&vlpcfg 4>, <&vlpcfg 5>,
++			 <&vlpcfg 6>, <&vlp_cksys 0x10>;
++		power-domains = <&scpsys 0x0f>;
++		bus-range = <0x0 0xff>;
++		ranges = <0x82000000 0x0 0x30000000 0x0 0x30000000 0x0 0x10000000>;
++		phys = <&pcie_phy0>;
++		phy-names = "pcie-phy";
++		#interrupt-cells = <1>;
++		interrupt-map-mask = <0 0 0 7>;
++		interrupt-map = <0 0 0 1 &pcie0_intc 0>,
++				<0 0 0 2 &pcie0_intc 1>,
++				<0 0 0 3 &pcie0_intc 2>,
++				<0 0 0 4 &pcie0_intc 3>;
++		status = "disabled";
++
++		pcie0_intc: interrupt-controller {
++			interrupt-controller;
++			#address-cells = <0>;
++			#interrupt-cells = <1>;
++		};
++	};
++
++	pcie@11288000 {
++		compatible = "mediatek,mt6990-pcie";
++		reg = <0x0 0x11288000 0x0 0x2000>;
++		reg-names = "pcie-mac";
++		linux,pci-domain = <1>;
++		#address-cells = <3>;
++		#size-cells = <2>;
++		interrupts = <0 278 4>;
++		clocks = <&pericfg_ao 0x2f>, <&pericfg_ao 0x30>,
++			 <&pericfg_ao 0x31>, <&pericfg_ao 0x32>,
++			 <&pericfg_ao 0x33>, <&topckgen 0x18>,
++			 <&topckgen 0x3d>;
++		power-domains = <&scpsys 0x0d>;
++		bus-range = <0x0 0xff>;
++		ranges = <0x82000000 0x0 0x40000000 0x0 0x40000000 0x0 0x04000000>;
++		phys = <&pcie_phy1>;
++		phy-names = "pcie-phy";
++		#interrupt-cells = <1>;
++		interrupt-map-mask = <0 0 0 7>;
++		interrupt-map = <0 0 0 1 &pcie1_intc 0>,
++				<0 0 0 2 &pcie1_intc 1>,
++				<0 0 0 3 &pcie1_intc 2>,
++				<0 0 0 4 &pcie1_intc 3>;
++		status = "disabled";
++
++		pcie1_intc: interrupt-controller {
++			interrupt-controller;
++			#address-cells = <0>;
++			#interrupt-cells = <1>;
++		};
++	};
++
++	pcie@11290000 {
++		compatible = "mediatek,mt6990-pcie";
++		reg = <0x0 0x11290000 0x0 0x2000>;
++		reg-names = "pcie-mac";
++		linux,pci-domain = <2>;
++		#address-cells = <3>;
++		#size-cells = <2>;
++		interrupts = <0 279 4>;
++		clocks = <&pericfg_ao 0x34>, <&pericfg_ao 0x35>,
++			 <&pericfg_ao 0x36>, <&pericfg_ao 0x37>,
++			 <&pericfg_ao 0x38>, <&topckgen 0x18>,
++			 <&topckgen 0x3d>;
++		power-domains = <&scpsys 0x0e>;
++		bus-range = <0x0 0xff>;
++		ranges = <0x82000000 0x0 0x44000000 0x0 0x44000000 0x0 0x04000000>;
++		phys = <&pcie_phy2>;
++		phy-names = "pcie-phy";
++		#interrupt-cells = <1>;
++		interrupt-map-mask = <0 0 0 7>;
++		interrupt-map = <0 0 0 1 &pcie2_intc 0>,
++				<0 0 0 2 &pcie2_intc 1>,
++				<0 0 0 3 &pcie2_intc 2>,
++				<0 0 0 4 &pcie2_intc 3>;
++		status = "disabled";
++
++		pcie2_intc: interrupt-controller {
++			interrupt-controller;
++			#address-cells = <0>;
++			#interrupt-cells = <1>;
++		};
++	};
++
++	pcie_phy0: phy@11310000 {
++		compatible = "mediatek,mt6980-pcie-phy";
++		reg = <0x0 0x11310000 0x0 0x10000>;
++		#phy-cells = <0>;
++		phy-id = <0>;
++		power-domains = <&scpsys 0x0f>;
++		status = "disabled";
++	};
++
++	pcie_phy1: phy@11e00000 {
++		compatible = "mediatek,mt6980-pcie-phy";
++		reg = <0x0 0x11e00000 0x0 0x10000>;
++		#phy-cells = <0>;
++		phy-id = <1>;
++		power-domains = <&scpsys 0x0d>;
++		status = "disabled";
++	};
++
++	pcie_phy2: phy@11e20000 {
++		compatible = "mediatek,mt6980-pcie-phy";
++		reg = <0x0 0x11e20000 0x0 0x10000>;
++		#phy-cells = <0>;
++		phy-id = <2>;
++		power-domains = <&scpsys 0x0e>;
++		status = "disabled";
++	};
++
++	netsys@15100000 {
++		compatible = "mediatek,mt6990-netsys";
++		reg = <0x0 0x15100000 0x0 0x20000>;
++		clocks = <&topckgen 0x2a>, <&topckgen 0x29>,
++			 <&topckgen 0x2d>, <&topckgen 0x2c>,
++			 <&topckgen 0x2b>;
++		clock-names = "net_sel", "net_500_sel", "med_mcu_sel",
++			      "wed_mcu_sel", "net_2x_sel";
++		power-domains = <&scpsys 0x09>;
++		#address-cells = <2>;
++		#size-cells = <2>;
++		ranges;
++		status = "disabled";
++
++		ethernet@15100000 {
++			compatible = "mediatek,mt6990-eth", "syscon";
++			reg = <0x0 0x15100000 0x0 0x30000>;
++			clocks = <&topckgen 0x2e>, <&topckgen 0x2f>,
++				 <&topckgen 0x30>, <&topckgen 0x31>,
++				 <&topckgen 0x32>, <&topckgen 0x33>;
++			clock-names = "sgmii_0_sel", "sgmii_sbus_0_sel",
++				      "sgmii_1_sel", "sgmii_sbus_1_sel",
++				      "usxgmii_sbus_0_sel", "usxgmii_sbus_1_sel";
++			mediatek,ethsys = <&ethsys>;
++			#address-cells = <1>;
++			#size-cells = <0>;
++			status = "disabled";
++
++			mac@0 {
++				compatible = "mediatek,eth-mac";
++				reg = <0>;
++				phy-mode = "2500base-x";
++				status = "disabled";
++			};
++
++			mac@1 {
++				compatible = "mediatek,eth-mac";
++				reg = <1>;
++				phy-mode = "2500base-x";
++				status = "disabled";
++			};
++		};
++	};
++
++	ethsys: ethsys@15000000 {
++		compatible = "mediatek,leopard-ethsys", "syscon", "simple-mfd";
++		reg = <0x0 0x15000000 0x0 0x1000>;
++		#clock-cells = <1>;
++		#reset-cells = <1>;
++		status = "disabled";
++
++		reset-controller {
++			compatible = "ti,syscon-reset";
++			#reset-cells = <1>;
++			ti,reset-bits = <0x34 0x04 0x34 0x04 0x34 0x04 0x28>;
++			status = "disabled";
++		};
++	};
++
++	sgmiisys0: sgmiisys@11304000 {
++		compatible = "mediatek,colgin-sgmiisys_0", "syscon";
++		reg = <0x0 0x11304000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmiisys1: sgmiisys@11305000 {
++		compatible = "mediatek,colgin-sgmiisys_1", "syscon";
++		reg = <0x0 0x11305000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmiiphy0: sgmiiphy@11E50000 {
++		compatible = "mediatek,colgin-sgmiisys_phy_0", "syscon";
++		reg = <0x0 0x11e50000 0x0 0x10000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmiiphy1: sgmiiphy@11E60000 {
++		compatible = "mediatek,colgin-sgmiisys_phy_1", "syscon";
++		reg = <0x0 0x11e60000 0x0 0x10000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmiiuxphy0: sgmiiphy@11306000 {
++		compatible = "mediatek,colgin-sgmiisys_uxphy_0", "syscon";
++		reg = <0x0 0x11306000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmiiuxphy1: sgmiiphy@11307000 {
++		compatible = "mediatek,colgin-sgmiisys_uxphy_1", "syscon";
++		reg = <0x0 0x11307000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++
++	sgmii_pll: sgmiipll@10014000 {
++		compatible = "mediatek,colgin-sgmiisys_pll", "syscon";
++		reg = <0x0 0x10014000 0x0 0x1000>;
++		#clock-cells = <1>;
++		status = "disabled";
++	};
++};
+diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts
+new file mode 100644
+index 000000000..231cb6921
+--- /dev/null
++++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dts
+@@ -0,0 +1,15 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/dts-v1/;
++
++/include/ "mt6990.dtsi"
++/include/ "mt6990-observed-peripherals.dtsi"
++
++/*
++ * Partial, non-bootable SBAT6D research tree. The board compatible string is
++ * recorded from the B-unit boot_b FDT; it is not a claim that this product is
++ * a MediaTek EVB. No memory map or peripheral wiring is enabled here.
++ */
++/ {
++	model = "SoftBank Air Terminal 6 (SBA6D, research DTS)";
++	compatible = "mediatek,evb6990_cpe_mt7990_emmc", "mediatek,mt6990";
++};
+diff --git a/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi
+new file mode 100644
+index 000000000..861fcf15a
+--- /dev/null
++++ b/target/linux/mediatek/files-6.18/arch/arm64/boot/dts/mediatek/mt6990.dtsi
+@@ -0,0 +1,75 @@
++// SPDX-License-Identifier: GPL-2.0-only
++
++
++/*
++ * Independently authored MT6990 SoC facts taken from the B-unit boot_b FDT.
++ * Only the CPU interface, PSCI, GICv3 and architected timer are represented.
++ * Memory is deliberately absent: the preserved FDT contains overlapping
++ * memory nodes and does not establish the Linux-usable physical map.
++ * Peripheral providers and dependencies are not yet modeled here.
++ */
++
++/ {
++	#address-cells = <2>;
++	#size-cells = <2>;
++	interrupt-parent = <&gic>;
++
++	psci {
++		compatible = "arm,psci-1.0";
++		method = "smc";
++	};
++
++	cpus {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		cpu@0 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x000>;
++			enable-method = "psci";
++		};
++
++		cpu@100 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x100>;
++			enable-method = "psci";
++		};
++
++		cpu@200 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x200>;
++			enable-method = "psci";
++		};
++
++		cpu@300 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a55";
++			reg = <0x300>;
++			enable-method = "psci";
++		};
++	};
++
++	gic: interrupt-controller@c000000 {
++		compatible = "arm,gic-v3";
++		#interrupt-cells = <3>;
++		#address-cells = <2>;
++		#size-cells = <2>;
++		#redistributor-regions = <1>;
++		interrupt-controller;
++		reg = <0x0 0x0c000000 0x0 0x00040000>,
++		      <0x0 0x0c040000 0x0 0x00200000>;
++		/* GIC PPI type 1, maintenance IRQ 9, level-high flags 4. */
++		interrupts = <1 9 4>;
++	};
++
++	timer {
++		compatible = "arm,armv8-timer";
++		/* GIC PPI type 1, level-high flags 4; order follows arch-timer binding. */
++		interrupts = <1 13 4>, <1 14 4>, <1 11 4>, <1 10 4>;
++		/* Recorded in the B-unit FDT; firmware CNTFRQ behavior is untested. */
++		clock-frequency = <13000000>;
++	};
++};
+diff --git a/target/linux/mediatek/image/mt6990.mk b/target/linux/mediatek/image/mt6990.mk
+new file mode 100644
+index 000000000..f419deee4
+--- /dev/null
++++ b/target/linux/mediatek/image/mt6990.mk
+@@ -0,0 +1,3 @@
++# Experimental MT6990 source target.
++# No device profiles are defined until a verified board DTS and image layout
++# exist. This intentionally prevents creation of installable device images.
+diff --git a/target/linux/mediatek/mt6990/config-6.18 b/target/linux/mediatek/mt6990/config-6.18
+new file mode 100644
+index 000000000..938c212e4acff04cc7191abcab444a348a34ab18
+--- /dev/null
++++ b/target/linux/mediatek/mt6990/config-6.18
+@@ -0,0 +1,267 @@
++CONFIG_STACKPROTECTOR=y
++CONFIG_CC_HAVE_STACKPROTECTOR_SYSREG=y
++CONFIG_STACKPROTECTOR_PER_TASK=y
++CONFIG_64BIT=y
++# CONFIG_AIROHA_EN8801SC_PHY is not set
++# CONFIG_AIR_AN8855_PHY is not set
++CONFIG_ARCH_BINFMT_ELF_EXTRA_PHDRS=y
++CONFIG_ARCH_DEFAULT_KEXEC_IMAGE_VERIFY_SIG=y
++CONFIG_ARCH_DMA_ADDR_T_64BIT=y
++CONFIG_ARCH_FORCE_MAX_ORDER=10
++CONFIG_ARCH_KEEP_MEMBLOCK=y
++CONFIG_ARCH_MEDIATEK=y
++CONFIG_ARCH_MHP_MEMMAP_ON_MEMORY_ENABLE=y
++CONFIG_ARCH_MMAP_RND_BITS=18
++CONFIG_ARCH_MMAP_RND_BITS_MAX=24
++CONFIG_ARCH_MMAP_RND_BITS_MIN=18
++CONFIG_ARCH_MMAP_RND_COMPAT_BITS_MIN=11
++CONFIG_ARCH_PKEY_BITS=3
++CONFIG_ARCH_PROC_KCORE_TEXT=y
++CONFIG_ARCH_SPARSEMEM_ENABLE=y
++CONFIG_ARCH_STACKWALK=y
++CONFIG_ARCH_SUSPEND_POSSIBLE=y
++CONFIG_ARCH_WANTS_EXECMEM_LATE=y
++CONFIG_ARCH_WANTS_NO_INSTR=y
++CONFIG_ARCH_WANTS_THP_SWAP=y
++CONFIG_ARM64=y
++CONFIG_ARM64_4K_PAGES=y
++CONFIG_ARM64_PA_BITS=48
++CONFIG_ARM64_PA_BITS_48=y
++# CONFIG_ARM64_PLATFORM_DEVICES is not set
++CONFIG_ARM64_TAGGED_ADDR_ABI=y
++CONFIG_ARM64_VA_BITS=39
++CONFIG_ARM64_VA_BITS_39=y
++CONFIG_ARM_AMBA=y
++CONFIG_ARM_ARCH_TIMER=y
++# CONFIG_ARM_ARCH_TIMER_EVTSTREAM is not set
++CONFIG_ARM_GIC=y
++CONFIG_ARM_GIC_ITS_PARENT=y
++CONFIG_ARM_GIC_V3=y
++CONFIG_ARM_GIC_V3_ITS=y
++CONFIG_ARM_GIC_V5=y
++CONFIG_ARM_PSCI_FW=y
++CONFIG_AUDIT_ARCH_COMPAT_GENERIC=y
++CONFIG_BUILTIN_RETURN_ADDRESS_STRIPS_PAC=y
++CONFIG_CC_HAVE_SHADOW_CALL_STACK=y
++CONFIG_CLKSRC_MMIO=y
++CONFIG_CLONE_BACKWARDS=y
++# CONFIG_CMDLINE_OVERRIDE is not set
++CONFIG_COMMON_CLK=y
++# CONFIG_COMMON_CLK_MT2712 is not set
++# CONFIG_COMMON_CLK_MT6735 is not set
++# CONFIG_COMMON_CLK_MT6779 is not set
++# CONFIG_COMMON_CLK_MT6795 is not set
++# CONFIG_COMMON_CLK_MT6797 is not set
++# CONFIG_COMMON_CLK_MT7622 is not set
++# CONFIG_COMMON_CLK_MT7981 is not set
++# CONFIG_COMMON_CLK_MT7986 is not set
++# CONFIG_COMMON_CLK_MT7987 is not set
++# CONFIG_COMMON_CLK_MT7988 is not set
++# CONFIG_COMMON_CLK_MT8173 is not set
++# CONFIG_COMMON_CLK_MT8183 is not set
++# CONFIG_COMMON_CLK_MT8186 is not set
++# CONFIG_COMMON_CLK_MT8195 is not set
++# CONFIG_COMMON_CLK_MT8196 is not set
++# CONFIG_COMMON_CLK_MT8365 is not set
++# CONFIG_COMMON_CLK_MT8516 is not set
++CONFIG_COMPACT_UNEVICTABLE_DEFAULT=1
++# CONFIG_COMPAT_32BIT_TIME is not set
++CONFIG_CONTEXT_TRACKING=y
++CONFIG_CONTEXT_TRACKING_IDLE=y
++CONFIG_CPUMASK_OFFSTACK=y
++CONFIG_CPU_LITTLE_ENDIAN=y
++CONFIG_CPU_MITIGATIONS=y
++CONFIG_CPU_RMAP=y
++CONFIG_CRC32_ARCH=y
++CONFIG_CRYPTO_ECB=y
++CONFIG_CRYPTO_LIB_GF128MUL=y
++CONFIG_CRYPTO_LIB_SHA256_ARCH=y
++CONFIG_CRYPTO_LIB_UTILS=y
++CONFIG_DCACHE_WORD_ACCESS=y
++CONFIG_DEBUG_INFO=y
++CONFIG_DMA_BOUNCE_UNALIGNED_KMALLOC=y
++CONFIG_DMA_DIRECT_REMAP=y
++CONFIG_DMA_NEED_SYNC=y
++CONFIG_DTC=y
++CONFIG_EDAC_SUPPORT=y
++CONFIG_EXCLUSIVE_SYSTEM_RAM=y
++CONFIG_FIXED_PHY=y
++CONFIG_FIX_EARLYCON_MEM=y
++CONFIG_FRAME_POINTER=y
++CONFIG_FS_IOMAP=y
++CONFIG_FUNCTION_ALIGNMENT=4
++CONFIG_FUNCTION_ALIGNMENT_4B=y
++CONFIG_FWNODE_MDIO=y
++CONFIG_FW_LOADER_PAGED_BUF=y
++CONFIG_FW_LOADER_SYSFS=y
++CONFIG_GCC_SUPPORTS_DYNAMIC_FTRACE_WITH_ARGS=y
++CONFIG_GENERIC_ALLOCATOR=y
++CONFIG_GENERIC_ARCH_TOPOLOGY=y
++CONFIG_GENERIC_BUG=y
++CONFIG_GENERIC_BUG_RELATIVE_POINTERS=y
++CONFIG_GENERIC_CLOCKEVENTS=y
++CONFIG_GENERIC_CLOCKEVENTS_BROADCAST=y
++CONFIG_GENERIC_CPU_AUTOPROBE=y
++CONFIG_GENERIC_CPU_DEVICES=y
++CONFIG_GENERIC_CPU_VULNERABILITIES=y
++CONFIG_GENERIC_CSUM=y
++CONFIG_GENERIC_EARLY_IOREMAP=y
++CONFIG_GENERIC_GETTIMEOFDAY=y
++CONFIG_GENERIC_IDLE_POLL_SETUP=y
++CONFIG_GENERIC_IOREMAP=y
++CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK=y
++CONFIG_GENERIC_IRQ_ENTRY=y
++CONFIG_GENERIC_IRQ_KEXEC_CLEAR_VM_FORWARD=y
++CONFIG_GENERIC_IRQ_SHOW=y
++CONFIG_GENERIC_IRQ_SHOW_LEVEL=y
++CONFIG_GENERIC_LIB_DEVMEM_IS_ALLOWED=y
++CONFIG_GENERIC_MSI_IRQ=y
++CONFIG_GENERIC_PCI_IOMAP=y
++CONFIG_GENERIC_PINCONF=y
++CONFIG_GENERIC_PINCTRL_GROUPS=y
++CONFIG_GENERIC_PINMUX_FUNCTIONS=y
++CONFIG_GENERIC_SCHED_CLOCK=y
++CONFIG_GENERIC_SMP_IDLE_THREAD=y
++CONFIG_GENERIC_STRNCPY_FROM_USER=y
++CONFIG_GENERIC_STRNLEN_USER=y
++CONFIG_GENERIC_TIME_VSYSCALL=y
++CONFIG_GPIO_CDEV=y
++CONFIG_GRO_CELLS=y
++CONFIG_HARDIRQS_SW_RESEND=y
++CONFIG_HAS_DMA=y
++CONFIG_HAS_IOMEM=y
++CONFIG_HAS_IOPORT=y
++CONFIG_HZ_PERIODIC=y
++CONFIG_ILLEGAL_POINTER_VALUE=0xdead000000000000
++CONFIG_INITRAMFS_SOURCE=""
++CONFIG_IRQCHIP=y
++CONFIG_IRQ_DOMAIN=y
++CONFIG_IRQ_DOMAIN_HIERARCHY=y
++CONFIG_IRQ_FORCED_THREADING=y
++CONFIG_IRQ_MSI_IOMMU=y
++CONFIG_IRQ_MSI_LIB=y
++CONFIG_IRQ_WORK=y
++CONFIG_LIBFDT=y
++CONFIG_LOCK_DEBUGGING_SUPPORT=y
++CONFIG_LOCK_SPIN_ON_OWNER=y
++CONFIG_LRU_GEN_WALKS_MMU=y
++CONFIG_MDIO_BUS=y
++# CONFIG_MEDIATEK_2P5GE_PHY is not set
++CONFIG_MEDIATEK_GE_PHY=y
++# CONFIG_MEDIATEK_WATCHDOG is not set
++# CONFIG_MFD_AIROHA_AN8855 is not set
++CONFIG_MIGRATION=y
++CONFIG_MMU_LAZY_TLB_REFCOUNT=y
++CONFIG_MODULES_USE_ELF_RELA=y
++# CONFIG_MTD_NAND_ECC_MEDIATEK is not set
++# CONFIG_MTK_CMDQ is not set
++CONFIG_MTK_CPUX_TIMER=y
++# CONFIG_MTK_DVFSRC is not set
++# CONFIG_MTK_INFRACFG is not set
++CONFIG_MTK_NET_PHYLIB=y
++# CONFIG_MTK_SCPSYS is not set
++CONFIG_MTK_TIMER=y
++CONFIG_MUTEX_SPIN_ON_OWNER=y
++CONFIG_NEED_DMA_MAP_STATE=y
++CONFIG_NEED_SG_DMA_LENGTH=y
++CONFIG_NET_DEVLINK=y
++CONFIG_NET_DSA=y
++CONFIG_NET_DSA_MT7530=y
++CONFIG_NET_DSA_MT7530_MDIO=y
++# CONFIG_NET_DSA_MT7530_MMIO is not set
++CONFIG_NET_DSA_TAG_MTK=y
++CONFIG_NET_EGRESS=y
++CONFIG_NET_FLOW_LIMIT=y
++CONFIG_NET_INGRESS=y
++CONFIG_NET_MEDIATEK_SOC=y
++CONFIG_NET_MEDIATEK_SOC_WED=y
++CONFIG_NET_SELFTESTS=y
++CONFIG_NET_VENDOR_MEDIATEK=y
++CONFIG_NET_XGRESS=y
++CONFIG_NO_IOPORT_MAP=y
++CONFIG_NR_CPUS=512
++CONFIG_OF=y
++CONFIG_OF_ADDRESS=y
++CONFIG_OF_EARLY_FLATTREE=y
++CONFIG_OF_FLATTREE=y
++CONFIG_OF_GPIO=y
++CONFIG_OF_IRQ=y
++CONFIG_OF_KOBJ=y
++CONFIG_OF_MDIO=y
++CONFIG_PAGE_BLOCK_MAX_ORDER=10
++CONFIG_PAGE_POOL=y
++CONFIG_PAGE_SIZE_LESS_THAN_256KB=y
++CONFIG_PAGE_SIZE_LESS_THAN_64KB=y
++CONFIG_PARTITION_PERCPU=y
++CONFIG_PCS_MTK_LYNXI=y
++CONFIG_PER_VMA_LOCK=y
++CONFIG_PGTABLE_LEVELS=3
++CONFIG_PHYLIB=y
++CONFIG_PHYLIB_LEDS=y
++CONFIG_PHYLINK=y
++CONFIG_PHYS_ADDR_T_64BIT=y
++CONFIG_PHY_COMMON_PROPS=y
++# CONFIG_PHY_MTK_DP is not set
++# CONFIG_PHY_MTK_MIPI_CSI_0_5 is not set
++# CONFIG_PHY_MTK_PCIE is not set
++# CONFIG_PHY_MTK_TPHY is not set
++# CONFIG_PHY_MTK_UFS is not set
++# CONFIG_PHY_MTK_XSPHY is not set
++CONFIG_PINCTRL=y
++# CONFIG_PINCTRL_AIROHA is not set
++# CONFIG_PINCTRL_MT2712 is not set
++# CONFIG_PINCTRL_MT6765 is not set
++# CONFIG_PINCTRL_MT6795 is not set
++# CONFIG_PINCTRL_MT6797 is not set
++# CONFIG_PINCTRL_MT7622 is not set
++# CONFIG_PINCTRL_MT7981 is not set
++# CONFIG_PINCTRL_MT7986 is not set
++# CONFIG_PINCTRL_MT7987 is not set
++# CONFIG_PINCTRL_MT8173 is not set
++# CONFIG_PINCTRL_MT8183 is not set
++# CONFIG_PINCTRL_MT8186 is not set
++# CONFIG_PINCTRL_MT8188 is not set
++# CONFIG_PINCTRL_MT8516 is not set
++CONFIG_POSIX_CPU_TIMERS_TASK_WORK=y
++CONFIG_POWER_RESET=y
++CONFIG_POWER_SUPPLY=y
++CONFIG_PTP_1588_CLOCK_OPTIONAL=y
++CONFIG_QUEUED_RWLOCKS=y
++CONFIG_QUEUED_SPINLOCKS=y
++CONFIG_RANDSTRUCT_NONE=y
++CONFIG_RATIONAL=y
++CONFIG_REGMAP=y
++CONFIG_REGMAP_IRQ=y
++CONFIG_REGMAP_MMIO=y
++CONFIG_RFS_ACCEL=y
++CONFIG_RPS=y
++CONFIG_RWSEM_SPIN_ON_OWNER=y
++CONFIG_SERIAL_8250_FSL=y
++CONFIG_SERIAL_8250_MT6577=y
++CONFIG_SERIAL_MCTRL_GPIO=y
++CONFIG_SMP=y
++CONFIG_SOCK_RX_QUEUE_MAPPING=y
++CONFIG_SOFTIRQ_ON_OWN_STACK=y
++CONFIG_SPARSEMEM=y
++CONFIG_SPARSEMEM_EXTREME=y
++CONFIG_SPARSEMEM_VMEMMAP=y
++CONFIG_SPARSEMEM_VMEMMAP_ENABLE=y
++CONFIG_SPARSE_IRQ=y
++CONFIG_SPLIT_PMD_PTLOCKS=y
++CONFIG_SPLIT_PTE_PTLOCKS=y
++CONFIG_SWIOTLB=y
++CONFIG_SWPHY=y
++CONFIG_SYSCTL_EXCEPTION_TRACE=y
++CONFIG_THREAD_INFO_IN_TASK=y
++CONFIG_TICK_CPU_ACCOUNTING=y
++CONFIG_TIMER_OF=y
++CONFIG_TIMER_PROBE=y
++CONFIG_TRACE_IRQFLAGS_NMI_SUPPORT=y
++CONFIG_TREE_RCU=y
++CONFIG_TREE_SRCU=y
++CONFIG_UNMAP_KERNEL_AT_EL0=y
++CONFIG_USER_STACKTRACE_SUPPORT=y
++CONFIG_VDSO_GETRANDOM=y
++CONFIG_VMAP_STACK=y
++CONFIG_XPS=y
++CONFIG_ZONE_DMA32=y
+diff --git a/target/linux/mediatek/mt6990/target.mk b/target/linux/mediatek/mt6990/target.mk
+new file mode 100644
+index 000000000..ce786712d
+--- /dev/null
++++ b/target/linux/mediatek/mt6990/target.mk
+@@ -0,0 +1,11 @@
++# Experimental source-build target for MediaTek MT6990.
++# This does not describe a bootable board or an installable firmware image.
++ARCH:=aarch64
++SUBTARGET:=mt6990
++BOARDNAME:=MT6990 (experimental source target)
++KERNELNAME:=Image
++
++define Target/Description
++	Build generic ARM64 Linux and package/rootfs components for MT6990 research.
++	No SBAT6D board Device Tree or installation image is defined.
++endef
+diff --git a/target/linux/mediatek/patches-6.18/978-mediatek-quiesce-workers-before-cleanup.patch b/target/linux/mediatek/patches-6.18/978-mediatek-quiesce-workers-before-cleanup.patch
+new file mode 100644
+index 000000000..3fc960a3e
+--- /dev/null
++++ b/target/linux/mediatek/patches-6.18/978-mediatek-quiesce-workers-before-cleanup.patch
+@@ -0,0 +1,41 @@
++From: Karin-Laboratory contributors
++Subject: [RFC PATCH] net: mediatek: quiesce FE recovery workers before cleanup
++Upstream-base: torvalds/linux v6.18
++Source-blob: e68997a29191b2a8ce0868873dcfe95c79e10e56
++
++This is a source-only RFC for review. The current cleanup path frees
++network devices before draining pending FE recovery work. Reorder the
++existing synchronous cancellations ahead of the teardown calls. Also
++stop existing recovery work ahead of the remove path's hardware deinit.
++
++This RFC does NOT stop other producers from requeueing work or the DMA
++monitor self-rearm, and does not resolve RTNL interactions. The prior
++single-hunk revision compiled for ARM64; this two-hunk revision awaits
++CI results and has no runtime testing. Do not flash or use as a complete fix.
++
++diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++@@ -4475,10 +4475,10 @@
++ static int mtk_cleanup(struct mtk_eth *eth)
++ {
+++	cancel_work_sync(&eth->pending_work);
+++	cancel_delayed_work_sync(&eth->reset.monitor_work);
++ 	mtk_sgmii_destroy(eth);
++ 	mtk_unreg_dev(eth);
++ 	mtk_free_dev(eth);
++-	cancel_work_sync(&eth->pending_work);
++-	cancel_delayed_work_sync(&eth->reset.monitor_work);
++ 
++ 	return 0;
++ }
++@@ -5331,6 +5331,9 @@
++ 	}
++ 
+++	cancel_work_sync(&eth->pending_work);
+++	cancel_delayed_work_sync(&eth->reset.monitor_work);
+++
++ 	mtk_wed_exit();
++ 	mtk_hw_deinit(eth);
++ 
++ 	netif_napi_del(&eth->tx_napi);
+diff --git a/target/linux/mediatek/patches-6.18/979-mediatek-serialize-reset-requeue.patch b/target/linux/mediatek/patches-6.18/979-mediatek-serialize-reset-requeue.patch
+new file mode 100644
+index 000000000..2fb68c0d0
+--- /dev/null
++++ b/target/linux/mediatek/patches-6.18/979-mediatek-serialize-reset-requeue.patch
+@@ -0,0 +1,136 @@
++From: Karin-Laboratory contributors
++Subject: [RFC PATCH] net: mediatek: rebase reset-work serialization for OpenWrt 6.18.55
++SPDX-License-Identifier: GPL-2.0-only
++
++Rebased RFC 0002 for the exact OpenWrt prepared kernel source at
++openwrt/openwrt a25fb079b1463cd5d7d69c6d9a1c28d873291ebb. Includes the
++OpenWrt mtk_mac_config reset-work producer and a forward declaration for
++the helper used before its definition. Apply after RFC 0001 and only after
++the OpenWrt source fingerprint gate passes.
++
++diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++index c8196cd75a2735380d8cee8f31bf475534621fa2..98594f7eb67030ecd20aebd55e26ae7621b8f7e9 100644
++--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++@@ -40,0 +41,2 @@
+++static void mtk_queue_reset_work(struct mtk_eth *eth);
+++
++@@ -718 +720 @@ static void mtk_mac_config(struct phylink_config *config, unsigned int mode,
++-			schedule_work(&eth->pending_work);
+++			mtk_queue_reset_work(eth);
++@@ -3616,0 +3619,28 @@ static bool mtk_hw_reset_check(struct mtk_eth *eth)
+++/* Caller holds reset_queue_lock. */
+++static void __mtk_queue_reset_work(struct mtk_eth *eth)
+++{
+++	if (!eth->reset_queue_stopping)
+++		schedule_work(&eth->pending_work);
+++}
+++
+++static void mtk_queue_reset_work(struct mtk_eth *eth)
+++{
+++	unsigned long flags;
+++
+++	spin_lock_irqsave(&eth->reset_queue_lock, flags);
+++	__mtk_queue_reset_work(eth);
+++	spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
+++}
+++
+++static void mtk_stop_reset_work(struct mtk_eth *eth)
+++{
+++	unsigned long flags;
+++
+++	spin_lock_irqsave(&eth->reset_queue_lock, flags);
+++	eth->reset_queue_stopping = true;
+++	spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
+++
+++	cancel_work_sync(&eth->pending_work);
+++	cancel_delayed_work_sync(&eth->reset.monitor_work);
+++}
+++
++@@ -3620,0 +3651 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
+++	unsigned long flags;
++@@ -3622,4 +3653,4 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
++-	if (test_bit(MTK_RESETTING, &eth->state))
++-		return;
++-
++-	if (!mtk_hw_reset_check(eth))
+++	spin_lock_irqsave(&eth->reset_queue_lock, flags);
+++	if (eth->reset_queue_stopping || test_bit(MTK_RESETTING, &eth->state) ||
+++	    !mtk_hw_reset_check(eth)) {
+++		spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
++@@ -3626,0 +3658 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
+++	}
++@@ -3629 +3661,2 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
++-	netif_err(eth, tx_err, dev, "transmit timed out\n");
+++	__mtk_queue_reset_work(eth);
+++	spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
++@@ -3631 +3664 @@ static void mtk_tx_timeout(struct net_device *dev, unsigned int txqueue)
++-	schedule_work(&eth->pending_work);
+++	netif_err(eth, tx_err, dev, "transmit timed out\n");
++@@ -4487 +4520 @@ static void mtk_hw_reset_monitor_work(struct work_struct *work)
++-		schedule_work(&eth->pending_work);
+++		mtk_queue_reset_work(eth);
++@@ -4490,2 +4523,10 @@ out:
++-	schedule_delayed_work(&eth->reset.monitor_work,
++-			      MTK_DMA_MONITOR_TIMEOUT);
+++	/* Serialize monitor rearm with the remove and probe-unwind stop. */
+++	{
+++		unsigned long flags;
+++
+++		spin_lock_irqsave(&eth->reset_queue_lock, flags);
+++		if (!eth->reset_queue_stopping)
+++			schedule_delayed_work(&eth->reset.monitor_work,
+++					     MTK_DMA_MONITOR_TIMEOUT);
+++		spin_unlock_irqrestore(&eth->reset_queue_lock, flags);
+++	}
++@@ -5624,0 +5666 @@ static int mtk_probe(struct platform_device *pdev)
+++	unsigned long registered_netdevs = 0;
++@@ -5656,0 +5699,2 @@ static int mtk_probe(struct platform_device *pdev)
+++	spin_lock_init(&eth->reset_queue_lock);
+++	eth->reset_queue_stopping = false;
++@@ -5878,2 +5922,3 @@ static int mtk_probe(struct platform_device *pdev)
++-			goto err_unreg_netdev;
++-		} else
+++			goto err_deinit_ppe;
+++		} else {
+++			set_bit(i, &registered_netdevs);
++@@ -5882,0 +5928 @@ static int mtk_probe(struct platform_device *pdev)
+++		}
++@@ -5892 +5938 @@ static int mtk_probe(struct platform_device *pdev)
++-		goto err_unreg_netdev;
+++		goto err_deinit_ppe;
++@@ -5905,2 +5950,0 @@ static int mtk_probe(struct platform_device *pdev)
++-err_unreg_netdev:
++-	mtk_unreg_dev(eth);
++@@ -5907,0 +5952,13 @@ err_deinit_ppe:
+++	/* Stop producers before unregistering devices or freeing reset resources. */
+++	mtk_stop_reset_work(eth);
+++	for (i = 0; i < MTK_MAX_DEVS; i++) {
+++		struct mtk_mac *mac;
+++
+++		if (!eth->netdev[i])
+++			continue;
+++		mac = netdev_priv(eth->netdev[i]);
+++		if (MTK_HAS_CAPS(eth->soc->caps, MTK_QDMA))
+++			unregister_netdevice_notifier(&mac->device_notifier);
+++		if (test_bit(i, &registered_netdevs))
+++			unregister_netdev(eth->netdev[i]);
+++	}
++@@ -5927,0 +5985,3 @@ static void mtk_remove(struct platform_device *pdev)
+++	/* Latch producers off and drain work before touching devices or hardware. */
+++	mtk_stop_reset_work(eth);
+++
++@@ -5937,3 +5996,0 @@ static void mtk_remove(struct platform_device *pdev)
++-	cancel_work_sync(&eth->pending_work);
++-	cancel_delayed_work_sync(&eth->reset.monitor_work);
++-
++diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.h b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
++index accf4849979e4bf57ebefa9eb5199656fbee71b7..c58ba74bc000b508573148e00e6932302b1bbe72 100644
++--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.h
+++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
++@@ -1374,0 +1375,2 @@ struct mtk_soc_data {
+++ * @reset_queue_lock:	Serializes reset-work producers with teardown
+++ * @reset_queue_stopping:	Prevents new reset-work scheduling during teardown
++@@ -1412,0 +1415,2 @@ struct mtk_eth {
+++	spinlock_t			reset_queue_lock;
+++	bool				reset_queue_stopping;
+diff --git a/target/linux/mediatek/patches-6.18/980-mt6990-incomplete-dtb-registration.patch b/target/linux/mediatek/patches-6.18/980-mt6990-incomplete-dtb-registration.patch
+new file mode 100644
+index 000000000..37e424106
+--- /dev/null
++++ b/target/linux/mediatek/patches-6.18/980-mt6990-incomplete-dtb-registration.patch
+@@ -0,0 +1,29 @@
++From: Karin-Laboratory contributors
++Subject: [RFC] arm64: dts: mediatek: add partial MT6990 research tree
++
++Compile independently transcribed CPU, PSCI, GICv3, architected timer and
++disabled peripheral observations as a non-bootable research DTB. Document the
++root compatible strings reported by the B-unit boot_b FDT. This does not select
++a usable RAM map, enable peripheral nodes, or create an installable image.
++
++diff --git a/arch/arm64/boot/dts/mediatek/Makefile b/arch/arm64/boot/dts/mediatek/Makefile
++--- a/arch/arm64/boot/dts/mediatek/Makefile
+++++ b/arch/arm64/boot/dts/mediatek/Makefile
++@@ -184,1 +184,2 @@
++ DTC_FLAGS_mt8395-radxa-nio-12l := -@
+++dtb-$(CONFIG_ARCH_MEDIATEK) += mt6990-sbat6d-incomplete.dtb
++
++diff --git a/Documentation/devicetree/bindings/arm/mediatek.yaml b/Documentation/devicetree/bindings/arm/mediatek.yaml
++--- a/Documentation/devicetree/bindings/arm/mediatek.yaml
+++++ b/Documentation/devicetree/bindings/arm/mediatek.yaml
++@@ -71,6 +71,10 @@ properties:
++               - archermind,mt6797-x20-dev
++               - mediatek,mt6797-evb
++           - const: mediatek,mt6797
+++      - items:
+++          - const: mediatek,evb6990_cpe_mt7990_emmc
+++          - const: mediatek,mt6990
+++
++       - items:
++           - enum:
++               - bananapi,bpi-r64
+diff --git a/target/linux/mediatek/patches-6.18/981-dt-bindings-serial-mediatek-add-observed-mt6873-uart-compatible.patch b/target/linux/mediatek/patches-6.18/981-dt-bindings-serial-mediatek-add-observed-mt6873-uart-compatible.patch
+new file mode 100644
+index 000000000..cef75f716
+--- /dev/null
++++ b/target/linux/mediatek/patches-6.18/981-dt-bindings-serial-mediatek-add-observed-mt6873-uart-compatible.patch
+@@ -0,0 +1,10 @@
++--- a/Documentation/devicetree/bindings/serial/mediatek,uart.yaml
+++++ b/Documentation/devicetree/bindings/serial/mediatek,uart.yaml
++@@ -31,6 +31,7 @@
++               - mediatek,mt6589-uart
++               - mediatek,mt6755-uart
++               - mediatek,mt6765-uart
+++              - mediatek,mt6873-uart
++               - mediatek,mt6779-uart
++               - mediatek,mt6795-uart
++               - mediatek,mt6797-uart
+diff --git a/target/linux/generic/config-6.18 b/target/linux/generic/config-6.18
+index df8f70652c65b17392f57407854d37c117de0803..c6ad7cd48830d24df4c82970a23c3be130f3f44f 100644
+--- a/target/linux/generic/config-6.18
++++ b/target/linux/generic/config-6.18
+@@ -7051,5 +7051,4 @@ CONFIG_STACKPROTECTOR
+ # CONFIG_STACKPROTECTOR is not set
+-# CONFIG_STACKPROTECTOR_PER_TASK is not set
+ # CONFIG_STACKPROTECTOR_STRONG is not set
+ # CONFIG_STACKTRACE is not set
+ # CONFIG_STACKTRACE_BUILD_ID is not set

@@ -1,6 +1,13 @@
 # Release readiness / 公開準備状況
 
-Updated: 2026-10-23. This is an **evidence-based source-publication status**, not an installation approval.
+## Verified MT6990 generic rootfs build (2026-10-24)
+
+**PASS: GitHub Actions [#40091561598](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40091561598), source commit [af6cb6ddc67b335c7c7da024eedae54f5dfb51b0](https://github.com/Karin-Laboratory/openwrt-terminal-6/commit/af6cb6ddc67b335c7c7da024eedae54f5dfb51b0).** Workflow `Experimental MT6990 generic target build` reports successful pinned OpenWrt checkout, patch application, AArch64 toolchain, Linux 6.18.55 kernel/MediaTek Ethernet compile, research DTB/schema stage and package/rootfs staging. Reported squashfs SHA-256: `10a3ed9981dd6ed9f078a9a9c6feb40ba5f0f20e436dd27dc7778c812af850a6`; this checksum has not been independently recalculated from a downloaded artifact in this documentation update.
+
+**Scope:** experimental **generic** MT6990 target and rootfs staging only. This is **not** a verified SBAT6D bootable image, installable partition image, board-complete DTS, runtime network bring-up, recoverable flashing procedure, or independent clean-room rebuild. RAM/reserved-memory and clock/reset/power-domain providers remain unresolved; disabled peripheral nodes remain research placeholders. The generic build succeeds, while board-specific installation, verified cold boot and recovery remain NO-GO.
+
+
+Updated: 2026-10-24. This is an **evidence-based source-publication status**, not an installation approval.
 
 ## What can be shared now
 
@@ -12,7 +19,7 @@ Updated: 2026-10-23. This is an **evidence-based source-publication status**, no
 ## Explicitly not ready
 
 - No supported installation image, verified flashing procedure, guaranteed A/B fallback or recovery instructions.
-- No complete OpenWrt source/patch manifest with an independently passing end-to-end build.
+- Hosted CI has a successful **generic MT6990 rootfs build**, but no independent third-party rebuild and no board-complete SBAT6D firmware, source/patch manifest or install image has been verified.
 - No permission established to redistribute the private archive, OEM SDK-derived driver tables, extracted firmware, calibration data, certificates or signing keys.
 - No independently verified persistent Ethernet and Wi-Fi bring-up on unrelated devices; 5G modem remains unsupported.
 
@@ -28,7 +35,8 @@ Updated: 2026-10-23. This is an **evidence-based source-publication status**, no
 | Code provenance | `docs/SOURCE-AUDIT.md`, `LICENSES/README.md` | Hold unreviewed imports, especially SDK-derived code |
 | Reproducible Linux v6.18 Ethernet object | [Public verification](docs/PUBLIC-SOURCE-VERIFICATION.md) | **PASS**: [three-state ARM64 build #39877158871](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158871); [sequential apply #39877158897](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39877158897) |
 | Full upstream Linux v6.18 ARM64 Image with built-in MediaTek Ethernet | [run #39885153830](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/39885153830) | **PASS** on commit `1d8949d` (47m45s); `CONFIG_NET_MEDIATEK_SOC=y`; Image SHA-256 `a99b89d680700e1cad4927d27238eaf0a9882b21968ac8bbb274a79b7aee6128`. Not an SBAT6D image |
-| Complete OpenWrt image build | `BUILDING.md` | NOT PASSED |
+| Generic MT6990 OpenWrt kernel/package/rootfs | [run #40091561598](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40091561598) at `af6cb6d` | **PASS, generic build only** | 
+| Complete SBAT6D installable OpenWrt image | `BUILDING.md`, `INSTALL.md` | **NOT PASSED** |
 | Installable image and recovery | `INSTALL.md`, `RECOVERY.md` | NOT PASSED |
 
 ## Release decision

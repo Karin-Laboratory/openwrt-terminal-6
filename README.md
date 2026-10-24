@@ -8,7 +8,11 @@ Community-maintained experimental port of OpenWrt for the **SoftBank Air Termina
 
 ## Public research snapshot / 公開中の研究成果
 
-The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported kernel/userspace boots, Ethernet and Wi-Fi observations, and the remaining blockers. It is **not an installable release**. The synthetic DTS example, offline tests, and two upstream-anchored MediaTek Ethernet RFC patches are open for review. The pinned Linux v6.18 ARM64 driver-object build passes public CI; a complete bootable OpenWrt build from public sources remains pending.
+The public [Japanese progress report](docs/PROGRESS.ja.md) summarizes reported kernel/userspace boots, Ethernet and Wi-Fi observations, and the remaining blockers. It is **not an installable release**. The synthetic DTS example, offline tests, and two upstream-anchored MediaTek Ethernet RFC patches are open for review. The pinned Linux v6.18 ARM64 driver-object build passes public CI; a generic MT6990 OpenWrt kernel/package/rootfs build has passed hosted CI ([run #40091561598](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40091561598)), but SBAT6D-specific bootable firmware remains pending.
+
+## Generic MT6990 OpenWrt build / 汎用ターゲットのビルド
+
+The experimental [MT6990 target build workflow](.github/workflows/mt6990-target-build.yml) passed end-to-end toolchain, kernel/MediaTek Ethernet, package install and generic squashfs staging at commit [`af6cb6d`](https://github.com/Karin-Laboratory/openwrt-terminal-6/commit/af6cb6ddc67b335c7c7da024eedae54f5dfb51b0), [Actions #40091561598](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40091561598). This is a **generic target compilation milestone only**, not a board-specific installable image or verified third-party reproduction. The official SBAT6D DTS remains incomplete, especially RAM reservations and clock/reset/power-domain providers. See [build scope](BUILDING.md) and [release gates](RELEASE-READINESS.md).
 
 ## Upstream-anchored Ethernet RFC patches / 公開中のEthernet RFC
 
@@ -62,7 +66,7 @@ The strings `SBAT6A`, `SBA6D` and `SBAT6D` have appeared in research notes. Thei
 
 ## Build and installation
 
-Read [BUILDING.md](BUILDING.md) for the reproducibility contract and [INSTALL.md](INSTALL.md) before modifying any device. These documents intentionally do not claim that a complete reproducible build exists yet.
+Read [BUILDING.md](BUILDING.md) for the reproducibility contract and [INSTALL.md](INSTALL.md) before modifying any device. The generic target CI passed; they do not claim a complete device-ready or independently reproduced firmware build.
 
 ## Security and licensing
 
@@ -72,6 +76,6 @@ Original project-owned code is MIT-licensed where authorship/rights are confirme
 
 SoftBank Airターミナル6向けの**実験的なOpenWrt移植プロジェクト**です。開発機ではLinux 6.18.44、OpenWrtユーザーランド、有線LAN、2.4/5GHz無線LANの通信成功と6GHz AP起動の報告があります（EHT/MLOなどWi-Fi 7機能全体は未検証）が、第三者の機器への安全な導入と復旧は**未検証**です。5Gモデムも未対応です。
 
-実機で観測したハードウェア構成とFDTの解析結果は[公開資料](board/SBAT6D-HARDWARE-FINDINGS.md)に整理しています。現時点では公開用の文書と審査基準を整備する段階であり、**配布可能なファームウェアイメージや推奨書込みコマンドはありません**。純正バイナリ、秘密鍵、署名素材は公開しません。再現手順は[BUILDING.md](BUILDING.md)、危険性は[INSTALL.md](INSTALL.md)と[RECOVERY.md](RECOVERY.md)を参照してください。
+実機で観測したハードウェア構成とFDTの解析結果は[公開資料](board/SBAT6D-HARDWARE-FINDINGS.md)に整理しています。汎用MT6990ターゲットのカーネル・package・rootfs生成はGitHub Actionsで成功していますが、SBAT6D正式DTSと実機用イメージは未完成です。**配布可能なファームウェアイメージや推奨書込みコマンドはありません**。純正バイナリ、秘密鍵、署名素材は公開しません。再現手順は[BUILDING.md](BUILDING.md)、危険性は[INSTALL.md](INSTALL.md)と[RECOVERY.md](RECOVERY.md)を参照してください。
 
 This is an independent community project, not an official SoftBank or OpenWrt release.

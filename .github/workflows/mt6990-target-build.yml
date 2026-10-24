@@ -1,0 +1,211 @@
+name: Experimental MT6990 generic target build
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - integration/mt6990-target.patch
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generic-arm64-target:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Checkout this workstream
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout pinned OpenWrt source
+        uses: actions/checkout@v4
+        with:
+          repository: openwrt/openwrt
+          ref: a25fb079b1463cd5d7d69c6d9a1c28d873291ebb
+          path: openwrt
+          persist-credentials: false
+
+      - name: Install OpenWrt build prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang flex bison g++ gawk gettext git \
+            libncurses-dev libssl-dev python3-setuptools rsync swig \
+            unzip zlib1g-dev file wget python3 python3-yaml
+          python3 -m venv "$RUNNER_TEMP/dtschema"
+          "$RUNNER_TEMP/dtschema/bin/pip" install --disable-pip-version-check 'dtschema==2026.9'
+          echo "$RUNNER_TEMP/dtschema/bin" >> "$GITHUB_PATH"
+
+      - name: Apply target patch and select MT6990 subtarget
+        working-directory: openwrt
+        run: |
+          set -euo pipefail
+          git apply "$GITHUB_WORKSPACE/integration/mt6990-target.patch"
+          cat > .config <<'EOF'
+          CONFIG_TARGET_mediatek=y
+          CONFIG_TARGET_mediatek_mt6990=y
+          CONFIG_TARGET_ROOTFS_SQUASHFS=y
+          CONFIG_TARGET_ROOTFS_TARGZ=y
+          CONFIG_PACKAGE_base-files=y
+          CONFIG_PACKAGE_busybox=y
+          EOF
+          make -j2 defconfig
+          grep -qx 'CONFIG_TARGET_mediatek_mt6990=y' .config
+          echo 'MT6990 subtarget selected; no device profile is defined.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Prepare Linux 6.18.55 with the MT6990 patch series
+        working-directory: openwrt
+        run: make -j2 target/linux/prepare V=s
+
+      - name: Build generic AArch64 toolchain
+        working-directory: openwrt
+        run: make -j2 toolchain/install V=s
+
+      - name: Resolve new Linux Kconfig defaults non-interactively
+        working-directory: openwrt
+        run: |
+          set -euo pipefail
+          tree='build_dir/target-aarch64_generic_musl/linux-mediatek_mt6990/linux-6.18.55'
+          test -n "$tree"
+          toolchain_dir="$(find staging_dir -maxdepth 1 -type d -name 'toolchain-aarch64_generic_*' -print -quit)"
+          test -n "$toolchain_dir"
+          toolchain_bin="$PWD/$toolchain_dir/bin"
+          cc="$toolchain_bin/aarch64-openwrt-linux-musl-gcc"
+          test -x "$cc"
+          cross="$toolchain_bin/aarch64-openwrt-linux-musl-"
+          echo "OpenWrt kernel compiler: $cc"
+          "$cc" --version | head -n 1
+          make -C "$tree" ARCH=arm64 \
+            CC="$cc" CROSS_COMPILE="$cross" \
+            HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++ \
+            HOSTLD=/usr/bin/ld HOSTAS=/usr/bin/as olddefconfig
+          grep -qx 'CONFIG_STACKPROTECTOR=y' "$tree/.config"
+          if ! grep -qx 'CONFIG_STACKPROTECTOR_PER_TASK=y' "$tree/.config"; then
+            echo 'The target requires the ARM64 per-task canary mode; Kconfig did not enable it.' >&2
+            grep -E 'STACKPROTECTOR|CC_HAVE_STACKPROTECTOR_SYSREG' "$tree/.config" >&2 || true
+            echo 'Checking the pinned cross compiler for the kernel canary ABI:' >&2
+            printf 'int canary_probe(void) { return 1; }\n' > "$RUNNER_TEMP/canary-probe.c"
+            "$cc" -c -fstack-protector \
+              -mstack-protector-guard=sysreg \
+              -mstack-protector-guard-reg=sp_el0 \
+              -mstack-protector-guard-offset=0 \
+              "$RUNNER_TEMP/canary-probe.c" -o "$RUNNER_TEMP/canary-probe.o" >&2 || true
+            exit 1
+          fi
+          grep -qx 'CONFIG_CC_HAVE_STACKPROTECTOR_SYSREG=y' "$tree/.config"
+
+      - name: Compile ARM64 kernel and MediaTek Ethernet driver
+        working-directory: openwrt
+        run: |
+          set -euo pipefail
+          toolchain_dir="$(find staging_dir -maxdepth 1 -type d -name 'toolchain-aarch64_generic_*' -print -quit)"
+          test -n "$toolchain_dir"
+          toolchain_bin="$PWD/$toolchain_dir/bin"
+          cc="$toolchain_bin/aarch64-openwrt-linux-musl-gcc"
+          cross="$toolchain_bin/aarch64-openwrt-linux-musl-"
+          test -x "$cc"
+          make -j2 target/linux/compile \
+            KERNEL_CC="$cc" KERNEL_CROSS="$cross" V=s
+          tree='build_dir/target-aarch64_generic_musl/linux-mediatek_mt6990/linux-6.18.55'
+          test -n "$tree"
+          echo 'Kernel configuration after OpenWrt target compile:'
+          grep -E '^(CONFIG_(STACKPROTECTOR|STACKPROTECTOR_PER_TASK|CC_HAVE_STACKPROTECTOR_SYSREG)=|# CONFIG_STACKPROTECTOR_PER_TASK is not set)' "$tree/.config" || true
+          grep -qx 'CONFIG_STACKPROTECTOR=y' "$tree/.config"
+          grep -qx 'CONFIG_CC_HAVE_STACKPROTECTOR_SYSREG=y' "$tree/.config"
+          grep -qx 'CONFIG_STACKPROTECTOR_PER_TASK=y' "$tree/.config"
+          grep -qx 'CONFIG_NET_MEDIATEK_SOC=y' "$tree/.config"
+          grep -qx 'CONFIG_NET_DSA=y' "$tree/.config"
+          grep -qx 'CONFIG_NET_DSA_MT7530=y' "$tree/.config"
+          if grep -Eq '^CONFIG_(COMMON_CLK_MT[0-9]+(_[A-Z0-9]+)?|PINCTRL_MT[0-9A-Z]+|EINT_MTK|MEDIATEK_WATCHDOG)=y$' "$tree/.config"; then
+            echo 'Unverified SoC-specific clock/pinctrl/watchdog selected in generic target config.' >&2
+            exit 1
+          fi
+          test -s "$tree/arch/arm64/boot/Image"
+          test -s "$tree/drivers/net/ethernet/mediatek/mtk_eth_soc.o"
+          make -C "$tree" ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" HOSTCC=/usr/bin/gcc \
+            mediatek/mt6990-sbat6d-incomplete.dtb
+          dtb="$tree/arch/arm64/boot/dts/mediatek/mt6990-sbat6d-incomplete.dtb"
+          test -s "$dtb"
+          binding="$tree/Documentation/devicetree/bindings/arm/mediatek.yaml"
+          dt-doc-validate "$binding"
+          make -C "$tree" ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" \
+            HOSTCC=/usr/bin/gcc dt_binding_check \
+            DT_SCHEMA_FILES=Documentation/devicetree/bindings/arm/mediatek.yaml
+          make -C "$tree" ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" \
+            HOSTCC=/usr/bin/gcc dt_binding_check \
+            DT_SCHEMA_FILES=Documentation/devicetree/bindings/serial/mediatek,uart.yaml
+          make -C "$tree" CHECK_DTBS=y \
+            DT_SCHEMA_FILES=Documentation/devicetree/bindings/arm/mediatek.yaml \
+            ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" HOSTCC=/usr/bin/gcc \
+            mediatek/mt6990-sbat6d-incomplete.dtb
+          dt-validate -u "$tree/Documentation/devicetree/bindings" \
+            -s "$tree/Documentation/devicetree/bindings/processed-schema.json" "$dtb"
+          "$tree/scripts/dtc/dtc" -I dtb -O dts "$dtb" -o /tmp/mt6990-sbat6d-incomplete.dts
+          grep -Fq 'compatible = "mediatek,evb6990_cpe_mt7990_emmc", "mediatek,mt6990";' /tmp/mt6990-sbat6d-incomplete.dts
+          grep -Fq 'model = "SoftBank Air Terminal 6 (SBA6D, research DTS)";' /tmp/mt6990-sbat6d-incomplete.dts
+          grep -Fq 'compatible = "arm,cortex-a55";' /tmp/mt6990-sbat6d-incomplete.dts
+          grep -Fq 'compatible = "arm,gic-v3";' /tmp/mt6990-sbat6d-incomplete.dts
+          for observed_node in 'serial@11002000' 'mmc@11230000' \
+            'pcie@11280000' 'pcie@11288000' 'pcie@11290000' \
+            'ethernet@15100000' 'mac@0' 'mac@1' 'sgmiisys@11305000'; do
+            grep -Fq "$observed_node {" /tmp/mt6990-sbat6d-incomplete.dts
+          done
+          disabled_count="$(grep -c 'status = \"disabled\";' /tmp/mt6990-sbat6d-incomplete.dts)"
+          test "$disabled_count" -ge 20
+          if grep -Eq '^[[:space:]]*memory(@[^[:space:]]*)?[[:space:]]*\{' /tmp/mt6990-sbat6d-incomplete.dts; then
+            echo 'The partial DTS must not choose either conflicting RAM range.' >&2
+            exit 1
+          fi
+          sha256sum "$dtb" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Disabled observed peripheral/provider nodes: $disabled_count" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Linux Kbuild and targeted schema validation passed for a partial, non-bootable research DTB. This does not validate missing MT6990 peripheral bindings or establish a complete SBAT6D board DTB.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build package and rootfs staging
+        working-directory: openwrt
+        run: |
+          set -euo pipefail
+          toolchain_dir="$(find staging_dir -maxdepth 1 -type d -name 'toolchain-aarch64_generic_*' -print -quit)"
+          test -n "$toolchain_dir"
+          toolchain_bin="$PWD/$toolchain_dir/bin"
+          cc="$toolchain_bin/aarch64-openwrt-linux-musl-gcc"
+          cross="$toolchain_bin/aarch64-openwrt-linux-musl-"
+          test -x "$cc"
+          echo "External kernel modules use the same compiler as the kernel: $cc"
+          "$cc" --version | head -n 1
+          tree='build_dir/target-aarch64_generic_musl/linux-mediatek_mt6990/linux-6.18.55'
+          test -n "$tree"
+          echo 'Effective kernel stack-protector ABI:'
+          grep -E '^(CONFIG_(STACKPROTECTOR|STACKPROTECTOR_PER_TASK|CC_HAVE_STACKPROTECTOR_SYSREG)=|# CONFIG_STACKPROTECTOR_PER_TASK is not set)' "$tree/.config" || true
+          if ! grep -qx 'CONFIG_STACKPROTECTOR=y' "$tree/.config"; then
+            echo 'The kernel build must retain stack-protector instrumentation.' >&2
+            grep -E 'STACKPROTECTOR' "$tree/.config" >&2 || true
+            exit 1
+          fi
+          if ! grep -qx 'CONFIG_STACKPROTECTOR_PER_TASK=y' "$tree/.config" || \
+             ! grep -qx 'CONFIG_CC_HAVE_STACKPROTECTOR_SYSREG=y' "$tree/.config"; then
+            echo 'ARM64 per-task stack-canary ABI is required for external kernel modules.' >&2
+            grep -E 'STACKPROTECTOR|CC_HAVE_STACKPROTECTOR_SYSREG' "$tree/.config" >&2 || true
+            exit 1
+          fi
+          make -C "$tree" ARCH=arm64 CC="$cc" CROSS_COMPILE="$cross" \
+            HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++ \
+            HOSTLD=/usr/bin/ld HOSTAS=/usr/bin/as prepare
+          canary_offset="$(awk '$1 == "#define" && $2 == "TSK_STACK_CANARY" { print $3 }' "$tree/include/generated/asm-offsets.h")"
+          if [[ ! "$canary_offset" =~ ^[0-9]+$ ]]; then
+            echo 'Could not derive TSK_STACK_CANARY from the prepared Linux tree.' >&2
+            grep -n 'TSK_STACK_CANARY' "$tree/include/generated/asm-offsets.h" >&2 || true
+            exit 1
+          fi
+          canary_flags="-mstack-protector-guard=sysreg -mstack-protector-guard-reg=sp_el0 -mstack-protector-guard-offset=$canary_offset"
+          echo "External kernel modules use the kernel per-task canary ABI: $canary_flags" | tee -a "$GITHUB_STEP_SUMMARY"
+          make -j2 package/compile KERNEL_CC="$cc" KERNEL_CROSS="$cross" CONFIG_KERNEL_CFLAGS="$canary_flags" V=s
+          make -j2 package/install KERNEL_CC="$cc" KERNEL_CROSS="$cross" CONFIG_KERNEL_CFLAGS="$canary_flags" V=s
+          make -j2 target/install KERNEL_CC="$cc" KERNEL_CROSS="$cross" CONFIG_KERNEL_CFLAGS="$canary_flags" V=s
+          rootfs="$(find build_dir/target-aarch64_generic_musl -path '*/root.squashfs' -type f -print -quit)"
+          test -n "$rootfs"
+          test -s "$rootfs"
+          sha256sum "$rootfs" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo 'Generic rootfs build only. No board DTB, boot image, flash image, or SBAT6D installability is claimed.' >> "$GITHUB_STEP_SUMMARY"
