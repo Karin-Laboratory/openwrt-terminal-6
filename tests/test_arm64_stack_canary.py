@@ -9,6 +9,7 @@ class Arm64StackCanaryTests(unittest.TestCase):
     def test_kernel_stack_protector_uses_supported_arm64_per_task_abi(self):
         patch = (ROOT / "integration/mt6990-target.patch").read_text()
         self.assertIn("+CONFIG_STACKPROTECTOR=y", patch)
+        self.assertIn("+CONFIG_CC_HAVE_STACKPROTECTOR_SYSREG=y", patch)
         self.assertIn("+CONFIG_STACKPROTECTOR_PER_TASK=y", patch)
         self.assertIn("-# CONFIG_STACKPROTECTOR_PER_TASK is not set", patch)
 

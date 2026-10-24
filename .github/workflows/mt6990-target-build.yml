@@ -111,6 +111,11 @@ jobs:
             KERNEL_CC="$cc" KERNEL_CROSS="$cross" V=s
           tree='build_dir/target-aarch64_generic_musl/linux-mediatek_mt6990/linux-6.18.55'
           test -n "$tree"
+          echo 'Kernel configuration after OpenWrt target compile:'
+          grep -E '^(CONFIG_(STACKPROTECTOR|STACKPROTECTOR_PER_TASK|CC_HAVE_STACKPROTECTOR_SYSREG)=|# CONFIG_STACKPROTECTOR_PER_TASK is not set)' "$tree/.config" || true
+          grep -qx 'CONFIG_STACKPROTECTOR=y' "$tree/.config"
+          grep -qx 'CONFIG_CC_HAVE_STACKPROTECTOR_SYSREG=y' "$tree/.config"
+          grep -qx 'CONFIG_STACKPROTECTOR_PER_TASK=y' "$tree/.config"
           grep -qx 'CONFIG_NET_MEDIATEK_SOC=y' "$tree/.config"
           grep -qx 'CONFIG_NET_DSA=y' "$tree/.config"
           grep -qx 'CONFIG_NET_DSA_MT7530=y' "$tree/.config"
