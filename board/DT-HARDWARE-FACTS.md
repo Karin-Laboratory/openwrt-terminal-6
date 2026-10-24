@@ -23,6 +23,15 @@ reports successful appending of reserved-memory information before jumping
 to Linux. This is LK-side evidence from that boot, not a post-LK FDT or Linux
 memory map readback for the `boot_b` snapshot.
 
+A further read-only capture on 2026-10-24 is documented in
+`SBAT6D-LIVE-OBSERVATION-20261024.md`. It identifies the physical B unit but
+was taken while **slot A** was running Linux 6.18.44. Its live FDT has a
+2-GiB memory node and an overlapping 488-MiB duplicate; Linux reports
+1,758,560 kB usable. This is useful evidence about that slot-A boot and the
+physical memory window, but it does not resolve the separate slot-B FDT or
+justify enabling a RAM/reserved-memory description in this DTS. The 2-GiB
+value is an FDT-declared window, not an independent physical-capacity test.
+
 ## Implemented nodes
 
 | Node/property | Recorded fact | Source/meaning | State in this branch |

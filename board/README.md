@@ -18,6 +18,8 @@ observed, disabled inventory and not a complete driver-ready SoC/board tree.
 
 `air-terminal-6.json` captures **observed** CPU5 / MAC1 / SGMII1 / MT7531 and MT7990 identifiers from the developer tests. It deliberately is **not a Device Tree** or an image recipe. The donor's 172 kB LG6851F DTS is explicitly derived from the donor's original boot image and must not be renamed, copied, or treated as evidence of Air Terminal 6's compatible topology.
 
+The sanitized [2026-10-24 live observation](SBAT6D-LIVE-OBSERVATION-20261024.md) is from the physical B unit while it was running slot A on Linux 6.18.44. It documents overlapping runtime FDT memory nodes and Linux's usable-memory view; it is not B-slot memory evidence and does not resolve the board DTS reservation map.
+
 Do not merge the donor's `Device/fiberhome_lg6851f` into a purported Air Terminal 6 target. The donor's `target/linux/mediatek/image/mt6990.mk` unconditionally defines LG6851F-specific Android boot packaging and a board DTS. A separate target requires a fully validated Air Terminal 6 DTS and explicit removal of vendor signing/package assumptions.
 
 **Next engineering inputs:** 1) resolve the contradictory root memory map into an LK-adjusted usable/reserved map, 2) implement redistributable MT6990 clock/reset/genpd/pinctrl providers, 3) add reviewed MMC, PCIe, Ethernet/SGMII and switch bindings/drivers, 4) validate all disabled observation nodes with Linux 6.18.55 `dtbs_check`, 5) separately approved cold-boot tests.
