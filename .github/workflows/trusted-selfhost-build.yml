@@ -1,22 +1,13 @@
 name: Trusted self-hosted ARM64 source build
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/trusted-selfhost-build.yml'
-      - 'patches/**'
-      - 'scripts/**'
-      - 'tools/**'
-      - 'tests/**'
-      - 'examples/**'
-      - 'config/source-catalog.json'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   arm64-source:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Karin-Laboratory/openwrt-terminal-6' && github.event.repository.private == true }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'Karin-Laboratory/openwrt-terminal-6' && github.event.repository.private == true }}
     runs-on: [self-hosted, linux, x64, sbat6-recovery]
     timeout-minutes: 60
     defaults:
@@ -32,7 +23,7 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-          test "${GITHUB_EVENT_NAME}" = push
+          test "${GITHUB_EVENT_NAME}" = workflow_dispatch
           test "${GITHUB_REF}" = refs/heads/main
           test "${GITHUB_REPOSITORY}" = Karin-Laboratory/openwrt-terminal-6
           test "$(id -u)" -ne 0
