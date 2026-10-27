@@ -20,7 +20,7 @@ These files contain **no OEM decompiled DTS**, no proprietary kernel binaries, s
 
 ## Reproducible syntax-only dtc check
 
-`bash scripts/verify-disabled-sgmii-dtc.sh` checks the independent safety model, downloads pinned Linux v6.18 into a temporary directory, builds the host `scripts_dtc` binary without sudo, compiles this overlay and checks both fragments remain disabled after DTB roundtrip. Successful Private v2 source-equivalent runner [run #40473252747](https://github.com/Karin-Laboratory/archive-openwrt-terminal-6-v2/actions/runs/40473252747) emitted `PINNED_LINUX_DTC_DISABLED_SGMII_OVERLAY_SYNTAX_PASS`. No DTBO/image is distributed; no clock/power provider was validated.
+`bash scripts/verify-disabled-sgmii-dtc.sh` checks the independent safety model, downloads pinned Linux v6.18 into a temporary directory, builds the host `scripts_dtc` binary without sudo, compiles this overlay and checks both fragments remain disabled after DTB roundtrip. Private v2 isolated [standalone dtc source build #40475280436](https://github.com/Karin-Laboratory/archive-openwrt-terminal-6-v2/actions/runs/40475280436) emitted `STANDALONE_DTC_V1_7_2_DISABLED_SGMII_PASS` after a full overlay compile/roundtrip. The earlier full Linux v6.18 dtc proof #40473252747 also succeeded; reproducing that via a large clone proved unreliable. No DTBO/image is distributed; no clock/power provider was validated.
 
 ## Required before real kernel DTS integration
 
