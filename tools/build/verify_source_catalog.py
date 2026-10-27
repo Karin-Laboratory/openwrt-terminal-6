@@ -46,14 +46,14 @@ def validate(root: Path, catalog: dict, public: bool = False):
         rel = PurePosixPath(name)
         if (rel.is_absolute() or ".." in rel.parts or "." in rel.parts
                 or name.startswith("/") or not name.startswith(
-                    ("patches/", "scripts/", "tools/", "examples/"))):
+                    ("patches/", "scripts/", "tools/", "examples/", "tests/"))):
             issues.append(prefix + ": unsafe or unsupported path")
             continue
         if name in seen:
             issues.append(prefix + ": duplicate path")
             continue
         seen.add(name)
-        if rel.suffix not in (".patch", ".py", ".c", ".h"):
+        if rel.suffix not in (".patch", ".py", ".c", ".h", ".sh") and rel.name != "Makefile":
             issues.append(prefix + ": non-source type")
         if item["component"] not in ALLOWED_COMPONENTS:
             issues.append(prefix + ": unknown component")
@@ -83,6 +83,18 @@ def validate(root: Path, catalog: dict, public: bool = False):
             issues.append(prefix + ": source bytes differ from catalog identity")
         if public and item["rights_review"] != "approved":
             issues.append(prefix + ": independent rights review pending")
+    # Enforce coverage of all current source/test/build files, not just the
+    # seven original handpicked kernel/boot/modem entries.
+    source_paths = set()
+    for dirname in ("patches", "scripts", "tools", "examples", "tests"):
+        subtree = root / dirname
+        if not subtree.exists():
+            continue
+        for location in subtree.rglob("*"):
+            if location.suffix in (".patch", ".py", ".c", ".h", ".sh") or location.name == "Makefile":
+                source_paths.add(location.relative_to(root).as_posix())
+    for name in sorted(source_paths - seen):
+        issues.append("uncatalogued source/test: " + name)
     missing = catalog["missing_dependencies"]
     if not isinstance(missing, list):
         issues.append("missing dependencies must be a list")
