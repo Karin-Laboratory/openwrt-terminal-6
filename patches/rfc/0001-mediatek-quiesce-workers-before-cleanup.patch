@@ -1,0 +1,41 @@
+From: Karin-Laboratory contributors
+Subject: [RFC PATCH] net: mediatek: quiesce FE recovery workers before cleanup
+Upstream-base: torvalds/linux v6.18
+Source-blob: e68997a29191b2a8ce0868873dcfe95c79e10e56
+
+This is a source-only RFC for review. The current cleanup path frees
+network devices before draining pending FE recovery work. Reorder the
+existing synchronous cancellations ahead of the teardown calls. Also
+stop existing recovery work ahead of the remove path's hardware deinit.
+
+This RFC does NOT stop other producers from requeueing work or the DMA
+monitor self-rearm, and does not resolve RTNL interactions. The prior
+single-hunk revision compiled for ARM64; this two-hunk revision awaits
+CI results and has no runtime testing. Do not flash or use as a complete fix.
+
+diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+@@ -4475,10 +4475,10 @@
+ static int mtk_cleanup(struct mtk_eth *eth)
+ {
++	cancel_work_sync(&eth->pending_work);
++	cancel_delayed_work_sync(&eth->reset.monitor_work);
+ 	mtk_sgmii_destroy(eth);
+ 	mtk_unreg_dev(eth);
+ 	mtk_free_dev(eth);
+-	cancel_work_sync(&eth->pending_work);
+-	cancel_delayed_work_sync(&eth->reset.monitor_work);
+ 
+ 	return 0;
+ }
+@@ -5331,6 +5331,9 @@
+ 	}
+ 
++	cancel_work_sync(&eth->pending_work);
++	cancel_delayed_work_sync(&eth->reset.monitor_work);
++
+ 	mtk_wed_exit();
+ 	mtk_hw_deinit(eth);
+ 
+ 	netif_napi_del(&eth->tx_napi);
