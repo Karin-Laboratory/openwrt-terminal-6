@@ -23,6 +23,6 @@ Read [technical status](docs/STATUS.md), [source provenance](docs/PROVENANCE.md)
 
 This repository will only include rights-cleared, individually reviewed, non-sensitive source and general research findings. Do not post firmware blobs, credential data, subscriber identities, radio calibration, private signing keys, exploit details, or device-specific raw logs.
 
-See [security policy](SECURITY.md), [contribution guidelines](CONTRIBUTING.md) and [licensing notes](docs/PROVENANCE.md).
+See [security policy](SECURITY.md), [contribution guidelines](CONTRIBUTING.md) and [file-level licensing notes](docs/PROVENANCE.md). GPL-2.0 kernel-derived materials and MIT-licensed independent examples have separate license texts in [LICENSES](LICENSES/).
 
 This is an independent community project, not an official SoftBank or OpenWrt release.
