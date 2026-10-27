@@ -42,3 +42,7 @@ This review does **NOT** claim a completed local all-ref CLI scan or authoritati
 - Public **source** visibility requires security/license/CI governance checks; public **firmware** distribution additionally requires safe credentials, signing provenance, recovery validation and radio/runtime redistribution clearance.
 
 This manifest is intended to be a reproducible review inventory, not a security certificate or permission to change visibility.
+
+## First clean-repository hosted CI observation
+
+The new-repository pull-request-triggered run [40438279734](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40438279734) reported **failure**, but its job metadata contained **no executed steps**, and fetching the job log returned a not-found object. **Neither test success nor a source-code test failure can be concluded from this run.** Private hosted-runner usage limits are a plausible environmental cause, not an established diagnosis. A real host-test and all-ref scanner PASS is still required before Public approval.
