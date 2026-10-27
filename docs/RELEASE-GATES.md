@@ -1,5 +1,7 @@
 # Publication and firmware distribution are separate milestones
 
+For the dated branch-tip, GitHub-conversation and source-equivalent ARM64 build review, see [2026-10-27 additional audit](PREPUBLICATION-REF-AND-BUILD-AUDIT-20261027.md). It is limited in scope and does not clear these gates.
+
 ## Source repository visibility: presently Private
 
 Before switching to Public, verify all of the following independently:
