@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: MIT
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Check lifecycle invariants in a v6.18 tree after applying RFC 0001/0002."""
 import argparse
 from pathlib import Path
