@@ -8,17 +8,18 @@ SCRIPT = ROOT / "scripts/verify-disabled-sgmii-dtc.sh"
 
 
 class PinnedDtcBuildTests(unittest.TestCase):
-    def test_pinned_upstream_source_identity(self):
+    def test_pinned_standalone_source_identity(self):
         content = SCRIPT.read_text()
-        self.assertIn("--branch v6.18", content)
-        self.assertIn("7d0a66e4bb9081d75c82ec4957c50034cb0ea449", content)
-        self.assertIn("e68997a29191b2a8ce0868873dcfe95c79e10e56", content)
+        self.assertIn("--branch v1.7.2", content)
+        self.assertIn("github.com/dgibson/dtc.git", content)
+        self.assertIn("2d10aa2afe35527728db30b35ec491ecb6959e5c", content)
+        self.assertIn("NO_PYTHON=1 dtc", content)
 
     def test_disabled_overlay_compiles_in_disposable_dir(self):
         content = SCRIPT.read_text()
         for phrase in (
             "verify_sgmii_overlay.py",
-            "scripts_dtc",
+            "NO_PYTHON=1 dtc",
             '-@ -I dts -O dtb',
             "status = \"disabled\";",
             "trap 'rm -rf -- \"$temporary\"' EXIT",
@@ -34,6 +35,11 @@ class PinnedDtcBuildTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, content)
         self.assertIn("EUID == 0", content)
+
+    def test_reject_long_linux_clone_regression(self):
+        content = SCRIPT.read_text()
+        self.assertNotIn("torvalds/linux.git", content)
+        self.assertNotIn("scripts_dtc", content)
 
     def test_does_not_claim_complete_device_tree(self):
         content = SCRIPT.read_text()
