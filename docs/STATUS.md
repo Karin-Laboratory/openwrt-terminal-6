@@ -7,7 +7,7 @@ Research snapshot: 2026-10-27. This project does not currently provide an instal
 | A/B boot control | Development-device slot selection reported | Strict, read-only, synthetic metadata observation model (no device IO) | LK retry/fallback conditions and independently proven rescue |
 | Signed boot | Experimental accepted boot images reported | No signing code, SDK copy, test keys or signed payloads | Review input formats, legal sources and safe packaging privately |
 | Linux kernel | Linux 6.18.44 boot observed | Source-only Ethernet RFC and Stage 10 delta | Fully rights-cleared independently reproduced kernel, SoC DTS and driver dependencies |
-| OpenWrt userspace | procd and shell operated on development device | Synthetic host-side reference tools | Pinned feeds, rootfs, packages and full clean build |
+| OpenWrt userspace | procd and shell operated on development device | Source-only pinned public MT6990 donor checkout script; synthetic host-side tools | Distinct SBAT6 build profile, pinned feeds, rootfs, packages and full clean build |
 | Ethernet | Device link and packet tests succeeded | Upstream-review RFCs; Stage10 DMA delta; disabled-only SGMII1 board overlay and static checks | Cold-boot init, full board DTS, upstream applicability and regression testing |
 | Wi-Fi 2.4 / 5 GHz | Connectivity reported | No radio firmware, EEPROM or calibration | Open-source/redistribution audit, persistent configuration |
 | Wi-Fi 6 GHz | Access point started | No radio binaries | Client association, EHT/MLO and regulatory validation |
