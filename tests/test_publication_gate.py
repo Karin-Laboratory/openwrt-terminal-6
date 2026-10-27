@@ -12,6 +12,9 @@ gate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gate)
 
 class PublicationGateTests(unittest.TestCase):
+    def test_scanner_uses_repository_root(self):
+        self.assertEqual(gate.ROOT, ROOT)
+
     def test_safe_source(self):
         issues = set()
         gate.scan("examples/reference.c", b"int main(void){return 0;}\n", issues)
