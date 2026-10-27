@@ -64,6 +64,24 @@ class HistoryScannerTests(unittest.TestCase):
         gate.history_findings(issues)
         self.assertIn(("alias", "symlink requires manual review"), issues)
 
+    def test_sensitive_commit_message_is_detected(self):
+        (self.root / "safe.txt").write_text("safe\\n")
+        self.commit("PASSWORD=synthetic_demo_value_not_real")
+        issues = set()
+        gate.history_findings(issues)
+        self.assertTrue(any(category == "potential embedded credential"
+                            for _, category in issues))
+
+    def test_annotated_tag_body_is_detected(self):
+        (self.root / "safe.txt").write_text("safe\\n")
+        self.commit("safe commit")
+        git(self.root, "tag", "-a", "v0", "-m", "PASSWORD=synthetic_demo_value_not_real")
+        issues = set()
+        gate.history_findings(issues)
+        self.assertTrue(any(path.startswith("@tag/") and
+                            category == "potential embedded credential"
+                            for path, category in issues))
+
     def test_benign_history_stays_clean(self):
         (self.root / "first.txt").write_text("hello\n")
         self.commit("first safe document")
