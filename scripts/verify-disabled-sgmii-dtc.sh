@@ -7,7 +7,7 @@ if (( EUID == 0 )); then
   echo 'Refusing to compile research Device Tree as root' >&2
   exit 2
 fi
-for tool in git make cc mktemp grep timeout; do
+for tool in git make cc mktemp grep timeout python3; do
   command -v "$tool" >/dev/null || { echo "Missing preinstalled tool: $tool" >&2; exit 2; }
 done
 
