@@ -224,7 +224,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "7a9a0a8cbdafa9f39ab90c1d40ee8fc8b67ac03d",
+      "git_blob_sha1": "8d3b45d51673dcc24dc6f43ff58836594ff7ab89",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -243,6 +243,33 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "ae4cce1224d5e5e980307728b46c52e1396e2214",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "board/mt6990-air-terminal-6-sgmii1-experimental.dtso",
+      "component": "board-dt",
+      "origin": "research-board-overlay",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "957e2135a68ccd7d835548198d9e47677f866f71",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/board/verify_sgmii_overlay.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3d57b66afd025b211d13c54f2260d4bef032a163",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_sgmii_overlay.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1eb8a45facd6fa527c9125fdb69061008229d4e2",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
