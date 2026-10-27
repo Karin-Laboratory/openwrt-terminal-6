@@ -28,58 +28,27 @@ test "$(git -C "$tmp/busybox" hash-object Makefile)" = \
   fa8cb761443388730372eaf260e7ca1a0235bc43
 
 timeout 120s make -C "$tmp/busybox" ARCH=arm64 CROSS_COMPILE="$prefix" defconfig
-# This is a *minimal cross-toolchain smoke*, not a full BusyBox rootfs config.
-# BusyBox 1.36.1's legacy tc/CBQ applet expects removed Linux UAPI types
-# in recent cross-toolchain headers. Disable that one optional applet only.
-grep -q '^CONFIG_TC=ytimeout 450s make -C "$tmp/busybox" ARCH=arm64 CROSS_COMPILE="$prefix" -j2 busybox
-test -s "$tmp/busybox/busybox"
-
-# Check only the ELF header, never execute the cross-compiled binary.
-python3 - "$tmp/busybox/busybox" <<'PY'
-import pathlib, struct, sys
-header = pathlib.Path(sys.argv[1]).read_bytes()[:64]
-if (len(header) < 64 or header[:4] != b'\x7fELF'
-        or header[4] != 2 or header[5] != 1
-        or struct.unpack_from('<H', header, 18)[0] != 183):
-    raise SystemExit("BLOCKED: BusyBox is not little-endian ELF64 AArch64")
-print("BUSYBOX_ARM64_ELF_HEADER_PASS")
-PY
-digest="$(sha256sum "$tmp/busybox/busybox" | cut -d' ' -f1)"
-bytes="$(wc -c < "$tmp/busybox/busybox")"
-echo "BusyBox 1.36.1 ARM64 ELF size_bytes=$bytes sha256=$digest"
-echo 'ARM64_BUSYBOX_SOURCE_COMPILE_PASS'
-echo 'LIMIT: not an OpenWrt rootfs or board firmware; no output is released.'
- "$tmp/busybox/.config"
+# This is a limited cross-toolchain smoke, not a device rootfs profile.
+# BusyBox 1.36.1's optional tc/CBQ applet needs older Linux UAPI types.
+# Disable only that legacy applet, without patching host kernel headers.
+grep -q '^CONFIG_TC=y$' "$tmp/busybox/.config"
 sed -i 's/^CONFIG_TC=y$/# CONFIG_TC is not set/' "$tmp/busybox/.config"
-grep -q '^# CONFIG_TC is not settimeout 450s make -C "$tmp/busybox" ARCH=arm64 CROSS_COMPILE="$prefix" -j2 busybox
-test -s "$tmp/busybox/busybox"
+grep -q '^# CONFIG_TC is not set$' "$tmp/busybox/.config"
 
-# Check only the ELF header, never execute the cross-compiled binary.
-python3 - "$tmp/busybox/busybox" <<'PY'
-import pathlib, struct, sys
-header = pathlib.Path(sys.argv[1]).read_bytes()[:64]
-if (len(header) < 64 or header[:4] != b'\x7fELF'
-        or header[4] != 2 or header[5] != 1
-        or struct.unpack_from('<H', header, 18)[0] != 183):
-    raise SystemExit("BLOCKED: BusyBox is not little-endian ELF64 AArch64")
-print("BUSYBOX_ARM64_ELF_HEADER_PASS")
-PY
-digest="$(sha256sum "$tmp/busybox/busybox" | cut -d' ' -f1)"
-bytes="$(wc -c < "$tmp/busybox/busybox")"
-echo "BusyBox 1.36.1 ARM64 ELF size_bytes=$bytes sha256=$digest"
-echo 'ARM64_BUSYBOX_SOURCE_COMPILE_PASS'
-echo 'LIMIT: not an OpenWrt rootfs or board firmware; no output is released.'
- "$tmp/busybox/.config"
 timeout 450s make -C "$tmp/busybox" ARCH=arm64 CROSS_COMPILE="$prefix" -j2 busybox
 test -s "$tmp/busybox/busybox"
 
-# Check only the ELF header, never execute the cross-compiled binary.
+# Read only the ELF header; never execute the cross-compiled binary.
 python3 - "$tmp/busybox/busybox" <<'PY'
-import pathlib, struct, sys
-header = pathlib.Path(sys.argv[1]).read_bytes()[:64]
+import pathlib
+import struct
+import sys
+
+with pathlib.Path(sys.argv[1]).open("rb") as infile:
+    header = infile.read(64)
 if (len(header) < 64 or header[:4] != b'\x7fELF'
         or header[4] != 2 or header[5] != 1
-        or struct.unpack_from('<H', header, 18)[0] != 183):
+        or struct.unpack_from("<H", header, 18)[0] != 183):
     raise SystemExit("BLOCKED: BusyBox is not little-endian ELF64 AArch64")
 print("BUSYBOX_ARM64_ELF_HEADER_PASS")
 PY
