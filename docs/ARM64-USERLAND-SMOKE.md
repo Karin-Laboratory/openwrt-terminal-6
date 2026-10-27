@@ -21,3 +21,9 @@ An ARM64 BusyBox ELF can be cross compiled from independently pinned source usin
 **Licensing:** BusyBox is GPL-2.0-only; a build-result hash does not permit distributing its binary or replace source/license obligation assessment. The independent smoke test script is inventoried with `rights_review=pending` until it has been assessed for general source publication.
 
 For a real OpenWrt rootfs, separately freeze the OpenWrt revision, all [feeds](../config/feeds.lock), package config, SDK/toolchain versions, package download checksums, device rootfs contents and reproducible build outputs. The [public MT6990 donor](OPENWRT-DONOR-SOURCE.md) uses LG6851F-specific image generation that must not be copied into an SBAT6 install path.
+
+## Verified Private-runner execution (2026-10-27)
+
+[Run #40498318443](https://github.com/Karin-Laboratory/archive-openwrt-terminal-6-v2/actions/runs/40498318443) completed **SUCCESS** on the already connected isolated archived-v2 runner, using exact source and test blobs byte-matched to this new repo. The completed log confirmed five static tests, the genuine BusyBox 1.36.1 AArch64 cross-compile, `BUSYBOX_ARM64_ELF_HEADER_PASS`, and `CLEAN_SOURCE_PINNED_ARM64_BUSYBOX_PASS`. The temporary ELF had **1,053,400 bytes** and SHA-256 `edac38e43eb54dbaa0ef95a213834d32379c71bcdfccb2b69230ecf91d391e87`. The runner discarded it without executing, installing, uploading or signing it.
+
+The initial unmodified `defconfig` smoke failed compiling legacy BusyBox `networking/tc.c` against current Linux headers; disabling only `CONFIG_TC` resolved this one cross-build compatibility issue. This is an isolated smoke profile, not a tested OpenWrt BusyBox package configuration.
