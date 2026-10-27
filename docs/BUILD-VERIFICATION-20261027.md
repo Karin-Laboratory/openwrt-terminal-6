@@ -32,3 +32,7 @@ All links below are authenticated GitHub Actions job records from the retained *
 - A/B LK retry semantics, independent rescue, signing/legal rights, radio firmware/calibration, all-history/CI-log safety and all 32 source-catalog rights approvals are still incomplete.
 
 **Publication: Private, NO-GO.** **Firmware distribution: NO-GO.** A successful host smoke test cannot authorize either transition by itself.
+
+## Completed: independently pinned AArch64 BusyBox userspace smoke
+
+[Private runner #40498318443](https://github.com/Karin-Laboratory/archive-openwrt-terminal-6-v2/actions/runs/40498318443) **SUCCESS**: BusyBox v1.36.1 pinned commit `1a64f6a20aaf6ea4dbba68bbfa8cc1ab7e5c57c4`, Makefile blob `fa8cb761443388730372eaf260e7ca1a0235bc43`, 5 synthetic security tests, ARM64 BusyBox cross compile, and ELF header architecture check. Ephemeral ELF size: 1,053,400 bytes, SHA-256 `edac38e43eb54dbaa0ef95a213834d32379c71bcdfccb2b69230ecf91d391e87`. Compile excludes obsolete `CONFIG_TC` applet incompatible with the available new kernel headers; no source patch was applied. This is **not a complete OpenWrt rootfs**, deployable binary package, or actual network-driver or modem test.
