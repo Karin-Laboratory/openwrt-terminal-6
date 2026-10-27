@@ -14,6 +14,8 @@ class BusyBoxSourceSmokeTests(unittest.TestCase):
         self.assertIn("1a64f6a20aaf6ea4dbba68bbfa8cc1ab7e5c57c4", src)
         self.assertIn("fa8cb761443388730372eaf260e7ca1a0235bc43", src)
         self.assertIn("ARCH=arm64 CROSS_COMPILE", src)
+        self.assertIn("CONFIG_TC is not set", src)
+        self.assertIn("recent cross-toolchain headers", src)
 
     def test_no_install_flash_sign_keys_or_execution(self):
         src = SCRIPT.read_text()
