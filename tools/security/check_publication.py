@@ -13,7 +13,7 @@ import re
 import subprocess
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 MAX_SIZE = 300_000
 BLOCK_EXT = {
     ".img", ".bin", ".dtb", ".dtbo", ".cpio", ".pem", ".key", ".p12",
