@@ -71,7 +71,9 @@ def validate(root: Path, catalog: dict, public: bool = False,
             issues.append(prefix + ": invalid Git blob digest")
             continue
         file_path = root.joinpath(*rel.parts)
-        if file_path.is_symlink() or not file_path.is_file():
+        if (root.is_symlink() or any(root.joinpath(*rel.parts[:depth]).is_symlink()
+                for depth in range(1, len(rel.parts) + 1))
+                or not file_path.is_file()):
             issues.append(prefix + ": unavailable or symbolic-link source")
             continue
         raw = file_path.read_bytes()
@@ -89,10 +91,13 @@ def validate(root: Path, catalog: dict, public: bool = False,
     source_paths = set()
     for dirname in ("patches", "scripts", "tools", "examples", "tests", "board"):
         subtree = root / dirname
+        if subtree.is_symlink():
+            issues.append("source directory must not be symlink: " + dirname)
+            continue
         if not subtree.exists():
             continue
         for location in subtree.rglob("*"):
-            if location.suffix in (".patch", ".py", ".c", ".h", ".sh") or location.name == "Makefile":
+            if location.suffix in (".patch", ".py", ".c", ".h", ".sh", ".dtso") or location.name == "Makefile":
                 source_paths.add(location.relative_to(root).as_posix())
     for name in sorted(source_paths - seen):
         issues.append("uncatalogued source/test: " + name)
