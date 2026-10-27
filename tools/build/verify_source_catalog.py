@@ -71,7 +71,8 @@ def validate(root: Path, catalog: dict, public: bool = False,
             issues.append(prefix + ": invalid Git blob digest")
             continue
         file_path = root.joinpath(*rel.parts)
-        if (any(parent.is_symlink() for parent in [file_path, *file_path.parents] if parent != root.parent)
+        if (root.is_symlink() or any(root.joinpath(*rel.parts[:depth]).is_symlink()
+                for depth in range(1, len(rel.parts) + 1))
                 or not file_path.is_file()):
             issues.append(prefix + ": unavailable or symbolic-link source")
             continue
