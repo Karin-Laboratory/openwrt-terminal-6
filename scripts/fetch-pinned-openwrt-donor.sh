@@ -6,7 +6,7 @@ umask 077
 
 DONOR_REPO='https://github.com/13179415360/openwrt-mt6990-lg6851f.git'
 DONOR_REV='a40df9a5afb46716dea799acea69f17480df4d82'
-DEST="\${1:-donor-source-inspection}"
+DEST="${1:-donor-source-inspection}"
 
 if (( EUID == 0 )); then
   echo 'Refusing external source acquisition as root' >&2
@@ -25,7 +25,7 @@ if [[ ! -d "$parent" || -L "$parent" ]]; then
   exit 2
 fi
 
-temporary="$(mktemp -d "\${TMPDIR:-/tmp}/sbat6-donor-text.XXXXXXXX")"
+temporary="$(mktemp -d "${TMPDIR:-/tmp}/sbat6-donor-text.XXXXXXXX")"
 trap 'rm -rf -- "$temporary"' EXIT
 git -C "$temporary" init -q source
 git -C "$temporary/source" remote add origin "$DONOR_REPO"
@@ -51,10 +51,10 @@ ids=(
   'c98113e8a8cc9ee334eef28428972d8e9d4404e7'
   '714551500ccd45bd3dfc77f951f104e0c46a660b'
 )
-for i in "\${!paths[@]}"; do
-  path="\${paths[$i]}"
-  expected="\${ids[$i]}"
-  blob="$(git -C "$temporary/source" rev-parse "\${DONOR_REV}:\${path}")"
+for i in "${!paths[@]}"; do
+  path="${paths[$i]}"
+  expected="${ids[$i]}"
+  blob="$(git -C "$temporary/source" rev-parse "${DONOR_REV}:${path}")"
   if [[ "$blob" != "$expected" ]]; then
     echo "Donor text identity mismatch: $path" >&2
     exit 3
