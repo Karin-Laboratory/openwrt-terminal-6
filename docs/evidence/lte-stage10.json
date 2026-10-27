@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source_publication": "sanitized test attribution; no private images or source baseline included",
+  "device": "SoftBank Air Terminal 6 development unit",
+  "system": "Linux 6.18.44 with OpenWrt userspace",
+  "experiment_date": "2026-10-25",
+  "stage9b": {
+    "data_plane": "LTE IPv4 bidirectional",
+    "manual_dma_restore": true
+  },
+  "stage10": {
+    "data_plane": "LTE IPv4 bidirectional",
+    "manual_dma_restore": false,
+    "observed": [
+      "ICMP replies",
+      "DNS resolution",
+      "TLS certificate-validated HTTPS 200",
+      "nonzero receive traffic"
+    ],
+    "observation_scope": "successful follow-up replay, not unattended cold boot"
+  },
+  "sha256": {
+    "stage10_ethernet_source": "091175f8fbffe3368798c94b580882a2d6991a078d3703fac79af70befe789c9",
+    "dpmaif_source": "6b9a636b781ee32de1cfa4b7d1538407e16de62881268d699895038393be365a",
+    "medmcu_source": "c7937c999e60257a5472ee410721b7bf6a956388967c9e5c51d659bee3a3c5e3",
+    "kernel_config_private": "70aedc51dbb773409230c67f776764bf4d4b5e4164b2372c8082d13f25fd63b7",
+    "kernel_Image": "f4ebd3c4b9dc77fb5c514b6bfbbadc4959fdd6b1b2b2ee99743a4d7aa6c82203"
+  },
+  "verified_against_retained_private_artifacts": "2026-10-27",
+  "limitations": [
+    "new clean repository alone cannot reproduce the whole firmware",
+    "NR unverified",
+    "IPv6 unverified",
+    "stock firmware and personal radio provisioning excluded",
+    "no direct trace of helper instruction execution in live CPU"
+  ]
+}
