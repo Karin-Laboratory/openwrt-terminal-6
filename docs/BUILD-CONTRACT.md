@@ -1,6 +1,6 @@
 # Reproducible build input catalog, source-only stage
 
-The [dated branch-tip and ARM64 build evidence](PREPUBLICATION-REF-AND-BUILD-AUDIT-20261027.md) records one verified upstream Ethernet object compile on the separate Private v2 runner, not a complete firmware build. The machine-readable [source catalog](../config/source-catalog.json) pins **all 34 tracked source, unit-test, board-overlay and build-helper files** (Git blob identities) for Ethernet RFCs, Stage10 MED DMA code, A/B research and the synthetic modem transport model.
+The [dated branch-tip and ARM64 build evidence](PREPUBLICATION-REF-AND-BUILD-AUDIT-20261027.md) records one verified upstream Ethernet object compile on the separate Private v2 runner, not a complete firmware build. The machine-readable [source catalog](../config/source-catalog.json) pins **all 36 tracked source, unit-test, board-overlay and build-helper files** (Git blob identities) for Ethernet RFCs, Stage10 MED DMA code, A/B research and the synthetic modem transport model.
 
 The checker also fails when a source/test/Makefile/shell file exists in the covered directories without a catalog entry. The initial 27 paths and corresponding blob hashes were independently checked against GitHub's complete, nontruncated branch tree on 2026-10-27. This is a reproducibility *contract for the files present here*, not a complete firmware Bill of Materials or a signature. The catalog intentionally records rights review as PENDING and lists missing components rather than fabricating OpenWrt firmware build success.
 
@@ -31,3 +31,7 @@ The board SGMII1 overlay is disabled-only and not part of a bootable DTB. The pr
 ## Source code release and firmware delivery are separate gates
 
 A verified source-only build input and documented redistribution approval can potentially support a source repository release before all hardware features operate. The `--public-source` gate deliberately does *not* require a full kernel, NR data call, firmware signing or fallback. The separate `--public-build` mode requires complete build dependencies and remains blocked. Both checks are only pieces of the full GitHub/third-party-rights/security review, never automatic authorization to switch repository visibility or flash hardware.
+
+## Pinned feeds are now a checked prerequisite
+
+The independently recorded [OpenWrt feed snapshot](OPENWRT-FEEDS-LOCK.md) contains five fixed Git commit IDs. `tools/build/verify_feeds_lock.py config/feeds.lock` rejects mutable feed branches, local source references, arbitrary hosts and credentials. This is a reproducibility preflight, **not** an OpenWrt rootfs build or a license review. The canonical `git.openwrt.org` remotes still require independent reachability confirmation of these Git objects.
