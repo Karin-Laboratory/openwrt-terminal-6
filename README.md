@@ -18,6 +18,17 @@ This is a **public development repository**, not a firmware download page. Brows
 
 **What you can do today:** inspect the code and patches, run the host-side tests, review provenance and discuss upstream integration. **What you cannot do from this repository:** build a complete supported SBAT6 firmware or safely flash a device.
 
+## Where to look
+
+| Your interest | Start with |
+| --- | --- |
+| What has been tested on hardware? | [Technical status](docs/STATUS.md) |
+| What work is needed for upstream OpenWrt? | [Roadmap](docs/ROADMAP.md) and [engineering integration](docs/ENGINEERING-STATUS-20261027.md) |
+| Can I reproduce a check without hardware? | [Source build contract](docs/BUILD-CONTRACT.md) and [tests](tests/) |
+| Where did the source come from? | [Source provenance and license notes](docs/PROVENANCE.md) |
+| How do I help? | [Contribution guide](CONTRIBUTING.md) |
+| Is there a flashable release? | [Publication and firmware gates](docs/RELEASE-GATES.md) (no installable release) |
+
 ## Contents
 
 - `patches/`: source-only RFCs and the experimental Stage 10 DMA preservation change. No generic kernel support or flashable artifacts implied.

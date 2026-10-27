@@ -34,11 +34,11 @@ Signing materials or sample key copies, OEM firmware and calibration, chip-uniqu
 
 ## Source/test catalog coverage (2026-10-27)
 
-The [source catalog](../config/source-catalog.json) records version-pinned identities for covered source, test, shell, Makefile, and board paths; the initial 27-path snapshot has subsequently expanded, each with exact Git blob identity. The catalog validator rejects unregistered new code. All entries retain `rights_review=pending`, intentionally preventing source identity from being mistaken for legal clearance. See [build contract](BUILD-CONTRACT.md).
+The [source catalog](../config/source-catalog.json) records exact Git blob identities for covered source, test, shell, Makefile and board paths. Coverage has expanded beyond the initial 27-path snapshot. The catalog validator rejects unregistered new code. All entries retain `rights_review=pending`, intentionally preventing source identity from being mistaken for legal clearance. See [build contract](BUILD-CONTRACT.md).
 
 ## Pinned MT6990 donor source boundary
 
-The new independent script `scripts/fetch-pinned-openwrt-donor.sh` refers to a public, exact-version source checkout, not a vendor binary mirror. Its reference implementation is derived from the original project's source-only acquisition pattern, but was independently rewritten for this clean repo. The donor carries LG6851F image/rootfs assumptions and must not be treated as a redistributable or flashable SBAT6 target. Details: [OpenWrt donor source review](OPENWRT-DONOR-SOURCE.md). New script/test file rights review remains pending.
+The new independent script `scripts/fetch-pinned-openwrt-donor.sh` references a public, pinned donor revision for strictly limited text-only inspection, not a full checkout or vendor binary mirror. Its reference implementation is derived from the original project's source-only acquisition pattern, but was independently rewritten for this clean repo. The donor carries LG6851F image/rootfs assumptions and must not be treated as a redistributable or flashable SBAT6 target. Details: [OpenWrt donor source review](OPENWRT-DONOR-SOURCE.md). New script/test file rights review remains pending.
 
 ### Donor source safety correction (2026-10-27)
 
