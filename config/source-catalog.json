@@ -128,6 +128,69 @@
       "git_blob_sha1": "43c39c08c8433ad18cc5846f1c4684ead37f3c8c",
       "rights_review": "pending",
       "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_source_catalog.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "516e6225d3a8b7444201b36e610a117040a3316b",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_build_input_integrity.py",
+      "component": "signing",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "a5591edba8b60ad2a85ef997017e3d65c51b9bae",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "examples/fe-recovery/t6_fe_recovery.h",
+      "component": "ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "797fcf1edf93d1de85e5975fa1ed144ab25776c2",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "examples/fe-recovery/test_fe_recovery.c",
+      "component": "ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1c82647450b25d4082203ef6a2f3d2a29ae953e6",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "examples/fe-recovery/Makefile",
+      "component": "ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "e365ac4843f8ef5ccdd6f315ce0537306c9a2cfd",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/apply-public-rfc-series.sh",
+      "component": "ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "e459ced4912701cbe8498222bd478c83818e87c8",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/check_mediatek_rfc_series.py",
+      "component": "ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "af2b6bf3a854561c3acf27e09e114835954bc243",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
     }
   ],
   "missing_dependencies": [
