@@ -4,6 +4,8 @@ Current track-by-track integration and self-hosted build evidence: [engineering 
 
 For the dated branch-tip, GitHub-conversation and source-equivalent ARM64 build review, see [2026-10-27 additional audit](PREPUBLICATION-REF-AND-BUILD-AUDIT-20261027.md). It is limited in scope and does not clear these gates.
 
+The source-only rights-label subgate is `python3 tools/build/verify_source_catalog.py --public-source`; it is expected to **FAIL** while attribution/redistribution reviews are PENDING. This subgate does not require unfinished firmware features, but a PASS would not supersede the independent security and rights checklist below.
+
 ## Source repository visibility: presently Private
 
 Before switching to Public, verify all of the following independently:

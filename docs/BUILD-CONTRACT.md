@@ -7,6 +7,7 @@ The checker also fails when a source/test/Makefile/shell file exists in the cove
 ## Modes
 
 - `python3 tools/build/verify_source_catalog.py`: verify local source bytes, names, file type, origin, license labels and the prohibition on flashable payload content in this catalog. A PASS means **source identity/schema only**.
+- `python3 tools/build/verify_source_catalog.py --public-source`: checks each recorded source entry's explicit `rights_review=approved` along with source schema and byte identities, **without demanding a complete firmware image**. Currently expected to FAIL as rights reviews remain pending. A PASS would be an internal label check, not legal clearance or permission to publish.
 - `python3 tools/build/verify_source_catalog.py --public-build`: additional hypothetical completeness check, currently expected to **FAIL** because independent contributor-rights approval and complete build/runtime inputs are unavailable. Even passing this mode alone never authorizes publishing a flashable binary.
 
 Input identity uses the standard Git object SHA-1 content identifier, calculated on `blob <length>\0<bytes>`. Git blob IDs are not authenticated release signatures or strong external supply-chain attestations. For a future release, pin upstream commits and SHA-256 digests of legally obtained independent source archives, verify source ownership and produce an authenticated build manifest.
@@ -26,3 +27,7 @@ Input identity uses the standard Git object SHA-1 content identifier, calculated
 Source identity verification and complete reproducibility are separate from **permission to redistribute**. Do not promote a component status simply because synthetic tests pass or its byte hash matches research evidence.
 
 The board SGMII1 overlay is disabled-only and not part of a bootable DTB. The previous historical firmware configuration and private device images must not be copied here, even to make this build appear complete.
+
+## Source code release and firmware delivery are separate gates
+
+A verified source-only build input and documented redistribution approval can potentially support a source repository release before all hardware features operate. The `--public-source` gate deliberately does *not* require a full kernel, NR data call, firmware signing or fallback. The separate `--public-build` mode requires complete build dependencies and remains blocked. Both checks are only pieces of the full GitHub/third-party-rights/security review, never automatic authorization to switch repository visibility or flash hardware.
