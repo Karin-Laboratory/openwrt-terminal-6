@@ -39,3 +39,7 @@ The [source catalog](../config/source-catalog.json) lists all 27 source, test, s
 ## Pinned MT6990 donor source boundary
 
 The new independent script `scripts/fetch-pinned-openwrt-donor.sh` refers to a public, exact-version source checkout, not a vendor binary mirror. Its reference implementation is derived from the original project's source-only acquisition pattern, but was independently rewritten for this clean repo. The donor carries LG6851F image/rootfs assumptions and must not be treated as a redistributable or flashable SBAT6 target. Details: [OpenWrt donor source review](OPENWRT-DONOR-SOURCE.md). New script/test file rights review remains pending.
+
+### Donor source safety correction (2026-10-27)
+
+The donor contains Wi-Fi EEPROM/firmware binary paths and a multi-megabyte communications firmware image of unclear independent reuse/redistribution rights. The source-inspection script was restricted to four independently blob-pinned text files and now **never checks out the donor tree**. All binary-bearing paths remain excluded. Full OpenWrt source acquisition and build require a separate, explicitly vetted rights-safe process.
