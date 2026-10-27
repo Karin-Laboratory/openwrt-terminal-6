@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: MIT
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Read-only verification of retained source and binary provenance; no devices."""
 import argparse,hashlib,importlib.util,json
 from pathlib import Path

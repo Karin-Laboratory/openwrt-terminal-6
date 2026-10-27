@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: MIT
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-only
 """Clean MT6990 first-boot FE reset MED register preservation patch.
 
 Apply to an exact, disposable, UNINSTRUMENTED Test37-A kernel source tree.

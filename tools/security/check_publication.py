@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 """Conservative read-only scanner for source-publication candidates.
 
-Scans tracked files and, with --history, all reachable blobs under *locally
-available* Git refs. This cannot inspect Actions logs, GitHub PR discussions,
-unreachable objects, forks, external archives, licenses or source semantics.
-Never prints matched credentials or byte content.
+--history inspects every file path of every reachable commit on locally
+available Git refs. It does NOT inspect unreachable/deleted Git objects,
+remote PR/Issue conversations, Actions logs, external archives or licenses.
+Results contain only category and escaped path, never matched secret bytes.
 """
 from pathlib import Path, PurePosixPath
 import argparse
@@ -15,6 +15,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 MAX_SIZE = 300_000
+MAX_COMMITS = 20_000
 BLOCK_EXT = {
     ".img", ".bin", ".dtb", ".dtbo", ".cpio", ".pem", ".key", ".p12",
     ".pfx", ".ko", ".o", ".so", ".zip", ".tar", ".gz", ".sqlite",
@@ -44,15 +45,16 @@ RULES = {
         rb"(?m)^(?:export\s+)?(?:API_KEY|ACCESS_TOKEN|PASSWORD|PASSWD|CLIENT_SECRET|PRIVATE_KEY)\s*=\s*['\"]?[^'\"\s#]{8,}"
     ),
 }
+
 def git(*args: str) -> bytes:
     return subprocess.run(
-        ["git", *args], cwd=ROOT, check=True, stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        ["git", *args], cwd=ROOT, check=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).stdout
 
 def scan(path: str, payload: bytes, findings: set) -> None:
     item = PurePosixPath(path)
-    if item.name in BLOCK_FILES or item.suffix.lower() in BLOCK_EXT:
+    if item.name.lower() in BLOCK_FILES or item.suffix.lower() in BLOCK_EXT:
         findings.add((path, "restricted artifact filename/type"))
     if len(payload) > MAX_SIZE:
         findings.add((path, "large file requires manual inspection"))
@@ -64,43 +66,84 @@ def scan(path: str, payload: bytes, findings: set) -> None:
         if pattern.search(payload):
             findings.add((path, category))
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--history", action="store_true")
-    args = parser.parse_args()
-    findings = set()
+def history_findings(findings: set) -> int:
+    """Scan path/blob PAIRS, not only blob IDs: same blob may have risky alias."""
+    if git("rev-parse", "--is-shallow-repository").strip() != b"false":
+        raise ValueError("shallow clone: cannot certify reachable history")
+    commits = [c for c in git("rev-list", "--all").splitlines() if c]
+    if len(commits) > MAX_COMMITS:
+        raise ValueError("commit safety limit exceeded; manual audit needed")
+    pairs = set()
     scanned = 0
-    if args.history:
-        objects = git("rev-list", "--objects", "--all").splitlines()
-        for row in objects:
-            sha_bytes, sep, path_bytes = row.partition(b" ")
+    for commit in commits:
+        commit_sha = commit.decode("ascii")
+        scan("@commit/" + commit_sha[:12], git("cat-file", "commit", commit_sha), findings)
+        scanned += 1
+        # NUL-delimited file paths avoid newline, tab and whitespace ambiguity.
+        for entry in git("ls-tree", "-r", "-z", commit.decode("ascii")).split(b"\x00"):
+            if not entry:
+                continue
+            meta, sep, path_raw = entry.partition(b"\t")
             if not sep:
+                raise ValueError("malformed Git tree entry")
+            mode, kind, sha_raw = meta.split(b" ")
+            path = path_raw.decode("utf-8", errors="backslashreplace")
+            if kind != b"blob":
+                findings.add((path, "gitlink or unsupported object requires review"))
                 continue
-            sha = sha_bytes.decode("ascii")
-            if git("cat-file", "-t", sha).strip() != b"blob":
+            if mode == b"120000":
+                findings.add((path, "symlink requires manual review"))
+            sha = sha_raw.decode("ascii")
+            if (sha, path) in pairs:
                 continue
-            path = path_bytes.decode("utf-8", errors="replace")
+            pairs.add((sha, path))
             size = int(git("cat-file", "-s", sha))
             if size > MAX_SIZE:
                 findings.add((path, "oversized historical blob"))
                 continue
             scan(path, git("cat-file", "blob", sha), findings)
             scanned += 1
-    else:
-        for path_bytes in git("ls-files", "-z").split(b"\x00"):
-            if not path_bytes:
-                continue
-            path = path_bytes.decode("utf-8", errors="replace")
-            location = ROOT / path
-            if not location.is_file():
-                findings.add((path, "tracked file absent"))
-                continue
-            scan(path, location.read_bytes(), findings)
+    # Annotated tags may contain their own sensitive metadata even when the
+    # commits and tree contents are clean.
+    for row in git("for-each-ref", "--format=%(objectname) %(objecttype)", "refs/tags").splitlines():
+        ref_sha, sep, ref_type = row.partition(b" ")
+        if not sep:
+            raise ValueError("malformed tag reference")
+        if ref_type == b"tag":
+            label = ref_sha.decode("ascii")
+            scan("@tag/" + label[:12], git("cat-file", "tag", label), findings)
             scanned += 1
+    return scanned
+
+def current_findings(findings: set) -> int:
+    scanned = 0
+    for path_raw in git("ls-files", "-z").split(b"\x00"):
+        if not path_raw:
+            continue
+        path = path_raw.decode("utf-8", errors="backslashreplace")
+        location = ROOT / path
+        if not location.is_file() or location.is_symlink():
+            findings.add((path, "tracked file absent or symlink"))
+            continue
+        scan(path, location.read_bytes(), findings)
+        scanned += 1
+    return scanned
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--history", action="store_true")
+    args = parser.parse_args()
+    findings = set()
+    try:
+        scanned = history_findings(findings) if args.history else current_findings(findings)
+    except (subprocess.CalledProcessError, ValueError, OSError) as exc:
+        print(f"BLOCKED: unable to complete Git audit ({type(exc).__name__})", file=sys.stderr)
+        return 2
     for path, category in sorted(findings):
-        print(f"BLOCKED: {path}: {category}")
+        # repr escapes control characters in paths; matched secret values are never shown.
+        print(f"BLOCKED: {ascii(path)}: {category}")
     print(f"Scanned={scanned}; findings={len(findings)}")
-    print("Limits: PR/Issue text, logs, forks, unreachable objects, old public copies, rights review")
+    print("LIMITS: remote PR/Issue text, CI logs, forks, unreachable Git objects, old copies, rights")
     return 1 if findings else 0
 
 if __name__ == "__main__":

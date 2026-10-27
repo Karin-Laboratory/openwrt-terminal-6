@@ -14,7 +14,7 @@ Date: 2026-10-27. Destination: the new Private repository at the canonical proje
 | Scope | Files | Integrity check |
 | --- | --- | --- |
 | GPL kernel source deltas | `patches/rfc/0001-*.patch`, `0002-*.patch`, `patches/mt6990/0001-*.patch` | byte-exact, same Git blob SHA |
-| Stage10 deterministic source transform | `scripts/research/sba6d_stage10_clean_patch.py` | original behavior unchanged; SPDX header prepended |
+| Stage10 deterministic source transform | `scripts/research/sba6d_stage10_clean_patch.py` | original behavior unchanged; SPDX identity added with executable shebang preserved |
 | Stage10 fake MMIO and transform tests | `tests/test_sba6d_stage10_clean_patch.py`, `tests/test_stage10_mmio_model.py` | original behavior unchanged; SPDX header prepended |
 | Independent FE recovery model | 4 files under `examples/fe-recovery/` | byte-exact |
 | Synthetic modem lifecycle | `tools/modem/transport_model.py`, `tools/modem/test_transport_model.py` | byte-exact |
@@ -46,3 +46,12 @@ This manifest is intended to be a reproducible review inventory, not a security 
 ## First clean-repository hosted CI observation
 
 The new-repository pull-request-triggered runs [40438279734](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40438279734) and [40438430837](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40438430837) reported **failure**, but both job records contained **no executed steps**; the first job log fetch returned a not-found object. **Neither test success nor a source-code test failure can be concluded from this run.** Private hosted-runner usage limits are a plausible environmental cause, not an established diagnosis. A real host-test and all-ref scanner PASS is still required before Public approval.
+
+## Subsequent security hardening (2026-10-27)
+
+- History checker now scans each path/blob pair from every locally available reachable commit, including deleted paths, symbolic links, commit metadata and annotated tags; it rejects shallow history. New synthetic regression cases cover those failure modes.
+- Source-only workflow policy checker blocks self-hosted runner declarations, unsafe privileged pull-request events, write-scoped GITHUB_TOKEN, secret expressions and mutable third-party Actions references. This complements, but does not replace, GitHub repository settings review.
+- The Stage10 deterministic source transformer embeds kernel-oriented C code; its source license is conservatively marked GPL-2.0-only instead of treating that embedded code as exclusively MIT. The separate original host-only tests retain their own license status, subject to contributor rights verification.
+- The source provenance check over new GitHub issue/PR bodies and accessible commit messages did not find the reviewed high-risk patterns. This was not a scan of every revision's tree, inaccessible CI logs or personal commit-author privacy settings.
+
+**Hosted workflow status remains blocked before tests execute.** These source changes do not constitute a new full CI PASS or Public release approval.
