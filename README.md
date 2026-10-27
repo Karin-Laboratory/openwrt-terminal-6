@@ -1,6 +1,6 @@
 # OpenWrt for SoftBank Air Terminal 6
 
-Independent research toward OpenWrt support for the SoftBank Air Terminal 6 (SBAT6 series / MediaTek MT6990).
+Public, source-only community research toward OpenWrt support for the SoftBank Air Terminal 6 (SBAT6 series / MediaTek MT6990).
 
 > **Source-only experimental project. No downloadable or supported firmware, installation instructions, signature keys, or confirmed safe recovery procedure are provided. Do not flash images based on this repository.**
 
@@ -12,6 +12,12 @@ Independent research toward OpenWrt support for the SoftBank Air Terminal 6 (SBA
 
 Read the [engineering integration status](docs/ENGINEERING-STATUS-20261027.md), [technical status](docs/STATUS.md), [source provenance](docs/PROVENANCE.md) and [publication gates](docs/RELEASE-GATES.md). The original research and binary evidence are retained separately in non-public archives; they are not imported into this Git history.
 
+## Start here
+
+This is a **public development repository**, not a firmware download page. Browse [technical status](docs/STATUS.md) to distinguish what worked on a research unit from what is reproducible from this tree. Review [roadmap](docs/ROADMAP.md) for next engineering milestones and [build contract](docs/BUILD-CONTRACT.md) for offline checks. Report bugs or propose small source improvements via Issues and PRs, following [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**What you can do today:** inspect the code and patches, run the host-side tests, review provenance and discuss upstream integration. **What you cannot do from this repository:** build a complete supported SBAT6 firmware or safely flash a device.
+
 ## Contents
 
 - `patches/`: source-only RFCs and the experimental Stage 10 DMA preservation change. No generic kernel support or flashable artifacts implied.
@@ -21,7 +27,7 @@ Read the [engineering integration status](docs/ENGINEERING-STATUS-20261027.md), 
 
 ## Collaboration and security
 
-This repository will only include rights-cleared, individually reviewed, non-sensitive source and general research findings. Do not post firmware blobs, credential data, subscriber identities, radio calibration, private signing keys, exploit details, or device-specific raw logs.
+This repository is public for source review. Per-file third-party rights checks and broader security reviews are ongoing; publication is not a claim that all release gates passed. Contributions must contain only materials contributors are authorized to share. Do not post firmware blobs, credential data, subscriber identities, radio calibration, private signing keys, exploit details, or device-specific raw logs.
 
 See [security policy](SECURITY.md), [contribution guidelines](CONTRIBUTING.md) and [file-level licensing notes](docs/PROVENANCE.md). GPL-2.0 kernel-derived materials and MIT-licensed independent examples have separate license texts in [LICENSES](LICENSES/).
 
