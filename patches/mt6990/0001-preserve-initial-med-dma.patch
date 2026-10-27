@@ -1,0 +1,123 @@
+SPDX-License-Identifier: GPL-2.0-only
+Source: recovered owner-authored Stage10 delta, parent GPL-2.0-only.
+
+--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+@@ -4507,10 +4507,108 @@
+ 	}
+ }
+ 
++/* MT6990: Ethernet FE reset clears MED-owned DMA configuration.
++ * Keep this boot's own configured ring pointers; never adopt another device's
++ * addresses or reallocate descriptors. Initial FE reset only.
++ */
++struct sbat6d_med_boot_regs {
++	u32 fdma_base, fdma_count, fdma_calc, fdma_ctrl, cdmm_ctrl;
++	u32 rx0_base, rx0_count, rx0_calc, rx1_base, rx1_count, rx1_calc;
++	u32 rx_group, rx_mask, rx_sdl, rx_pref;
++	u32 tx_base, tx_count, tx_ctx, tx_pref;
++	u32 fdma_mask, fdma_global, mdma_global;
++	bool restore;
++};
++
++static bool sbat6d_med_boot_restored;
++
++static void sbat6d_med_boot_capture(struct mtk_eth *eth,
++				    struct sbat6d_med_boot_regs *s)
++{
++	if (!MTK_HAS_CAPS(eth->soc->caps, MTK_SOC_MT6990) ||
++	    READ_ONCE(sbat6d_med_boot_restored))
++		return;
++	s->fdma_base = mtk_r32(eth, 0x5900);
++	s->fdma_count = mtk_r32(eth, 0x5904);
++	s->fdma_calc = mtk_r32(eth, 0x5908);
++	s->fdma_ctrl = mtk_r32(eth, 0x0124);
++	s->cdmm_ctrl = mtk_r32(eth, 0x1644); /* native CDMM_EG_CRTL */
++	s->rx0_base = mtk_r32(eth, 0x5500);
++	s->rx0_count = mtk_r32(eth, 0x5504);
++	s->rx0_calc = mtk_r32(eth, 0x5508);
++	s->rx1_base = mtk_r32(eth, 0x5510);
++	s->rx1_count = mtk_r32(eth, 0x5514);
++	s->rx1_calc = mtk_r32(eth, 0x5518);
++	s->rx_group = mtk_r32(eth, 0x5650);
++	s->rx_mask = mtk_r32(eth, 0x5628);
++	s->rx_sdl = mtk_r32(eth, 0x5670);
++	s->rx_pref = mtk_r32(eth, 0x56dc);
++	s->tx_base = mtk_r32(eth, 0x5400);
++	s->tx_count = mtk_r32(eth, 0x5404);
++	s->tx_ctx = mtk_r32(eth, 0x5408);
++	s->tx_pref = mtk_r32(eth, 0x56d0);
++	s->fdma_mask = mtk_r32(eth, 0x5a28);
++	s->fdma_global = mtk_r32(eth, 0x5a04);
++	s->mdma_global = mtk_r32(eth, 0x5604);
++	s->restore = s->fdma_base && s->fdma_count == 0x70e4 &&
++		s->rx0_base && s->rx0_count == 4200 &&
++		s->rx1_base && s->rx1_count == 4200 &&
++		s->tx_base && s->tx_count == 12150 &&
++		s->rx_mask == 0x30000 && s->rx_group == 0x30000 &&
++		s->fdma_mask == 0x80000000 &&
++		s->fdma_global == 0x40002004 &&
++		s->mdma_global == 0x10804825 &&
++		(s->cdmm_ctrl & 6) == 6;
++}
++
++static void sbat6d_med_boot_restore(struct mtk_eth *eth,
++				    const struct sbat6d_med_boot_regs *s)
++{
++	if (!s->restore)
++		return;
++	if (mtk_r32(eth, 0x5500) || mtk_r32(eth, 0x5400) ||
++	    mtk_r32(eth, 0x5900))
++		return;
++	mtk_w32(eth, s->fdma_base, 0x5900);
++	mtk_w32(eth, s->fdma_count, 0x5904);
++	mtk_w32(eth, s->fdma_calc, 0x5908);
++	mtk_w32(eth, s->fdma_ctrl, 0x0124);
++	mtk_w32(eth, s->cdmm_ctrl, 0x1644);
++	mtk_w32(eth, s->rx0_base, 0x5500);
++	mtk_w32(eth, s->rx0_count, 0x5504);
++	mtk_w32(eth, s->rx0_calc, 0x5508);
++	mtk_w32(eth, s->rx1_base, 0x5510);
++	mtk_w32(eth, s->rx1_count, 0x5514);
++	mtk_w32(eth, s->rx1_calc, 0x5518);
++	mtk_w32(eth, 0x30000, 0x5608);
++	mtk_w32(eth, s->rx_group, 0x5650);
++	mtk_w32(eth, s->rx_mask, 0x5628);
++	mtk_w32(eth, s->rx_sdl, 0x5670);
++	mtk_w32(eth, s->rx_pref, 0x56dc);
++	mtk_w32(eth, s->tx_base, 0x5400);
++	mtk_w32(eth, s->tx_count, 0x5404);
++	mtk_w32(eth, s->tx_ctx, 0x5408);
++	mtk_w32(eth, 1, 0x5608);
++	mtk_w32(eth, s->tx_pref, 0x56d0);
++	mtk_w32(eth, s->fdma_mask, 0x5a28);
++	wmb();
++	mtk_w32(eth, s->fdma_global, 0x5a04);
++	mtk_w32(eth, s->mdma_global, 0x5604);
++	if (mtk_r32(eth, 0x5500) == s->rx0_base &&
++	    mtk_r32(eth, 0x5510) == s->rx1_base &&
++	    mtk_r32(eth, 0x5900) == s->fdma_base &&
++	    mtk_r32(eth, 0x5628) == s->rx_mask)
++		WRITE_ONCE(sbat6d_med_boot_restored, true);
++	else
++		dev_warn(eth->dev, "MT6990 MED boot ring restore readback failed\n");
++}
++
+ static void mtk_hw_reset(struct mtk_eth *eth)
+ {
+ 	u32 val;
+-
++	struct sbat6d_med_boot_regs boot = { 0 };
++
++	sbat6d_med_boot_capture(eth, &boot);
+ 	if (mtk_is_netsys_v2_or_greater(eth))
+ 		regmap_write(eth->ethsys, ETHSYS_FE_RST_CHK_IDLE_EN, 0);
+ 
+@@ -4534,6 +4632,7 @@
+ 	}
+ 
+ 	ethsys_reset(eth, RSTCTRL_ETH | RSTCTRL_FE | val);
++	sbat6d_med_boot_restore(eth, &boot);
+ 
+ 	if (mtk_is_netsys_v3_or_greater(eth))
+ 		regmap_write(eth->ethsys, ETHSYS_FE_RST_CHK_IDLE_EN,
