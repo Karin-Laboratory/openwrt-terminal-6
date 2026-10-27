@@ -21,6 +21,22 @@ TEXT = "\n".join((
 
 
 class FeedLockTests(unittest.TestCase):
+    def test_proposed_snapshot_is_exactly_pinned(self):
+        lock = (ROOT / "config/feeds.lock").read_text()
+        self.assertEqual(mod.inspect(lock), [])
+        expected = {
+            "packages": "11396c3434272b73294d29aa9d86497b25cf33da",
+            "luci": "a8c110bed82375b69eb3881b2e54e617520e8c7d",
+            "routing": "4b9891b9136259f93294a424507ed24c5e8c1cbd",
+            "telephony": "5d68d53c160a325ea9d03fce393e051573bcc736",
+            "video": "644a66261288b4a95dbc6e46fe805d33cb9f71d9",
+        }
+        entries = [line.split() for line in lock.splitlines()
+                   if line.strip() and not line.lstrip().startswith("#")]
+        self.assertEqual(len(entries), 5)
+        for _, name, url in entries:
+            self.assertEqual(url.rpartition("^")[2], expected[name])
+
     def test_pinned_first_party_feeds_are_accepted(self):
         self.assertEqual(mod.inspect(TEXT), [])
 
