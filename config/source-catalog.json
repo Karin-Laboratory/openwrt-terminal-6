@@ -191,6 +191,60 @@
       "git_blob_sha1": "af2b6bf3a854561c3acf27e09e114835954bc243",
       "rights_review": "pending",
       "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/modem/test_transport_model.py",
+      "component": "modem",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "2328b6f792786fcd2fbd3132c3d7b902c11b91b4",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/modem/verify_stage10_provenance.py",
+      "component": "modem-ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "80cec57e94d5d6fddde244329374e20d69778540",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/verify_build_inputs.py",
+      "component": "signing",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "093175bb5cc1f3d959329ea18ec48d41c2635f15",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/verify_source_catalog.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "7a9a0a8cbdafa9f39ab90c1d40ee8fc8b67ac03d",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/security/check_publication.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "179105da330183bb2309e37cd2317b5eda0b5ffa",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/security/check_workflows.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "bcfd8f3f634d5467fb0dfb6a688e94079d2ee0a2",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
     }
   ],
   "missing_dependencies": [
