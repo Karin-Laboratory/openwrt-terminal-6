@@ -4,7 +4,7 @@ Research snapshot: 2026-10-27. This project does not currently provide an instal
 
 | Component | Observed in historical experiments | Available here | Remaining work |
 | --- | --- | --- | --- |
-| A/B boot control | Development-device slot selection reported | Non-operational research overview only | LK retry/fallback conditions and independently proven rescue |
+| A/B boot control | Development-device slot selection reported | Strict, read-only, synthetic metadata observation model (no device IO) | LK retry/fallback conditions and independently proven rescue |
 | Signed boot | Experimental accepted boot images reported | No signing code, SDK copy, test keys or signed payloads | Review input formats, legal sources and safe packaging privately |
 | Linux kernel | Linux 6.18.44 boot observed | Source-only Ethernet RFC and Stage 10 delta | Fully rights-cleared independently reproduced kernel, SoC DTS and driver dependencies |
 | OpenWrt userspace | procd and shell operated on development device | Synthetic host-side reference tools | Pinned feeds, rootfs, packages and full clean build |
