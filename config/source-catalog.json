@@ -65,6 +65,69 @@
       "git_blob_sha1": "4c6a7968957df35d3207cc9f5ec0b9a3fc3f8d0e",
       "rights_review": "pending",
       "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_sba6d_stage10_clean_patch.py",
+      "component": "modem-ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b511dd4f175d4e05ecce2217747c4972dcbf2e03",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_stage10_mmio_model.py",
+      "component": "modem-ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "e8e15d869f3ee822991c94957dc64cac45bb057a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_publication_gate.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "7ffde1f20e97f12ae63faef45e10ac9f0b31fa8e",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_publication_history.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "9f02a9e61d9ad98147b1a307a6f5acc68706772b",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_workflow_policy.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "665ddee45d3419d7c9aac1db0d9fbec2b8b047d1",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_slot_observation.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "de9efbda4770ddf42cd062f0279a902a171007ae",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_ab_fallback_hypotheses.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "43c39c08c8433ad18cc5846f1c4684ead37f3c8c",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
     }
   ],
   "missing_dependencies": [
