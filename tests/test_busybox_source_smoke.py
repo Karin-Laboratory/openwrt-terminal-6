@@ -37,6 +37,13 @@ class BusyBoxSourceSmokeTests(unittest.TestCase):
         self.assertIn("!= 183", src)
         self.assertIn("never execute", src)
 
+    def test_single_build_and_elf_header_check(self):
+        src = SCRIPT.read_text()
+        self.assertEqual(src.count("timeout 450s make"), 1)
+        self.assertEqual(src.count("<<'PY'"), 1)
+        self.assertEqual(src.count("BUSYBOX_ARM64_ELF_HEADER_PASS"), 1)
+        self.assertNotIn("CONFIG_TC=ytimeout", src)
+
     def test_does_not_claim_rootfs_completeness(self):
         src = SCRIPT.read_text()
         self.assertIn("not an OpenWrt rootfs or board firmware", src)
