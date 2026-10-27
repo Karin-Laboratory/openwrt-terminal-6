@@ -70,6 +70,19 @@ class SourceCatalogTests(unittest.TestCase):
         self.assertTrue(any("flashable payload" in p for p in errors))
         self.assertTrue(any("SPDX" in p for p in errors))
 
+    def test_source_publication_gate_independent_of_firmware_readiness(self):
+        problems = check.validate(self.root, self.catalog, source_public=True)
+        self.assertTrue(any("rights review pending" in x for x in problems))
+        self.assertFalse(any("missing build dependencies" in x for x in problems))
+        self.entry["rights_review"] = "approved"
+        self.assertEqual(check.validate(self.root, self.catalog, source_public=True), [])
+        self.assertTrue(any("missing build dependencies" in x
+                            for x in check.validate(self.root, self.catalog, public=True)))
+
+    def test_empty_rights_label_is_not_publication_approval(self):
+        self.entry["rights_review"] = ""
+        self.assertTrue(check.validate(self.root, self.catalog, source_public=True))
+
     def test_reject_symlink(self):
         f = self.root / self.path
         f.unlink()
