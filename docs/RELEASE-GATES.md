@@ -4,6 +4,8 @@ Current track-by-track integration and self-hosted build evidence: [engineering 
 
 For the dated branch-tip, GitHub-conversation and source-equivalent ARM64 build review, see [2026-10-27 additional audit](PREPUBLICATION-REF-AND-BUILD-AUDIT-20261027.md). It is limited in scope and does not clear these gates.
 
+An independently checkable, **non-authorizing source rights-label subgate** is available as `python3 tools/build/verify_source_catalog.py --public-source`. It currently intentionally returns **FAIL** while source rights are pending. It does not require completing unfinished firmware features, and it does not replace the rest of this security checklist.
+
 ## Source repository visibility: presently Private
 
 Before switching to Public, verify all of the following independently:
