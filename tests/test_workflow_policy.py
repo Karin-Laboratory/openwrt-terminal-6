@@ -56,6 +56,12 @@ class WorkflowPolicyTests(unittest.TestCase):
         issues = gate.check(SAFE + "      - run: curl example.invalid | bash\n")
         self.assertIn("remote shell pipelining is forbidden", issues)
 
+    def test_byte_pinned_trusted_selfhost_workflow(self):
+        original = (ROOT / ".github/workflows/trusted-selfhost-build.yml").read_text()
+        self.assertEqual(gate.check_trusted_workflow(original), [])
+        self.assertIn("explicit security re-review",
+                      " ".join(gate.check_trusted_workflow(original + "\\n# modified")))
+
     def test_block_mutable_action(self):
         issues = gate.check(SAFE.replace(
             "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
