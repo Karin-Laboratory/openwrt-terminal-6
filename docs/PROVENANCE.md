@@ -1,0 +1,28 @@
+# Source origin, licenses and evidence boundaries
+
+This repository was constructed in a **new Git history** by selecting individual source files rather than cloning or rebasing the private research archive. Each file must remain subject to a final rights review before the repository visibility becomes Public.
+
+## Source classes
+
+| Files | Origin | Terms and caveats |
+| --- | --- | --- |
+| `patches/rfc/*.patch` | Proposed changes against upstream Linux v6.18 MediaTek Ethernet driver | **GPL-2.0-only** kernel derivative; preserve original kernel copyright and upstream source attribution. No implied upstream acceptance or completed Signed-off-by |
+| `patches/mt6990/*.patch` | Research-derived minimal Stage10 Ethernet/MED DMA delta against an exact modified parent kernel | **GPL-2.0-only** parent; exact parent is NOT the generic Linux v6.18 tree; neither parent source nor vendor binaries supplied |
+| `scripts/research/sba6d_stage10_clean_patch.py` and `tests/test_sba6d_stage10_clean_patch.py` | Project-authored deterministic transformation / standalone test | SPDX MIT on independent program/test; transformation output is a kernel source derivative subject to applicable GPL terms |
+| `tests/test_stage10_mmio_model.py` | Project-authored host-only fake-MMIO regression harness | SPDX MIT; does not touch devices |
+| `examples/fe-recovery/*` | Project-authored independent C state machine and tests | SPDX MIT where indicated; **not** a complete kernel driver |
+| `tools/modem/*` | Project-authored synthetic modem model and source verifier | SPDX MIT where indicated; not CCCI/MIPC wire implementation |
+| `tools/check_mediatek_rfc_series.py` and `scripts/apply-public-rfc-series.sh` | Project-authored source validation helpers | SPDX MIT where indicated; build tooling only |
+| Documentation | Independent project summaries from research experiments | Not vendor dumps, source binaries, firmware or confidential test records |
+
+MIT license text is available under `LICENSES/MIT.txt`. GPL-2.0-only Linux patch derivatives remain under Linux GPL terms. This is intentionally **not** a blanket MIT license for the whole repository.
+
+## Independent reproduction status
+
+The Stage10 research fix has a pinned source identity and a deterministic transformation check, together with a hardware-free C MMIO test. Prior retained-builder checking confirmed an ARM64 Ethernet object compile and matching source/image hashes. The original proprietary/third-party kernel baseline, firmware and provisioning data are NOT part of this repo. The available checks prove neither an independent full firmware build nor NR data operation.
+
+For a future fully reproducible upstream port, publish a rights-cleared kernel/SoC tree, device-tree bindings, OpenWrt feeds/build config and redistributable runtime dependencies. Preserve attribution for every imported component and never manufacture a third-party contributor sign-off.
+
+## Never import
+
+Signing materials or sample key copies, OEM firmware and calibration, chip-unique provisioning, SIM/subscriber details, private device/network endpoints, historical signed partitions, unaudited build outputs, or confidential vulnerability evidence. Their archival retention does not make them redistributable.
