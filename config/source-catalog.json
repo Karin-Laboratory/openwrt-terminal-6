@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "policy": "SOURCE_ONLY",
+  "warning": "Git blob SHA-1 is a content identity, not a release signature or independent license clearance.",
+  "inputs": [
+    {
+      "path": "patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch",
+      "component": "ethernet",
+      "origin": "linux-v6.18-derived",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "3fc960a3ea7e5580fae46a463d95e619e8a0ecdf",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "patches/rfc/0002-mediatek-serialize-reset-requeue.patch",
+      "component": "ethernet",
+      "origin": "linux-v6.18-derived",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "5514a6868ae03acca08c49a4b92c42da88c4ce5a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "patches/mt6990/0001-preserve-initial-med-dma.patch",
+      "component": "modem-ethernet",
+      "origin": "modified-gpl-parent-derived",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "1e2bd82ed3576982c5a91d04e084a249c31fb103",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/research/sba6d_stage10_clean_patch.py",
+      "component": "modem-ethernet",
+      "origin": "research-transformer",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "85fb48c726939319394569ed933131c1fba305ba",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/slot_observation.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "c6393bd5c4b09becdff5a16c0d68dbfb85c0db3f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/ab_fallback_hypotheses.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "671813ada11159aa32f84956992cea356e37bb9e",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/modem/transport_model.py",
+      "component": "modem",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "4c6a7968957df35d3207cc9f5ec0b9a3fc3f8d0e",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    }
+  ],
+  "missing_dependencies": [
+    {
+      "component": "signing",
+      "reason": "Only confidential vendor trust and SDK rights analysis exists; no public signature or key."
+    },
+    {
+      "component": "linux-kernel",
+      "reason": "Full rights-cleared MT6990 base kernel/DT/driver dependencies not published."
+    },
+    {
+      "component": "openwrt-userland",
+      "reason": "Pinned feeds/packages/rootfs and clean independent build are not available."
+    },
+    {
+      "component": "wifi7",
+      "reason": "Rights-cleared firmware/config, client association and EHT/MLO unverified."
+    },
+    {
+      "component": "modem-runtime",
+      "reason": "Rights-cleared RIL/CCCI/MIPC runtime and NR/IPv6 not established."
+    },
+    {
+      "component": "fallback",
+      "reason": "LK retry and rescue not verified."
+    }
+  ]
+}
