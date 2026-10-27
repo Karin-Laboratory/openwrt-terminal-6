@@ -19,7 +19,7 @@ Research snapshot: 2026-10-27. This project does not currently provide an instal
 
 On 2026-10-25, Stage 9B restored the initial DMA configuration manually and achieved bidirectional IPv4 data. Stage 10 preserved MED-related DMA registers around the initial Ethernet reset, then recorded ping, DNS resolution and HTTPS 200 with TLS certificate verification without using the manual restoration in that replay.
 
-These experiments used a retained, modified MT6990 vendor-capable Linux/OpenWrt source baseline and separate private runtime/provisioning assets. Historical file SHA-256 comparisons link the modified source and actually booted image. The current public candidate is **not** a standalone reproduction of that firmware and does not include the original confidential binaries, full kernel configuration or signing inputs.
+These experiments used a retained, modified MT6990 vendor-capable Linux/OpenWrt source baseline and separate private runtime/provisioning assets. Historical file SHA-256 comparisons link the modified source and actually booted image. The current public repository is **not** a standalone reproduction of that firmware and does not include the original confidential binaries, full kernel configuration or signing inputs.
 
 The Stage10 change depends on precise MMIO assumptions from that research baseline; it must not be treated as a generic MediaTek kernel patch or safe deployable fix.
 
