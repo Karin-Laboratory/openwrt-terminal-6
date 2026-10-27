@@ -36,3 +36,7 @@ The lack of a firmware release is **not** a failure of source-only upstream rese
 ## CI trust boundary
 
 Use GitHub-hosted, short-lived runners for source-only test jobs. No SDK keys, device access, preserved private build paths, firmware signers, shell access to home infrastructure or secret-backed upload actions are authorized in public PR workflows.
+
+## Queued trusted-runner safety condition (2026-10-27)
+
+The clean repository's self-hosted source build was restricted to **manual workflow_dispatch + main + Private** after numerous push-triggered jobs queued without a registered runner. Any **previously queued jobs** created under the old trigger remain an explicit blocker before Public cutover: verify and cancel them in GitHub Actions, and confirm no home-runner assignment or pending jobs remain. The review must be based on real administrative settings and completed records; the user-owned archived v2 runner's PASS does not establish clean-repo assignment.
