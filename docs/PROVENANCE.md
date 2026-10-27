@@ -1,6 +1,6 @@
 # Source origin, licenses and evidence boundaries
 
-This repository was constructed in a **new Git history** by selecting individual source files rather than cloning or rebasing the private research archive. Each file must remain subject to a final rights review before the repository visibility becomes Public.
+This repository was constructed in a **new Git history** by selecting individual source files rather than cloning or rebasing the private research archive. Rights review remains ongoing after the repository became Public; publication is not independent approval of third-party redistribution rights.
 
 ## New board research source attribution
 
@@ -34,7 +34,7 @@ Signing materials or sample key copies, OEM firmware and calibration, chip-uniqu
 
 ## Source/test catalog coverage (2026-10-27)
 
-The [source catalog](../config/source-catalog.json) lists all 27 source, test, shell and Makefile paths in the clean Git tree at review time, each with exact Git blob identity. The catalog validator rejects unregistered new code. All entries retain `rights_review=pending`, intentionally preventing source identity from being mistaken for legal clearance. See [build contract](BUILD-CONTRACT.md).
+The [source catalog](../config/source-catalog.json) records version-pinned identities for covered source, test, shell, Makefile, and board paths; the initial 27-path snapshot has subsequently expanded, each with exact Git blob identity. The catalog validator rejects unregistered new code. All entries retain `rights_review=pending`, intentionally preventing source identity from being mistaken for legal clearance. See [build contract](BUILD-CONTRACT.md).
 
 ## Pinned MT6990 donor source boundary
 
