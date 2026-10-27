@@ -54,7 +54,7 @@ def validate(root: Path, catalog: dict, public: bool = False,
             issues.append(prefix + ": duplicate path")
             continue
         seen.add(name)
-        if rel.suffix not in (".patch", ".py", ".c", ".h", ".sh", ".dtso") and rel.name != "Makefile":
+        if rel.suffix not in (".patch", ".py", ".c", ".h", ".sh", ".dtso", ".dts", ".dtsi", ".mk") and rel.name != "Makefile":
             issues.append(prefix + ": non-source type")
         if item["component"] not in ALLOWED_COMPONENTS:
             issues.append(prefix + ": unknown component")
@@ -89,6 +89,7 @@ def validate(root: Path, catalog: dict, public: bool = False,
     # Enforce coverage of all current source/test/build files, not just the
     # seven original handpicked kernel/boot/modem entries.
     source_paths = set()
+    forbidden_firmware_suffixes = {".img", ".bin", ".dtb", ".dtbo", ".key", ".pem", ".ko", ".cpio"}
     for dirname in ("patches", "scripts", "tools", "examples", "tests", "board"):
         subtree = root / dirname
         if subtree.is_symlink():
@@ -97,7 +98,11 @@ def validate(root: Path, catalog: dict, public: bool = False,
         if not subtree.exists():
             continue
         for location in subtree.rglob("*"):
-            if location.suffix in (".patch", ".py", ".c", ".h", ".sh", ".dtso") or location.name == "Makefile":
+            if location.is_symlink():
+                issues.append("symlinked source-tree entry: " + location.relative_to(root).as_posix())
+            if location.is_file() and location.suffix.lower() in forbidden_firmware_suffixes:
+                issues.append("unapproved binary/secret artifact: " + location.relative_to(root).as_posix())
+            if location.suffix in (".patch", ".py", ".c", ".h", ".sh", ".dtso", ".dts", ".dtsi", ".mk") or location.name == "Makefile":
                 source_paths.add(location.relative_to(root).as_posix())
     for name in sorted(source_paths - seen):
         issues.append("uncatalogued source/test: " + name)
