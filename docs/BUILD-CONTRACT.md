@@ -7,7 +7,8 @@ The checker also fails when a source/test/Makefile/shell file exists in the cove
 ## Modes
 
 - `python3 tools/build/verify_source_catalog.py`: verify local source bytes, names, file type, origin, license labels and the prohibition on flashable payload content in this catalog. A PASS means **source identity/schema only**.
-- `python3 tools/build/verify_source_catalog.py --public-build`: additional hypothetical completeness check, currently expected to **FAIL** because independent contributor-rights approval and complete build/runtime inputs are unavailable. Even passing this mode alone never authorizes publishing a flashable binary.
+- `python3 tools/build/verify_source_catalog.py --public-source`: **source-only publication identity and rights-label gate**, currently expected to **FAIL** because no source entry has completed its individual rights review. It does **not** require unfinished firmware dependencies.
+- `python3 tools/build/verify_source_catalog.py --public-build`: separate hypothetical **firmware build** completeness check, currently expected to **FAIL** because contributor-rights approval and complete kernel/userland/runtime inputs are unavailable. Even passing this mode alone never authorizes publishing a flashable binary.
 
 Input identity uses the standard Git object SHA-1 content identifier, calculated on `blob <length>\0<bytes>`. Git blob IDs are not authenticated release signatures or strong external supply-chain attestations. For a future release, pin upstream commits and SHA-256 digests of legally obtained independent source archives, verify source ownership and produce an authenticated build manifest.
 
@@ -26,3 +27,9 @@ Input identity uses the standard Git object SHA-1 content identifier, calculated
 Source identity verification and complete reproducibility are separate from **permission to redistribute**. Do not promote a component status simply because synthetic tests pass or its byte hash matches research evidence.
 
 The board SGMII1 overlay is disabled-only and not part of a bootable DTB. The previous historical firmware configuration and private device images must not be copied here, even to make this build appear complete.
+
+## Important distinction: automated labels are not legal clearance
+
+`--public-source` only checks that all inventoried source entries have the explicit `approved` rights label, along with source identity and schema. It does not verify whether that label is truthful, does not scan entire Git history, private issue/PR edits, Actions logs, software supply chain, vendor coordinated disclosure or the GitHub Actions trust configuration. A PASS for this subgate is **necessary but not sufficient** for a Public repository.
+
+`--public-build` additionally blocks while missing kernel, OpenWrt rootfs, radio/modem runtime and boot recovery dependencies remain. Public source availability **must not** be blocked indefinitely by the absence of a flashable firmware image, but Public source still requires its own completed rights and security review.
