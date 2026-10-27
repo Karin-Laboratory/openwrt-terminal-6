@@ -68,12 +68,17 @@ def scan(path: str, payload: bytes, findings: set) -> None:
 
 def history_findings(findings: set) -> int:
     """Scan path/blob PAIRS, not only blob IDs: same blob may have risky alias."""
+    if git("rev-parse", "--is-shallow-repository").strip() != b"false":
+        raise ValueError("shallow clone: cannot certify reachable history")
     commits = [c for c in git("rev-list", "--all").splitlines() if c]
     if len(commits) > MAX_COMMITS:
         raise ValueError("commit safety limit exceeded; manual audit needed")
     pairs = set()
     scanned = 0
     for commit in commits:
+        commit_sha = commit.decode("ascii")
+        scan("@commit/" + commit_sha[:12], git("cat-file", "commit", commit_sha), findings)
+        scanned += 1
         # NUL-delimited file paths avoid newline, tab and whitespace ambiguity.
         for entry in git("ls-tree", "-r", "-z", commit.decode("ascii")).split(b"\x00"):
             if not entry:
@@ -97,6 +102,16 @@ def history_findings(findings: set) -> int:
                 findings.add((path, "oversized historical blob"))
                 continue
             scan(path, git("cat-file", "blob", sha), findings)
+            scanned += 1
+    # Annotated tags may contain their own sensitive metadata even when the
+    # commits and tree contents are clean.
+    for row in git("for-each-ref", "--format=%(objectname) %(objecttype)", "refs/tags").splitlines():
+        ref_sha, sep, ref_type = row.partition(b" ")
+        if not sep:
+            raise ValueError("malformed tag reference")
+        if ref_type == b"tag":
+            label = ref_sha.decode("ascii")
+            scan("@tag/" + label[:12], git("cat-file", "tag", label), findings)
             scanned += 1
     return scanned
 
