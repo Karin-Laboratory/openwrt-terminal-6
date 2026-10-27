@@ -16,7 +16,7 @@ This repository was constructed in a **new Git history** by selecting individual
 | `tools/check_mediatek_rfc_series.py` and `scripts/apply-public-rfc-series.sh` | Project-authored source validation helpers | SPDX MIT where indicated; build tooling only |
 | Documentation | Independent project summaries from research experiments | Not vendor dumps, source binaries, firmware or confidential test records |
 
-MIT license text is available under `LICENSES/MIT.txt`. GPL-2.0-only Linux patch derivatives **and the transformer embedding driver helper code** remain under Linux GPL terms. This is intentionally **not** a blanket MIT license for the whole repository.
+MIT license text is available under [`LICENSES/MIT.txt`](../LICENSES/MIT.txt). The original Linux v6.18 GPL-2.0 license copy, byte-for-byte from [`torvalds/linux` LICENSES/preferred/GPL-2.0](https://github.com/torvalds/linux/blob/v6.18/LICENSES/preferred/GPL-2.0), is retained in [`LICENSES/GPL-2.0`](../LICENSES/GPL-2.0) (upstream Git blob `ea8e93dc44bc462a2be34e484432cf2b9ec88527`). GPL-2.0-only Linux patch derivatives **and the transformer embedding driver helper code** remain under Linux GPL terms. This is intentionally **not** a blanket MIT license for the whole repository.
 
 ## Independent reproduction status
 
