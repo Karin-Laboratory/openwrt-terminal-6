@@ -17,7 +17,7 @@ Read [technical status](docs/STATUS.md), [source provenance](docs/PROVENANCE.md)
 - `patches/`: source-only RFCs and the experimental Stage 10 DMA preservation change. No generic kernel support or flashable artifacts implied.
 - `scripts/` and `tests/`: hardware-free transformation and regression tests.
 - `examples/`: independent host-side recovery state model.
-- `tools/`: synthetic transport state model, strictly read-only A/B metadata observation, and conservative publication checks.
+- `tools/`: synthetic modem and A/B models, offline SHA-256 build-input identity checks (not signing), and conservative publication checks.
 
 ## Collaboration and security
 
