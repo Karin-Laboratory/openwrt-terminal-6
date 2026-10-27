@@ -39,6 +39,11 @@ class DonorTextAllowlistTests(unittest.TestCase):
             self.assertNotIn(forbidden, body)
         self.assertIn("cat-file blob", body)
 
+    def test_bash_variable_expansion_is_not_escaped(self):
+        body = SCRIPT.read_text()
+        self.assertNotIn(chr(92) + "${", body)
+        self.assertIn('${TMPDIR:-/tmp}', body)
+
     def test_non_root_no_overwrite_and_temp_cleanup(self):
         body = SCRIPT.read_text()
         for expected in (
