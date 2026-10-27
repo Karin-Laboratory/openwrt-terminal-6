@@ -1,0 +1,8 @@
+# Source-only proposed feed snapshot at 2026-09-09 15:04:35 UTC.
+# Five revisions were checked against the OpenWrt organization GitHub mirrors.
+# Not yet independently verified with git.openwrt.org or licensed as an SBAT6 firmware build.
+src-git packages https://git.openwrt.org/feed/packages.git^11396c3434272b73294d29aa9d86497b25cf33da
+src-git luci https://git.openwrt.org/project/luci.git^a8c110bed82375b69eb3881b2e54e617520e8c7d
+src-git routing https://git.openwrt.org/feed/routing.git^4b9891b9136259f93294a424507ed24c5e8c1cbd
+src-git telephony https://git.openwrt.org/feed/telephony.git^5d68d53c160a325ea9d03fce393e051573bcc736
+src-git video https://github.com/openwrt/video.git^644a66261288b4a95dbc6e46fe805d33cb9f71d9
