@@ -1,8 +1,8 @@
 # Reproducible build input catalog, source-only stage
 
-The machine-readable [source catalog](../config/source-catalog.json) pins **individual source files** (Git blob identities) for Ethernet RFCs, Stage10 MED DMA code, A/B research and the synthetic modem transport model.
+The machine-readable [source catalog](../config/source-catalog.json) pins **all 27 tracked source, unit-test and build-helper files** (Git blob identities) for Ethernet RFCs, Stage10 MED DMA code, A/B research and the synthetic modem transport model.
 
-This is a reproducibility *contract for the files present here*, not a complete firmware Bill of Materials or a signature. The catalog intentionally records rights review as PENDING and lists missing components rather than fabricating OpenWrt firmware build success.
+The checker also fails when a source/test/Makefile/shell file exists in the covered directories without a catalog entry. The 27 paths and corresponding blob hashes were independently checked against GitHub's complete, nontruncated branch tree on 2026-10-27. This is a reproducibility *contract for the files present here*, not a complete firmware Bill of Materials or a signature. The catalog intentionally records rights review as PENDING and lists missing components rather than fabricating OpenWrt firmware build success.
 
 ## Modes
 
