@@ -36,6 +36,8 @@ jobs:
               --output "$tmp/linux/drivers/net/ethernet/mediatek/$file"
           done
           bash scripts/apply-public-rfc-series.sh "$tmp/linux"
+      - name: Compile disabled SGMII overlay with pinned Linux host dtc
+        run: bash scripts/verify-disabled-sgmii-dtc.sh
       - name: Verify pinned source-only build contract
         run: python3 tools/build/verify_source_catalog.py
       - name: Verify public CI trust policy

@@ -290,6 +290,24 @@
       "git_blob_sha1": "e4f5870784b4a650dd2439de4ca1338902d9e634",
       "rights_review": "pending",
       "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/verify-disabled-sgmii-dtc.sh",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "57ad964f6fa97da6a8c6ccdb3a5f595cf62cf80e",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_pinned_sgmii_dtc.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "d34ef186cf5ae2b8688395717c821bde1201db84",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
     }
   ],
   "missing_dependencies": [

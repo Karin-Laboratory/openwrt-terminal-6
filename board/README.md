@@ -18,6 +18,10 @@
 
 These files contain **no OEM decompiled DTS**, no proprietary kernel binaries, signed partition payloads, factory radio calibration, modem NV/provisioning, bootloader security proof or installation commands.
 
+## Reproducible syntax-only dtc check
+
+`bash scripts/verify-disabled-sgmii-dtc.sh` checks the independent safety model, downloads pinned Linux v6.18 into a temporary directory, builds the host `scripts_dtc` binary without sudo, compiles this overlay and checks both fragments remain disabled after DTB roundtrip. Successful Private v2 source-equivalent runner [run #40473252747](https://github.com/Karin-Laboratory/archive-openwrt-terminal-6-v2/actions/runs/40473252747) emitted `PINNED_LINUX_DTC_DISABLED_SGMII_OVERLAY_SYNTAX_PASS`. No DTBO/image is distributed; no clock/power provider was validated.
+
 ## Required before real kernel DTS integration
 
 1. Independently establish a rights-cleared full MT6990 base SoC DTS and correct Linux Device Tree binding schemas.
