@@ -59,6 +59,9 @@ class WorkflowPolicyTests(unittest.TestCase):
     def test_byte_pinned_trusted_selfhost_workflow(self):
         original = (ROOT / ".github/workflows/trusted-selfhost-build.yml").read_text()
         self.assertEqual(gate.check_trusted_workflow(original), [])
+        self.assertIn("github.event.repository.private == true", original)
+        self.assertNotIn("pull_request:", original)
+        self.assertIn("branches: [main]", original)
         self.assertIn("explicit security re-review",
                       " ".join(gate.check_trusted_workflow(original + "\\n# modified")))
 

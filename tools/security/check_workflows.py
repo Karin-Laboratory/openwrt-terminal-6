@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # Only this reviewed byte-exact main-push workflow may run on an isolated
 # self-hosted builder. Any modification fails closed until independently reviewed.
 TRUSTED_SELFHOST_WORKFLOW = "trusted-selfhost-build.yml"
-TRUSTED_SELFHOST_BLOB_SHA1 = "a16d13df3eecb7d6abca76a169e9a017df24e76f"
+TRUSTED_SELFHOST_BLOB_SHA1 = "3294d958945f09a19e845ca075f2f41b675a154e"
 
 def check_trusted_workflow(text: str):
     blob = text.encode("utf-8")

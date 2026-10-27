@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   arm64-source:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Karin-Laboratory/openwrt-terminal-6' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Karin-Laboratory/openwrt-terminal-6' && github.event.repository.private == true }}
     runs-on: [self-hosted, linux, x64, sbat6-recovery]
     timeout-minutes: 60
     defaults:
@@ -36,10 +36,22 @@ jobs:
           test "${GITHUB_REF}" = refs/heads/main
           test "${GITHUB_REPOSITORY}" = Karin-Laboratory/openwrt-terminal-6
           test "$(id -u)" -ne 0
-          for command in git python3 make cc curl aarch64-linux-gnu-gcc; do
-            command -v "$command" >/dev/null || { echo "Missing preinstalled compiler/tool: $command"; exit 2; }
+          for command in git python3 make cc curl; do
+            command -v "$command" >/dev/null || { echo "Missing preinstalled tool: $command"; exit 2; }
           done
-          echo 'Trusted main and preinstalled non-root toolchain preflight: PASS'
+          if command -v aarch64-linux-gnu-gcc >/dev/null; then
+            prefix=aarch64-linux-gnu-
+          elif command -v aarch64-openwrt-linux-musl-gcc >/dev/null; then
+            prefix=aarch64-openwrt-linux-musl-
+          elif [[ -n "${SBAT6_TOOLCHAIN_BIN:-}" && -x "${SBAT6_TOOLCHAIN_BIN}/aarch64-openwrt-linux-musl-gcc" ]]; then
+            echo "${SBAT6_TOOLCHAIN_BIN}" >> "$GITHUB_PATH"
+            prefix=aarch64-openwrt-linux-musl-
+          else
+            echo 'Missing preinstalled ARM64 cross-toolchain; never install with sudo inside this job'
+            exit 2
+          fi
+          echo "SBAT6_CROSS_COMPILE=$prefix" >> "$GITHUB_ENV"
+          echo 'Trusted private main and preinstalled non-root toolchain preflight: PASS'
       - name: Run host-only regressions and new-history safety gates
         run: |
           set -euo pipefail
@@ -61,23 +73,23 @@ jobs:
           test "$(git rev-parse HEAD)" = 7d0a66e4bb9081d75c82ec4957c50034cb0ea449
           test "$(git hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.c)" = e68997a29191b2a8ce0868873dcfe95c79e10e56
           test "$(git hash-object drivers/net/ethernet/mediatek/mtk_eth_soc.h)" = 0168e2fbc6197a6aa9fe159767166e86915accbc
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+          make ARCH=arm64 CROSS_COMPILE="${SBAT6_CROSS_COMPILE}" defconfig
           scripts/config --enable CONFIG_COMPILE_TEST --enable CONFIG_NET_VENDOR_MEDIATEK --enable CONFIG_NET_MEDIATEK_SOC --enable CONFIG_NET_DSA
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+          make ARCH=arm64 CROSS_COMPILE="${SBAT6_CROSS_COMPILE}" olddefconfig
           grep -Eq '^CONFIG_NET_MEDIATEK_SOC=(y|m)$' .config
           object=drivers/net/ethernet/mediatek/mtk_eth_soc.o
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 "$object"
+          make ARCH=arm64 CROSS_COMPILE="${SBAT6_CROSS_COMPILE}" -j2 "$object"
           baseline="$(sha256sum "$object" | cut -d' ' -f1)"
           rm -f -- "$object"
           git apply --check "$GITHUB_WORKSPACE/patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch"
           git apply "$GITHUB_WORKSPACE/patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch"
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 "$object"
+          make ARCH=arm64 CROSS_COMPILE="${SBAT6_CROSS_COMPILE}" -j2 "$object"
           rfc1="$(sha256sum "$object" | cut -d' ' -f1)"
           rm -f -- "$object"
           git apply --check "$GITHUB_WORKSPACE/patches/rfc/0002-mediatek-serialize-reset-requeue.patch"
           git apply "$GITHUB_WORKSPACE/patches/rfc/0002-mediatek-serialize-reset-requeue.patch"
           python3 "$GITHUB_WORKSPACE/tools/check_mediatek_rfc_series.py" --source .
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 "$object"
+          make ARCH=arm64 CROSS_COMPILE="${SBAT6_CROSS_COMPILE}" -j2 "$object"
           rfc12="$(sha256sum "$object" | cut -d' ' -f1)"
           git diff --check
           {
