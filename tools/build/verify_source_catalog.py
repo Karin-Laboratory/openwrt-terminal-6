@@ -9,9 +9,9 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-ALLOWED_COMPONENTS = {"ethernet", "modem-ethernet", "modem", "ab-recovery",
+ALLOWED_COMPONENTS = {"ethernet", "modem-ethernet", "modem", "ab-recovery", "board-dt",
                       "kernel", "openwrt-userland", "wifi7", "signing"}
-ALLOWED_ORIGINS = {"linux-v6.18-derived", "modified-gpl-parent-derived",
+ALLOWED_ORIGINS = {"linux-v6.18-derived", "modified-gpl-parent-derived", "research-board-overlay",
                    "research-transformer", "independent-original"}
 ALLOWED_LICENSES = {"MIT", "GPL-2.0-only"}
 ALLOWED_REVIEWS = {"pending", "approved"}
@@ -46,14 +46,14 @@ def validate(root: Path, catalog: dict, public: bool = False):
         rel = PurePosixPath(name)
         if (rel.is_absolute() or ".." in rel.parts or "." in rel.parts
                 or name.startswith("/") or not name.startswith(
-                    ("patches/", "scripts/", "tools/", "examples/", "tests/"))):
+                    ("patches/", "scripts/", "tools/", "examples/", "tests/", "board/"))):
             issues.append(prefix + ": unsafe or unsupported path")
             continue
         if name in seen:
             issues.append(prefix + ": duplicate path")
             continue
         seen.add(name)
-        if rel.suffix not in (".patch", ".py", ".c", ".h", ".sh") and rel.name != "Makefile":
+        if rel.suffix not in (".patch", ".py", ".c", ".h", ".sh", ".dtso") and rel.name != "Makefile":
             issues.append(prefix + ": non-source type")
         if item["component"] not in ALLOWED_COMPONENTS:
             issues.append(prefix + ": unknown component")
@@ -86,7 +86,7 @@ def validate(root: Path, catalog: dict, public: bool = False):
     # Enforce coverage of all current source/test/build files, not just the
     # seven original handpicked kernel/boot/modem entries.
     source_paths = set()
-    for dirname in ("patches", "scripts", "tools", "examples", "tests"):
+    for dirname in ("patches", "scripts", "tools", "examples", "tests", "board"):
         subtree = root / dirname
         if not subtree.exists():
             continue
