@@ -61,7 +61,10 @@ class WorkflowPolicyTests(unittest.TestCase):
         self.assertEqual(gate.check_trusted_workflow(original), [])
         self.assertIn("github.event.repository.private == true", original)
         self.assertNotIn("pull_request:", original)
-        self.assertIn("branches: [main]", original)
+        self.assertIn("workflow_dispatch:", original)
+        self.assertIn("github.ref == 'refs/heads/main'", original)
+        self.assertNotIn("    branches: [main]", original)
+        self.assertNotIn("  push:", original)
         self.assertIn("explicit security re-review",
                       " ".join(gate.check_trusted_workflow(original + "\\n# modified")))
 

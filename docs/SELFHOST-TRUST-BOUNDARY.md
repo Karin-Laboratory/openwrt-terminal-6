@@ -1,6 +1,6 @@
 # Trusted self-hosted source build boundary
 
-This repository is being prepared for public **source** review. The dedicated [trusted self-hosted builder](../.github/workflows/trusted-selfhost-build.yml) performs source-only ARM64 compilation on **trusted main push while the repository is Private**, never on pull-request events. Its GitHub job-level condition checks the actual push event's `repository.private == true`; upon Public conversion the job must not execute. Already queued older runs must still be examined or cancelled before the transition.
+This repository is being prepared for public **source** review. The dedicated [trusted self-hosted builder](../.github/workflows/trusted-selfhost-build.yml) performs source-only ARM64 compilation on **explicit maintainer workflow_dispatch on main while the repository is Private**, never on pull-request events or automatic main pushes. Its GitHub job-level condition checks the actual push event's `repository.private == true`; upon Public conversion the job must not execute. Already queued older runs must still be examined or cancelled before the transition.
 
 ## What this job is allowed to do
 
@@ -20,7 +20,7 @@ The standalone workflow is **byte-pinned** in `tools/security/check_workflows.py
 
 ## Execution conditions and evidence
 
-The workflow is triggered only by a trusted commit to `main` changing its YAML or source/test inputs. It requests runner labels `self-hosted`, `linux`, `x64`, `sbat6-recovery`, consistent with the historical archived build workflow.
+The workflow is triggered **only by an explicit maintainer manual dispatch against `main`**, not by pushes, scheduled events or outside PRs. This avoids indefinitely accumulating self-hosted jobs while the new repository has no authorized runner. It requests runner labels `self-hosted`, `linux`, `x64`, `sbat6-recovery`, consistent with the historical archived build workflow.
 
 Run outcomes have three independent gates:
 
@@ -29,3 +29,7 @@ Run outcomes have three independent gates:
 3. **Firmware reproducibility:** not provided. A successful kernel *object* build is not a full MT6990 kernel, OpenWrt rootfs, signed image or radio data implementation.
 
 Keep the source repository Private until full rights and security checks pass. The trusted-main runner workflow may need to be disabled or migrated to a separately isolated build project before publishing the repository; merely restricting the event does not by itself make a long-lived self-hosted runner safe against trusted-main compromises.
+
+## Queued-run cutover warning (2026-10-27)
+
+Prior auto-push workflow versions already created queued jobs before this trigger was changed. Historical queued runs do **not** disappear merely because the YAML now uses manual dispatch, and their payload may retain the earlier Private state. Cancel all old queued/running self-hosted jobs in GitHub Actions before any Public visibility change or new runner registration. GitHub integration did not provide permission to cancel those jobs directly. Do not publish while the queue is uncleared. The existing Private v2 runner continues source-equivalent testing using separate constrained branch workflows.
