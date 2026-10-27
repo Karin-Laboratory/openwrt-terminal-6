@@ -55,3 +55,7 @@ The new-repository pull-request-triggered runs [40438279734](https://github.com/
 - The source provenance check over new GitHub issue/PR bodies and accessible commit messages did not find the reviewed high-risk patterns. This was not a scan of every revision's tree, inaccessible CI logs or personal commit-author privacy settings.
 
 **Hosted workflow status remains blocked before tests execute.** These source changes do not constitute a new full CI PASS or Public release approval.
+
+## Additional offline board evidence selection
+
+Three source/test files for a disabled-only SGMII1 Device Tree overlay and static checks were added in a later reviewed migration step. The factual board JSON was adapted to distinguish historical LTE IPv4 success from unverified NR and IPv6. The v1 Git history, extracted vendor device trees and live hardware logs remain excluded. Total cataloged source/test/build/overlay files is now 30, with individual rights review still pending.
