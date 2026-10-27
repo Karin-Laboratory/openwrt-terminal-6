@@ -326,6 +326,24 @@
       "git_blob_sha1": "394ab8459707bf2ceea83a2c37323b53d35d63c0",
       "rights_review": "pending",
       "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/build-arm64-busybox-smoke.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "621a7e3d3058da1997eb07446692cbb19bb82dba",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_busybox_source_smoke.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "077bfbd20faa6685e599ca4cfb55afd05f83550f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
     }
   ],
   "missing_dependencies": [
