@@ -2,7 +2,7 @@
 
 This is a staged **source-development** sequence, not a deployment checklist.
 
-1. **Boot control and fallback model:** a read-only [synthetic metadata model](../tools/boot/slot_observation.py) records only sanitized A/B priority/retry/success flags and deliberately refuses to declare fallback proven. Independently establish LK failure-counter transitions and recovery semantics in isolated tests before any device operations. No slot-changing commands or signed boot modifications are supplied here.
+1. **Boot control and fallback model:** a read-only [synthetic metadata model](../tools/boot/slot_observation.py) records only sanitized A/B priority/retry/success flags; [competing retry hypothesis tests](../tools/boot/ab_fallback_hypotheses.py) exhibit why priority alone cannot establish a safe fallback. Independently establish LK failure-counter transitions and recovery semantics in isolated tests before any device operations. No slot-changing commands or signed boot modifications are supplied here.
 2. **Boot-image trust and legal signing inputs:** document permissible SDK acquisition and redistribution conditions; compare image format and trust boundary with manufacturer disclosures in a confidential channel where appropriate. Do not publish keys or validated bypass procedures.
 3. **MT6990 kernel and Device Tree:** isolate copyright-cleared common SoC drivers and binding providers. Pin an openly reproducible kernel baseline before attempting a clean ARM64 build.
 4. **OpenWrt userspace:** pin buildroot, feeds, package ABI and complete rootfs config. Depend on legally sourced modem/radio runtime; do not substitute private rootfs copies.
