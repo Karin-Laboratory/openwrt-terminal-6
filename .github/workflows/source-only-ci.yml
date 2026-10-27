@@ -1,0 +1,30 @@
+name: Source-only tests and publication preflight
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host-tests:
+    name: Safe host tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate offline Stage 10 regression
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Validate synthetic modem lifecycle
+        run: python3 -m unittest discover -s tools/modem -p 'test_*.py' -v
+      - name: Validate independent FE recovery model
+        run: make -C examples/fe-recovery test
+      - name: Scan new repository reachable history
+        run: python3 tools/security/check_publication.py --history
+      - name: Publication is still gated
+        run: |
+          echo "Source checks do not scan GitHub issue/PR text, Actions logs, prior archives, third-party rights or firmware safety."
+          echo "A successful run is NOT authorization to publish firmware."
