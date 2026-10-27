@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 CC ?= cc
 CFLAGS ?= -O2 -g -Wall -Wextra -Werror -std=c11
 .PHONY: test clean
