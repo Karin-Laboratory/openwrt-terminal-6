@@ -8,6 +8,7 @@
 - Expected upstream `Makefile` Git blob `fa8cb761443388730372eaf260e7ca1a0235bc43`.
 - Only independently authored [build script](../scripts/build-arm64-busybox-smoke.sh) and [security tests](../tests/test_busybox_source_smoke.py) are retained in this new repo. BusyBox upstream sources/binaries are **not** redistributed.
 - Runner must have an already installed non-root AArch64 cross-compiler; e.g., `aarch64-openwrt-linux-musl-gcc`. No package installation is performed inside the test.
+- BusyBox 1.36.1's optional legacy `tc` applet needs old CBQ Linux UAPI definitions that the current cross-toolchain Linux headers no longer provide. To avoid modifying host headers or vendor/kernel sources, this intentionally limited smoke configuration disables **only** `CONFIG_TC`; it is not an OpenWrt package configuration.
 - Cross compilation is performed entirely in a temporary disposable directory, and the emitted ELF is examined without execution. A reported SHA-256 is a build-result identity, not an authenticated release signature.
 
 ## What success means
