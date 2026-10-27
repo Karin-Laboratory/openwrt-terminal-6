@@ -2,6 +2,10 @@
 
 This repository was constructed in a **new Git history** by selecting individual source files rather than cloning or rebasing the private research archive. Each file must remain subject to a final rights review before the repository visibility becomes Public.
 
+## New board research source attribution
+
+The experimental disabled-only SGMII1 overlay is sourced byte-for-byte from `Karin-Laboratory/archive-openwrt-terminal-6-v1` at `board/mt6990-air-terminal-6-sgmii1-experimental.dtso` and keeps its GPL-2.0-only SPDX notice. The generalized board JSON was independently adapted from the v1 factual inventory, only to reflect later verified LTE IPv4 versus still-unproven NR/IPv6. No vendor-decompiled DTS, EEPROM, bootloader image or private firmware source was imported. File-by-file contributor rights remain pending.
+
 ## Source classes
 
 | Files | Origin | Terms and caveats |
