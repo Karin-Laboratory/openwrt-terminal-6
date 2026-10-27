@@ -108,6 +108,24 @@ class SourceCatalogTests(unittest.TestCase):
         self.assertTrue(any("source directory must not be symlink" in x
                             for x in errors))
 
+    def test_new_dts_dtsi_and_mk_must_be_cataloged(self):
+        for name in ("board/future.dts", "board/base.dtsi", "scripts/build.mk"):
+            destination = self.root / name
+            destination.parent.mkdir(exist_ok=True, parents=True)
+            destination.write_text("synthetic test only")
+        findings = check.validate(self.root, self.catalog)
+        for name in ("board/future.dts", "board/base.dtsi", "scripts/build.mk"):
+            self.assertTrue(any(name in finding and "uncatalogued" in finding
+                                for finding in findings))
+
+    def test_untracked_binary_and_unrelated_symlink_fail_closed(self):
+        (self.root / "board").mkdir()
+        (self.root / "board" / "secret.img").write_bytes(b"synthetic")
+        (self.root / "board" / "redirect").symlink_to(self.root / "real_file")
+        findings = check.validate(self.root, self.catalog)
+        self.assertTrue(any("unapproved binary/secret artifact" in x for x in findings))
+        self.assertTrue(any("symlinked source-tree entry" in x for x in findings))
+
     def test_reject_symlink(self):
         f = self.root / self.path
         f.unlink()
