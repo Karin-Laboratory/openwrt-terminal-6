@@ -27,3 +27,7 @@ For a future fully reproducible upstream port, publish a rights-cleared kernel/S
 ## Never import
 
 Signing materials or sample key copies, OEM firmware and calibration, chip-unique provisioning, SIM/subscriber details, private device/network endpoints, historical signed partitions, unaudited build outputs, or confidential vulnerability evidence. Their archival retention does not make them redistributable.
+
+## Source/test catalog coverage (2026-10-27)
+
+The [source catalog](../config/source-catalog.json) lists all 27 source, test, shell and Makefile paths in the clean Git tree at review time, each with exact Git blob identity. The catalog validator rejects unregistered new code. All entries retain `rights_review=pending`, intentionally preventing source identity from being mistaken for legal clearance. See [build contract](BUILD-CONTRACT.md).
