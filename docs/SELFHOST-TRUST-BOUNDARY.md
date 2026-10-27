@@ -1,6 +1,6 @@
 # Trusted self-hosted source build boundary
 
-This repository is now Public for **source** review. The dedicated [trusted self-hosted builder](../.github/workflows/trusted-selfhost-build.yml) performs source-only ARM64 compilation on **explicit maintainer workflow_dispatch on main while the repository is Private**, never on pull-request events or automatic main pushes. Its GitHub job-level condition checks the actual push event's `repository.private == true`; upon Public conversion the job must not execute. Already queued older runs must still be examined or cancelled before the transition.
+This repository is now Public for **source** review. The dedicated [trusted self-hosted builder](../.github/workflows/trusted-selfhost-build.yml) performs source-only ARM64 compilation on **explicit maintainer workflow_dispatch on main while the repository is Private**, never on pull-request events or automatic main pushes. Its job-level condition requires a Private repository; in the current Public state this workflow must not execute. Older queued runs must still be inspected and, if present, cancelled; the visibility transition has already occurred.
 
 ## What this job is allowed to do
 
@@ -28,8 +28,8 @@ Run outcomes have three independent gates:
 2. **Host tests and Linux object compilation:** the installed cross-compiler and known-good dependencies must be present and the tests must actually execute.
 3. **Firmware reproducibility:** not provided. A successful kernel *object* build is not a full MT6990 kernel, OpenWrt rootfs, signed image or radio data implementation.
 
-The source repository is already Public; retain the Private-only execution guard for trusted self-hosted jobs and continue security and rights reviews. The trusted-main runner workflow may need to be disabled or migrated to a separately isolated build project before publishing the repository; merely restricting the event does not by itself make a long-lived self-hosted runner safe against trusted-main compromises.
+The source repository is already Public; retain the Private-only execution guard for trusted self-hosted jobs and continue security and rights reviews. Any future trusted build should use a separately isolated build project or disposable runner; event restrictions alone do not protect a long-lived runner from compromised trusted-main code.
 
 ## Queued-run cutover warning (2026-10-27)
 
-Prior auto-push workflow versions already created queued jobs before this trigger was changed. Historical queued runs do **not** disappear merely because the YAML now uses manual dispatch, and their payload may retain the earlier Private state. Inspect and cancel any legacy queued/running self-hosted jobs before assigning a new runner. The source repository has already become Public. GitHub integration did not provide permission to cancel those jobs directly. Do not publish while the queue is uncleared. The existing Private v2 runner continues source-equivalent testing using separate constrained branch workflows.
+Prior auto-push workflow versions already created queued jobs before this trigger was changed. Historical queued runs do **not** disappear merely because the YAML now uses manual dispatch, and their payload may retain the earlier Private state. Inspect and cancel any legacy queued/running self-hosted jobs before assigning a new runner. The source repository has already become Public. GitHub integration did not provide permission to cancel those jobs directly. Do not assign or enable a trusted runner while the legacy queue is unverified. The existing Private v2 runner continues source-equivalent testing using separate constrained branch workflows.
