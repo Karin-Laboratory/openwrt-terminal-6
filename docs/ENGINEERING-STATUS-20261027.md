@@ -4,7 +4,7 @@
 
 ## Technical integration matrix
 
-| Track | Verified | Migrated public-candidate source | Next proof required |
+| Track | Verified | Source available in this public repository | Next proof required |
 | --- | --- | --- | --- |
 | A/B slot | Historical priority observations | Sanitized read-only state and competing LK retry models | Real LK retry/fallback transitions, independent recovery |
 | Signing | Research-only historical accepted image | Local SHA-256 artifact verification only; no keys, SDK or signing tool | Rights/legal review and safe independently authenticated artifact pipeline |
@@ -27,7 +27,7 @@
 ## Recent source-only migration steps
 
 - Independently selected [SGMII1 disabled overlay and board metadata](../board/README.md) from Private v1, not OEM decompiled DTS or firmware. New lexical safety tests require the fragments stay disabled.
-- Verified actual public [OpenWrt MT6990 donor](OPENWRT-DONOR-SOURCE.md) commit `a40df9a5afb46716dea799acea69f17480df4d82`, including the **LG6851F-specific** Android boot and `boot_b.img`/`rootfs_b.img` recipe. Provided a four-file hash-pinned text inspection procedure, not a general checkout or deployable image.
+- Verified actual public [OpenWrt MT6990 donor](OPENWRT-DONOR-SOURCE.md) commit `a40df9a5afb46716dea799acea69f17480df4d82`, and identified **LG6851F-specific** Android boot and `boot_b.img`/`rootfs_b.img` recipes that must not be used for SBAT6. The restricted inspection script fetches four hash-pinned text blobs only.
 - The source catalog is expanded and fail-closed for uncatalogued DTS/DTSI/MK, disallowed binary artifacts and symlinks. For the current authoritative count, inspect `config/source-catalog.json`; rights review remains pending.
 - Prior [branch-tip and PR-text audit](PREPUBLICATION-REF-AND-BUILD-AUDIT-20261027.md) covered 13 branch-tip trees and 82 distinct blobs with no high-confidence sensitive pattern matches. Separately the available **47 new main commit diffs** were checked with high-confidence patterns and no matches, but neither coverage proves all intermediate objects, CI logs and external copies are clean.
 
