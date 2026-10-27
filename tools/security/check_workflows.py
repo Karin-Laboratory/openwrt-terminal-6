@@ -20,20 +20,20 @@ PROHIBITED = [
 
 def check(text: str):
     violations = [category for category, pattern in PROHIBITED if pattern.search(text)]
-    runners = re.findall(r"(?m)^[ \\t]*runs-on:[ \\t]*([^\\n#]+)", text)
+    runners = re.findall(r"(?m)^[ \t]*runs-on:[ \t]*([^\n#]+)", text)
     if not runners or any(value.strip() != "ubuntu-latest" for value in runners):
         violations.append("every job must use literal GitHub-hosted ubuntu-latest")
-    if re.search(r"(?m)^[ \\t]*permissions:[ \\t]*(?:write-all|write)[ \\t]*$", text):
+    if re.search(r"(?m)^[ \t]*permissions:[ \t]*(?:write-all|write)[ \t]*$", text):
         violations.append("write-all permission is forbidden")
-    if re.search(r"(?m)^[ \\t]*[a-z][a-z-]*:[ \\t]*write[ \\t]*$", text):
+    if re.search(r"(?m)^[ \t]*[a-z][a-z-]*:[ \t]*write[ \t]*$", text):
         violations.append("write-scoped permission is forbidden")
-    if not re.search(r"(?m)^[ \\t]*contents:[ \\t]*read[ \\t]*$", text):
+    if not re.search(r"(?m)^[ \t]*contents:[ \t]*read[ \t]*$", text):
         violations.append("must explicitly restrict contents permission to read")
-    actions = re.findall(r"(?m)^[ \\t]*-[ \\t]*uses:[ \\t]*([^\\n#]+)", text)
+    actions = re.findall(r"(?m)^[ \t]*-[ \t]*uses:[ \t]*([^\n#]+)", text)
     for action in actions:
         if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[0-9a-f]{40}", action.strip()):
             violations.append("remote actions must use 40-character commit pins")
-    if re.search(r"(?m)\\b(?:curl|wget)\\b[^\\n]*\\|[ \\t]*(?:bash|sh)\\b", text):
+    if re.search(r"(?m)\b(?:curl|wget)\b[^\n]*\|[ \t]*(?:bash|sh)\b", text):
         violations.append("remote shell pipelining is forbidden")
     return violations
 
