@@ -5,10 +5,23 @@
 This is a text-level denylist, NOT a complete YAML semantic/security audit.
 """
 from pathlib import Path
+import hashlib
 import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+# Only this reviewed byte-exact main-push workflow may run on an isolated
+# self-hosted builder. Any modification fails closed until independently reviewed.
+TRUSTED_SELFHOST_WORKFLOW = "trusted-selfhost-build.yml"
+TRUSTED_SELFHOST_BLOB_SHA1 = "a16d13df3eecb7d6abca76a169e9a017df24e76f"
+
+def check_trusted_workflow(text: str):
+    blob = text.encode("utf-8")
+    identity = hashlib.sha1(b"blob " + str(len(blob)).encode() + b"\x00" + blob).hexdigest()
+    if identity != TRUSTED_SELFHOST_BLOB_SHA1:
+        return ["trusted self-hosted build changed; explicit security re-review required"]
+    return []
+
 PROHIBITED = [
     ("untrusted privileged event", re.compile(r"\b(?:pull_request_target|workflow_run|repository_dispatch)\s*:")),
     ("self-hosted runner", re.compile(r"\bself-hosted\b")),
@@ -45,7 +58,9 @@ def main() -> int:
         return 1
     failures = 0
     for path in paths:
-        result = check(path.read_text(encoding="utf-8"))
+        contents = path.read_text(encoding="utf-8")
+        result = (check_trusted_workflow(contents)
+                  if path.name == TRUSTED_SELFHOST_WORKFLOW else check(contents))
         for category in result:
             print(f"BLOCKED: {path.name}: {category}")
         failures += len(result)
