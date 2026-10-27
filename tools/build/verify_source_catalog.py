@@ -21,7 +21,8 @@ EXPECTED_INPUT_KEYS = {"path", "component", "origin", "license",
 MAX_SOURCE = 500_000
 
 
-def validate(root: Path, catalog: dict, public: bool = False):
+def validate(root: Path, catalog: dict, public: bool = False,
+             source_public: bool = False):
     issues = []
     if not isinstance(catalog, dict) or set(catalog) != {
         "schema", "policy", "warning", "inputs", "missing_dependencies"
@@ -81,7 +82,7 @@ def validate(root: Path, catalog: dict, public: bool = False):
                               b"\x00" + raw).hexdigest()
         if digest != sha:
             issues.append(prefix + ": source bytes differ from catalog identity")
-        if public and item["rights_review"] != "approved":
+        if (public or source_public) and item["rights_review"] != "approved":
             issues.append(prefix + ": independent rights review pending")
     # Enforce coverage of all current source/test/build files, not just the
     # seven original handpicked kernel/boot/modem entries.
@@ -116,19 +117,24 @@ def validate(root: Path, catalog: dict, public: bool = False):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--public-build", action="store_true",
-                        help="stricter hypothetical completeness gate, not publication authorization")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--public-source", action="store_true",
+                       help="check source identity and rights labels; does NOT require full firmware")
+    group.add_argument("--public-build", action="store_true",
+                       help="stricter hypothetical firmware completeness gate")
     args = parser.parse_args()
     try:
         catalog = json.loads((ROOT / "config/source-catalog.json").read_text())
-        issues = validate(ROOT, catalog, public=args.public_build)
+        issues = validate(ROOT, catalog, public=args.public_build,
+                          source_public=args.public_source)
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
         print("SOURCE CATALOG FAIL: unreadable or invalid input")
         return 2
     for issue in issues:
         print("SOURCE CATALOG BLOCKED:", issue)
     print("SOURCE CATALOG", "PASS" if not issues else "FAIL",
-          "(identity/schema only; NEVER rights or firmware approval)")
+          "(checks declared source-rights status only; requires independent\n" +
+          " copyright/license, Git history, issue/log and security reviews)")
     return 1 if issues else 0
 
 
