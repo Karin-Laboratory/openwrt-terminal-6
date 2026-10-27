@@ -7,7 +7,7 @@ This step assists **source inspection only**, NOT a runnable SBAT6 target, rootf
 - Repository: [13179415360/openwrt-mt6990-lg6851f](https://github.com/13179415360/openwrt-mt6990-lg6851f)
 - Exact commit: `a40df9a5afb46716dea799acea69f17480df4d82`
 - Reviewed source files and Git blobs: `target/linux/mediatek/Makefile` = `77b27878987e53e83be3d40dc342753e3734ac75`, `mt6990/target.mk` = `c98113e8a8cc9ee334eef28428972d8e9d4404e7`, `image/mt6990.mk` = `714551500ccd45bd3dfc77f951f104e0c46a660b`.
-- Source-only fetch script: `bash scripts/fetch-pinned-openwrt-donor.sh /path/to/new-local-directory`. It refuses root, refuses existing destinations and validates the checkout revision. The source is downloaded directly by each authorized researcher, not mirrored here.
+- Text-only inspection fetch: `bash scripts/fetch-pinned-openwrt-donor.sh /path/to/new-local-directory`. It refuses root, rejects existing destinations, uses partial Git fetch, and selects **only four individually SHA-pinned nonbinary configuration/Makefile texts**. The temporary Git repository is destroyed; no donor checkout, radio EEPROM, modem firmware or binary image is stored in the resulting destination. Other donor materials are never mirrored here.
 
 ## Critical donor-vs-device distinction
 
@@ -27,4 +27,8 @@ Original firmware images, signed partitions, private keys, device calibration an
 
 ## Current verdict
 
-**Source acquisition: available; official independent OpenWrt target and clean build: NOT IMPLEMENTED.** A donor source checkout is not evidence that SBAT6 boots or that the cellular network operates in NR mode.
+**Pinned four-file configuration inspection: available; full donor checkout and executable build are deliberately excluded; official independent OpenWrt target and clean build: NOT IMPLEMENTED.**
+
+## 2026-10-27 donor safety finding
+
+Authenticated inspection of the donor tree at the pinned revision identified binary files under `target/linux/mediatek/mt6990/base-files/lib/firmware/` (including model-specific Wi-Fi EEPROM/firmware) and a multi-megabyte `connsys_gnss_b.img` under `base-files/usr/lib/firmware/`. Their redistribution rights and device-specific content have **not** been verified. The previous broad checkout script was therefore replaced with a fixed four-text-file allowlist. These binaries are **not part of this repository or approved build inputs**. The inspection script cannot be used to build rootfs or a signed image. A donor source checkout is not evidence that SBAT6 boots or that the cellular network operates in NR mode.
