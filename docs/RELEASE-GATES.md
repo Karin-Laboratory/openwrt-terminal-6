@@ -6,9 +6,9 @@ For the dated branch-tip, GitHub-conversation and source-equivalent ARM64 build 
 
 The source-only rights-label subgate is `python3 tools/build/verify_source_catalog.py --public-source`; it is expected to **FAIL** while attribution/redistribution reviews are PENDING. This subgate does not require unfinished firmware features, but a PASS would not supersede the independent security and rights checklist below.
 
-## Source repository visibility: presently Private
+## Source repository visibility: Public since 2026-10-27
 
-Before switching to Public, verify all of the following independently:
+The maintainer elected to make this source-only repository Public on 2026-10-27. The following remain ongoing audit and remediation responsibilities; Public status **does not establish that every item has been cleared**:
 
 - Every reachable Git object/commit/branch/tag and tracked file in **this** new-history repo contains only approved source and no private build-host endpoints, secrets, firmware images, exploitable unpublished vulnerability details or restricted third-party material.
 - All PR/Issue text, reviews, Actions run logs/artifacts and old URL redirects are reviewed; an automated repository scanner does not cover those.
@@ -39,4 +39,4 @@ Use GitHub-hosted, short-lived runners for source-only test jobs. No SDK keys, d
 
 ## Queued trusted-runner safety condition (2026-10-27)
 
-The clean repository's self-hosted source build was restricted to **manual workflow_dispatch + main + Private** after numerous push-triggered jobs queued without a registered runner. Any **previously queued jobs** created under the old trigger remain an explicit blocker before Public cutover: verify and cancel them in GitHub Actions, and confirm no home-runner assignment or pending jobs remain. The review must be based on real administrative settings and completed records; the user-owned archived v2 runner's PASS does not establish clean-repo assignment.
+The clean repository's self-hosted source build was restricted to **manual workflow_dispatch + main + Private** after numerous push-triggered jobs queued without a registered runner. Any **previously queued jobs** created under the old trigger require review and cancellation where applicable, even though the repository has already become Public. Confirm real GitHub Actions queue/runner settings; this document does not certify that historical jobs are cleared. The review must be based on real administrative settings and completed records; the user-owned archived v2 runner's PASS does not establish clean-repo assignment.
