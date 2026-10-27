@@ -10,7 +10,7 @@ Independent research toward OpenWrt support for the SoftBank Air Terminal 6 (SBA
 - **LTE IPv4 data traffic on OpenWrt succeeded:** Stage 9B required manual DMA restoration; Stage 10 retained MED DMA state through the initial Ethernet reset and subsequently passed ping, DNS and certificate-validated HTTPS.
 - **Not demonstrated:** 5G NR data, modem IPv6, unattended cold-boot repeatability, a clean third-party firmware rebuild, safe A/B fallback, or production security.
 
-Read [technical status](docs/STATUS.md), [source provenance](docs/PROVENANCE.md) and [publication gates](docs/RELEASE-GATES.md). The original research and binary evidence are retained separately in non-public archives; they are not imported into this Git history.
+Read the [engineering integration status](docs/ENGINEERING-STATUS-20261027.md), [technical status](docs/STATUS.md), [source provenance](docs/PROVENANCE.md) and [publication gates](docs/RELEASE-GATES.md). The original research and binary evidence are retained separately in non-public archives; they are not imported into this Git history.
 
 ## Contents
 
