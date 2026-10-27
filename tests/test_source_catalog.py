@@ -83,6 +83,31 @@ class SourceCatalogTests(unittest.TestCase):
         self.entry["rights_review"] = ""
         self.assertTrue(check.validate(self.root, self.catalog, source_public=True))
 
+    def test_unregistered_dtso_is_blocked(self):
+        overlay = self.root / "board" / "unexpected.dtso"
+        overlay.parent.mkdir()
+        overlay.write_text("/dts-v1/;\\n")
+        errors = check.validate(self.root, self.catalog)
+        self.assertTrue(any("uncatalogued source/test: board/unexpected.dtso" in x
+                            for x in errors))
+
+    def test_symlink_parent_of_cataloged_file_is_blocked(self):
+        original_directory = self.root / "patches" / "rfc"
+        new_directory = self.root / "real"
+        original_directory.rename(new_directory)
+        original_directory.symlink_to(new_directory, target_is_directory=True)
+        errors = check.validate(self.root, self.catalog)
+        self.assertTrue(any("symbolic-link source" in x for x in errors))
+
+    def test_symlinked_source_root_is_blocked(self):
+        original = self.root / "board"
+        target = self.root / "real_board"
+        target.mkdir()
+        original.symlink_to(target, target_is_directory=True)
+        errors = check.validate(self.root, self.catalog)
+        self.assertTrue(any("source directory must not be symlink" in x
+                            for x in errors))
+
     def test_reject_symlink(self):
         f = self.root / self.path
         f.unlink()
