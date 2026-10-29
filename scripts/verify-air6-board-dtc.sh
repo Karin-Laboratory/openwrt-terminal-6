@@ -119,6 +119,8 @@ for name, block, token in [
         raise SystemExit(name + ': missing ' + token)
 if 'ethernet@15100000' not in parent or 'phy@11e60000' not in tree:
     raise SystemExit('topology absent after DTB roundtrip')
+if 'sgmii-pwr0' in parent or 'sgmii-pwr1' in parent:
+    raise SystemExit('obsolete SGMII power helper survived NETSYS bus enable')
 print('AIR6_NETSYS_SGMII1_DTC_PASS (SOURCE ONLY; NO COLD-BOOT CLAIM)')
 PY
 
