@@ -58,7 +58,7 @@ git clone -q --depth 1 --single-branch --branch v1.7.2 \
   https://github.com/dgibson/dtc.git "$TEMP/dtc"
 test "$(git -C "$TEMP/dtc" rev-parse HEAD)" = 2d10aa2afe35527728db30b35ec491ecb6959e5c
 make -s -C "$TEMP/dtc" -j2 NO_PYTHON=1 dtc
-"$TEMP/dtc/dtc" -@ -I dts -O dtb -o "$TEMP/air6.dtbin" "$TEMP/air6.preprocessed.dts"
+"$TEMP/dtc/dtc" -I dts -O dtb -o "$TEMP/air6.dtbin" "$TEMP/air6.preprocessed.dts"
 "$TEMP/dtc/dtc" -I dtb -O dts -o "$TEMP/air6.roundtrip.dts" "$TEMP/air6.dtbin"
 python3 - "$TEMP/air6.roundtrip.dts" <<'PY'
 from pathlib import Path
