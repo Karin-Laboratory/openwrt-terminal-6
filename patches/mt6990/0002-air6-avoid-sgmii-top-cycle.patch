@@ -1,0 +1,89 @@
+From: Karin-Laboratory <noreply@github.com>
+Subject: [PATCH] phy: mediatek: avoid destructive SGMII TOP cycle on Air6
+
+Test24 succeeded by retaining SGMII TOP power and initializing PLL, PCS and
+analog PHY in order. The donor reset method power-cycles the SGMII_TOP
+domain while phylink is configuring it. Do not reset a shared power
+domain under another consumer; let the power-domain framework own it.
+
+This does not prove cold-boot link training and must be validated on an
+isolated Air6 device with readback and independent recovery.
+
+--- a/drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c
++++ b/drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c
+@@ -39,52 +39,6 @@
+ 	bool configured;
+ };
+ 
+-static int mt6990_sgmii_top_cycle(struct mt6990_sgmii_phy *priv)
+-{
+-	u32 val;
+-	int ret;
+-
+-	/* Exact SDK SGMII_TOP MTCMOS off/on ordering. Bus-protect callbacks for
+-	 * these domains are empty in the MT6990 vendor implementation.
+-	 */
+-	regmap_update_bits(priv->spm, priv->top_ctl, MT6990_SRAM_PDN,
+-			   MT6990_SRAM_PDN);
+-	regmap_update_bits(priv->spm, priv->top_ctl,
+-			   MT6990_PWR_ISO | MT6990_PWR_CLK_DIS,
+-			   MT6990_PWR_ISO | MT6990_PWR_CLK_DIS);
+-	regmap_update_bits(priv->spm, priv->top_ctl,
+-			   MT6990_PWR_RST_B | MT6990_PWR_ON | MT6990_PWR_ON_2ND, 0);
+-	ret = regmap_read_poll_timeout(priv->spm, MT6990_PWR_STATUS, val,
+-				       !(val & priv->top_sta_mask), 10, 1000000);
+-	if (ret)
+-		return ret;
+-	ret = regmap_read_poll_timeout(priv->spm, MT6990_PWR_STATUS_2ND, val,
+-				       !(val & priv->top_sta_mask), 10, 1000000);
+-	if (ret)
+-		return ret;
+-
+-	regmap_update_bits(priv->spm, priv->top_ctl,
+-			   MT6990_PWR_ON | MT6990_PWR_ON_2ND,
+-			   MT6990_PWR_ON | MT6990_PWR_ON_2ND);
+-	ret = regmap_read_poll_timeout(priv->spm, MT6990_PWR_STATUS, val,
+-				       (val & priv->top_sta_mask) == priv->top_sta_mask,
+-				       10, 1000000);
+-	if (ret)
+-		return ret;
+-	ret = regmap_read_poll_timeout(priv->spm, MT6990_PWR_STATUS_2ND, val,
+-				       (val & priv->top_sta_mask) == priv->top_sta_mask,
+-				       10, 1000000);
+-	if (ret)
+-		return ret;
+-
+-	regmap_update_bits(priv->spm, priv->top_ctl,
+-			   MT6990_PWR_CLK_DIS | MT6990_PWR_ISO, 0);
+-	regmap_update_bits(priv->spm, priv->top_ctl, MT6990_PWR_RST_B,
+-			   MT6990_PWR_RST_B);
+-	regmap_update_bits(priv->spm, priv->top_ctl, MT6990_SRAM_PDN, 0);
+-	return 0;
+-}
+-
+ static void mt6990_sgmii_runtime_disable(void *data)
+ {
+ 	struct mt6990_sgmii_phy *priv = data;
+@@ -203,15 +157,14 @@
+ 	struct mt6990_sgmii_phy *priv = phy_get_drvdata(phy);
+ 	int ret;
+ 
+-	/* The generic power-domain core owns this device's runtime-PM reference.
+-	 * Cycling it here underflows the usage count during phylink configure and
+-	 * races the two ports through their shared parent domain.  The TOP domain
+-	 * is already on at probe time; invalidate the analog state so set_mode()
+-	 * reapplies the complete SDK Gen2 table after the PCS force-mode writes.
++	/*
++	 * The Test24 Air6 success path never cycled SGMII_TOP. Leave its
++	 * genpd and the shared PLL lifetime under the owning power-domain
++	 * and other port consumers. Reapply the analog Gen2 table via the
++	 * subsequent set_mode callback, without a destructive TOP off/on.
+ 	 */
+-	regmap_update_bits(priv->pll, MT6990_SGMII_PLL_CON0,
+-			   MT6990_SGMII_PLL_EN, MT6990_SGMII_PLL_EN);
+-	ret = mt6990_sgmii_top_cycle(priv);
++	ret = regmap_update_bits(priv->pll, MT6990_SGMII_PLL_CON0,
++				 MT6990_SGMII_PLL_EN, MT6990_SGMII_PLL_EN);
+ 	if (ret)
+ 		return ret;
+ 
