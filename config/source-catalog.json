@@ -344,6 +344,33 @@
       "git_blob_sha1": "a6f7083e7b0b5f46646a59a91ce5618cd54409cc",
       "rights_review": "pending",
       "contains_flashable_payload": false
+    },
+    {
+      "path": "board/mt6990-air-terminal-6.dts",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "d8e63ce893185b464fba515d4034f2d6b936b1df",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/verify-air6-board-dtc.sh",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "08575bb934829d23a5c5fd95a3b602c97608dce8",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_board_source.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "917e91b0d37b7f33e219b657ed275c573a1dc67c",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
     }
   ],
   "missing_dependencies": [
