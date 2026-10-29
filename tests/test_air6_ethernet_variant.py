@@ -25,7 +25,8 @@ class Air6EthernetVariantTests(unittest.TestCase):
         self.assertIn('#address-cells = <2>;', TRIAL)
         self.assertIn('#size-cells = <2>;', TRIAL)
         self.assertIn('ranges;', TRIAL)
-        self.assertNotIn('/delete-node/', TRIAL)
+        self.assertIn('/delete-node/ sgmii-pwr0;', TRIAL)
+        self.assertIn('/delete-node/ sgmii-pwr1;', TRIAL)
         self.assertNotIn('ethernet@15100000 {', TRIAL)
 
     def test_real_phy_provider_and_consumer(self):
