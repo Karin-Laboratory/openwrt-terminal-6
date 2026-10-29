@@ -52,6 +52,7 @@
 	mediatek,sgmiisys = <&sgmiisys0>, <&sgmiisys1>;
 	#address-cells = <1>;
 	#size-cells = <0>;
+	status = "disabled";
 
 	gmac0: mac@0 {
 		compatible = "mediatek,eth-mac";
@@ -106,7 +107,6 @@
 		};
 	};
 
-	status = "disabled";
 };
 
 /* Manual PHY/PCS register experiments do not prove safe power ownership. */
