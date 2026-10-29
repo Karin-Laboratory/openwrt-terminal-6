@@ -350,7 +350,7 @@
       "component": "board-dt",
       "origin": "independent-original",
       "license": "GPL-2.0-only",
-      "git_blob_sha1": "d8e63ce893185b464fba515d4034f2d6b936b1df",
+      "git_blob_sha1": "92dbdf095392f278ad02e89f589f144f003acde4",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
