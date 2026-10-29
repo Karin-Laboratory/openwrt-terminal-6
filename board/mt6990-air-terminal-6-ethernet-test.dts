@@ -55,6 +55,14 @@
  * separate bound driver. Confirm this at runtime before treating it as safe.
  */
 &netsys {
+	/*
+	 * The pinned SoC DTSI retains two obsolete SGMII power bring-up
+	 * helper children without reg. Do not instantiate these when the
+	 * parent becomes a simple-bus; the PHY/genpd path owns TOP1 power.
+	 */
+	/delete-node/ sgmii-pwr0;
+	/delete-node/ sgmii-pwr1;
+
 	compatible = "mediatek,mt6990-netsys", "simple-bus";
 	#address-cells = <2>;
 	#size-cells = <2>;
