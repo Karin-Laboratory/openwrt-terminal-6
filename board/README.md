@@ -1,6 +1,6 @@
-# Experimental SGMII1 Ethernet board evidence
+# Air6 board Device Tree source and evidence
 
-**Status: OFFLINE EVIDENCE ONLY. This directory is not a board DTS, installable DTB, flash image, signed payload or proof of cold-boot bring-up.**
+**Status: independently authored board DTS candidate, offline source only.** `mt6990-air-terminal-6.dts` is a compile-time integration candidate, **not** a validated full board hardware definition, bootable DTB, signed payload or firmware image. Untested peripherals remain disabled.
 
 ## Independently reported hardware observations
 
@@ -10,7 +10,12 @@
 - Wi-Fi reports distinguished 2.4/5 GHz functional traffic, 6 GHz AP initialization, and unverified outside 6 GHz client association/EHT/MLO.
 - Modem Stage9B/10 historical LTE IPv4 data SUCCESS was recovered later than the original board ledger. NR and IPv6 remain UNVERIFIED.
 
-For the currently verified board-specific evidence, missing providers and independent full-DTS reconstruction conditions, see [Air6 DTS reconstruction (2026-10-29)](DTS-RECONSTRUCTION-20261029.md). There is no complete, independently reviewed Air6 DTS in this repository.
+For the currently verified board-specific evidence, missing providers and independent full-DTS reconstruction conditions, see [Air6 DTS reconstruction (2026-10-29)](DTS-RECONSTRUCTION-20261029.md). A new independently authored [Air6 board DTS source candidate](mt6990-air-terminal-6.dts) now exists. It depends on the separately pinned GPL-identified MT6990 SoC DTSI and cannot yet be described as complete/boot-validated. [Source-only syntax verifier](../scripts/verify-air6-board-dtc.sh).
+
+## Independently authored board DTS candidate
+
+- [`mt6990-air-terminal-6.dts`](mt6990-air-terminal-6.dts): independently written Air6 board-specific topology, including MAC1 → SGMII1 / MDIO31 MT7531 CPU5 and the observed user port1, UART, MMC numbering aliases and explicit disabled peripheral gates. It deliberately has no memory map, OEM calibration, bootargs, signing or firmware artifacts. All non-proven Ethernet, USB, MMC and PCIe consumers stay disabled.
+- `bash scripts/verify-air6-board-dtc.sh` performs a pinned source-only SoC/DTC compile and DTB roundtrip, **without distributing the output**. The SoC baseline is the GPL/MIT-identified 969 patch at donor commit `a40df9a`, not the LG6851F board `.dts`. See the [reconstruction ledger](DTS-RECONSTRUCTION-20261029.md).
 
 ## Safely imported files
 

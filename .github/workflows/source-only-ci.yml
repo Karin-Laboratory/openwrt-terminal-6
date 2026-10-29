@@ -35,9 +35,13 @@ jobs:
               "https://raw.githubusercontent.com/torvalds/linux/v6.18/drivers/net/ethernet/mediatek/$file" \
               --output "$tmp/linux/drivers/net/ethernet/mediatek/$file"
           done
+          git -C "$tmp/linux" add drivers/net/ethernet/mediatek/mtk_eth_soc.c drivers/net/ethernet/mediatek/mtk_eth_soc.h
+          git -C "$tmp/linux" -c user.name="Source-only CI" -c user.email="source-only@example.invalid" commit -qm "Record pinned v6.18 inputs for clean-worktree preflight"
           bash scripts/apply-public-rfc-series.sh "$tmp/linux"
       - name: Compile disabled SGMII overlay with pinned Linux host dtc
         run: bash scripts/verify-disabled-sgmii-dtc.sh
+      - name: Compile independent Air6 board DTS with pinned SoC source (no firmware)
+        run: bash scripts/verify-air6-board-dtc.sh
       - name: Reject unpinned or untrusted OpenWrt feeds
         run: python3 tools/build/verify_feeds_lock.py config/feeds.lock
       - name: Verify pinned source-only build contract

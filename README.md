@@ -18,7 +18,7 @@ Read the [engineering integration status](docs/ENGINEERING-STATUS-20261027.md), 
 
 This is a **public development repository**, not a firmware download page. Browse [technical status](docs/STATUS.md) to distinguish what worked on a research unit from what is reproducible from this tree. Review [roadmap](docs/ROADMAP.md) for next engineering milestones and [build contract](docs/BUILD-CONTRACT.md) for offline checks. Report bugs or propose small source improvements via Issues and PRs, following [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**What you can do today:** inspect the code and patches, run the host-side tests, review provenance and discuss upstream integration. **What you cannot do from this repository:** build a complete supported SBAT6 firmware or safely flash a device.
+**What you can do today:** inspect the code, patches and the new [independently authored Air6 DTS source candidate](board/mt6990-air-terminal-6.dts), run host-side syntax tests, review provenance and discuss upstream integration. The DTS is **not** a complete or verified Air6 board definition; unvalidated hardware consumers are disabled. **What you cannot do from this repository:** build a complete supported SBAT6 firmware or safely flash a device.
 
 ## Where to look
 

@@ -1,0 +1,160 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * SoftBank Air Terminal 6 / MT6990 board description, independent research.
+ *
+ * DRAFT/NOT BOOT VALIDATED. Compile-only integration against the separately
+ * pinned, GPL-identified MT6990 SoC .dtsi; no OEM decompiled board DT.
+ * Disabled consumers deliberately retain unverified board power, pinmux,
+ * memory and clock dependencies. Do not package this as flashable firmware.
+ *
+ * Provenance: project Test19/Test24/Test25 hardware observations;
+ * individual topology observations are not a copied vendor DTS.
+ */
+
+/dts-v1/;
+
+#include "mt6990.dtsi"
+
+/ {
+	model = "SoftBank Air Terminal 6 (research)";
+	compatible = "softbank,air-terminal-6", "mediatek,mt6990";
+
+	aliases {
+		serial0 = &uart0;
+		/* Controller and Linux /dev/mmcblkN numbering are distinct. */
+		mmc0 = &mmc0;
+		mmc1 = &mmc1;
+	};
+
+	chosen {
+		/* LK command line and memory map must come from the actual board. */
+		stdout-path = "serial0:115200n8";
+	};
+};
+
+/* UART was observed with a kernel shell on a development unit. */
+&uart0 {
+	status = "okay";
+};
+
+/*
+ * MT7531 is reachable via the MediaTek Ethernet MDIO path. MAC1 uses SGMII1
+ * toward switch CPU port 5. The single independently traffic-tested external
+ * switch user port was port 1 (the development kernel exposed it as lan2).
+ * Other user ports and jack assignments are not established by that test.
+ *
+ * The associated NETSYS resource and PCS/PHY clock/power dependencies have
+ * not passed cold-boot validation on this source baseline. Keep the FE off.
+ * A compiler-accepted tree alone is not authorization to enable this block.
+ */
+&eth {
+	mediatek,ethsys = <&ethsys>;
+	mediatek,sgmiisys = <&sgmiisys0>, <&sgmiisys1>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "disabled";
+
+	gmac0: mac@0 {
+		compatible = "mediatek,eth-mac";
+		reg = <0>;
+		status = "disabled";
+	};
+
+	gmac1: mac@1 {
+		compatible = "mediatek,eth-mac";
+		reg = <1>;
+		phy-mode = "2500base-x";
+
+		fixed-link {
+			speed = <2500>;
+			full-duplex;
+			pause;
+		};
+	};
+
+	mdio: mdio-bus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		switch@1f {
+			compatible = "mediatek,mt7531";
+			reg = <31>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@1 {
+					reg = <1>;
+					label = "lan2";
+				};
+
+				port@5 {
+					reg = <5>;
+					label = "cpu";
+					ethernet = <&gmac1>;
+					phy-mode = "2500base-x";
+
+					fixed-link {
+						speed = <2500>;
+						full-duplex;
+						pause;
+					};
+				};
+			};
+		};
+	};
+
+};
+
+/* Manual PHY/PCS register experiments do not prove safe power ownership. */
+&sgmiisys0 {
+	status = "disabled";
+};
+
+&sgmiisys1 {
+	status = "disabled";
+};
+
+/*
+ * Physical eMMC presence and A/B partitions are known, but MMC controller
+ * routing, UHS pinctrl and regulators are not independently source-verified.
+ * Never infer the active MMC controller from Linux block-device numbering.
+ */
+&mmc0 {
+	bus-width = <8>;
+	non-removable;
+	no-sd;
+	no-sdio;
+	status = "disabled";
+};
+
+&mmc1 {
+	status = "disabled";
+};
+
+/*
+ * The observed Wi-Fi PCI endpoints do not by themselves validate host
+ * controller reset/power assignments. Per-device calibration remains local.
+ */
+&pcie0 {
+	status = "disabled";
+};
+
+&pcie1 {
+	status = "disabled";
+};
+
+&pcie2 {
+	status = "disabled";
+};
+
+/* USB VBUS switching and connector assignment remain unverified on B unit. */
+&usb {
+	dr_mode = "host";
+	status = "disabled";
+};
+
+&xsphy {
+	status = "disabled";
+};
