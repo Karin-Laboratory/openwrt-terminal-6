@@ -17,7 +17,21 @@ mkdir -p "$TEMP/include/dt-bindings/interrupt-controller" "$TEMP/include/dt-bind
 BASE=https://raw.githubusercontent.com/13179415360/openwrt-mt6990-lg6851f/a40df9a5afb46716dea799acea69f17480df4d82
 get_pinned() {
   local url="$1" target="$2" blob="$3"
-  curl --fail --silent --show-error --location --retry 3 --max-time 60 "$url" -o "$target"
+  if ! curl --fail --silent --show-error --location --retry 2 --max-time 60 "$url" -o "$target"; then
+    # Exact pinned revision is encoded in BASE; never use an unpinned HEAD.
+    local rel="${url#"$BASE"/}"
+    curl --fail --silent --show-error --retry 2 --max-time 60 \
+      -H 'Accept: application/vnd.github+json' \
+      "https://api.github.com/repos/13179415360/openwrt-mt6990-lg6851f/contents/$rel?ref=a40df9a5afb46716dea799acea69f17480df4d82" \
+      -o "$TEMP/donor-source.json"
+    python3 - "$TEMP/donor-source.json" "$target" <<'PY'
+import base64, json, pathlib, sys
+record = json.loads(pathlib.Path(sys.argv[1]).read_text())
+if record.get('encoding') != 'base64' or record.get('type') != 'file':
+    raise SystemExit('Unexpected pinned GitHub source response')
+pathlib.Path(sys.argv[2]).write_bytes(base64.b64decode(record['content'], validate=False))
+PY
+  fi
   test "$(git hash-object "$target")" = "$blob" || {
     echo "Unexpected source identity: $target" >&2; exit 1;
   }
@@ -48,8 +62,21 @@ Path(sys.argv[2]).write_text('\n'.join(out) + '\n')
 PY
 LINUX=https://raw.githubusercontent.com/torvalds/linux/v6.18/include/dt-bindings
 for item in interrupt-controller/arm-gic.h interrupt-controller/irq.h gpio/gpio.h; do
-  curl --fail --silent --show-error --location --retry 3 --max-time 60 \
-    "$LINUX/$item" -o "$TEMP/include/dt-bindings/$item"
+  output="$TEMP/include/dt-bindings/$item"
+  if ! curl --fail --silent --show-error --location --retry 2 --max-time 60 \
+      "$LINUX/$item" -o "$output"; then
+    curl --fail --silent --show-error --retry 2 --max-time 60 \
+      -H 'Accept: application/vnd.github+json' \
+      "https://api.github.com/repos/torvalds/linux/contents/include/dt-bindings/$item?ref=v6.18" \
+      -o "$TEMP/linux-header.json"
+    python3 - "$TEMP/linux-header.json" "$output" <<'PY'
+import base64, json, pathlib, sys
+record = json.loads(pathlib.Path(sys.argv[1]).read_text())
+if record.get('encoding') != 'base64' or record.get('type') != 'file':
+    raise SystemExit('Unexpected Linux binding header response')
+pathlib.Path(sys.argv[2]).write_bytes(base64.b64decode(record['content'], validate=False))
+PY
+  fi
 done
 # GCC cpp supplies the Linux DTS preprocessor for symbolic irq and power cells.
 cpp -nostdinc -undef -D__DTS__ -x assembler-with-cpp \
