@@ -10,6 +10,8 @@ Public, source-only community research toward OpenWrt support for the SoftBank A
 - **LTE IPv4 data traffic on OpenWrt succeeded:** Stage 9B required manual DMA restoration; Stage 10 retained MED DMA state through the initial Ethernet reset and subsequently passed ping, DNS and certificate-validated HTTPS.
 - **Not demonstrated:** 5G NR data, modem IPv6, unattended cold-boot repeatability, a clean third-party firmware rebuild, safe A/B fallback, or production security.
 
+The [NETSYS + SGMII1 opt-in Ethernet candidate](docs/NETSYS-SGMII1-BOOT-CANDIDATE.md) adds real PHY/PCS/clock/provider and DSA integration source without enabling the default board image. It remains **source-only and untested on hardware**.
+
 Read the [board DTS reconstruction evidence](board/DTS-RECONSTRUCTION-20261029.md) for the independently observed Air6 topology, missing dependencies and full-DTS completion criteria. The public board DTS remains **unavailable**.
 
 Read the [engineering integration status](docs/ENGINEERING-STATUS-20261027.md), [technical status](docs/STATUS.md), [source provenance](docs/PROVENANCE.md) and [publication gates](docs/RELEASE-GATES.md). The original research and binary evidence are retained separately in non-public archives; they are not imported into this Git history.
