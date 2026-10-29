@@ -12,6 +12,11 @@
 
 For the currently verified board-specific evidence, missing providers and independent full-DTS reconstruction conditions, see [Air6 DTS reconstruction (2026-10-29)](DTS-RECONSTRUCTION-20261029.md). A new independently authored [Air6 board DTS source candidate](mt6990-air-terminal-6.dts) now exists. It depends on the separately pinned GPL-identified MT6990 SoC DTSI and cannot yet be described as complete/boot-validated. [Source-only syntax verifier](../scripts/verify-air6-board-dtc.sh).
 
+## Independently authored board DTS candidate
+
+- [`mt6990-air-terminal-6.dts`](mt6990-air-terminal-6.dts): independently written Air6 board-specific topology, including MAC1 → SGMII1 / MDIO31 MT7531 CPU5 and the observed user port1, UART, MMC numbering aliases and explicit disabled peripheral gates. It deliberately has no memory map, OEM calibration, bootargs, signing or firmware artifacts. All non-proven Ethernet, USB, MMC and PCIe consumers stay disabled.
+- `bash scripts/verify-air6-board-dtc.sh` performs a pinned source-only SoC/DTC compile and DTB roundtrip, **without distributing the output**. The SoC baseline is the GPL/MIT-identified 969 patch at donor commit `a40df9a`, not the LG6851F board `.dts`. See the [reconstruction ledger](DTS-RECONSTRUCTION-20261029.md).
+
 ## Safely imported files
 
 - `mt6990-air-terminal-6-sgmii1-experimental.dtso`: source-only GPL-2.0 overlay with **both target fragments disabled**. Copied byte-for-byte from the preserved Private v1 source tree. It records a possible PHY consumer link without guessing clock, reset, PLL or power-domain providers.
