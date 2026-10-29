@@ -10,7 +10,7 @@
 - Wi-Fi reports distinguished 2.4/5 GHz functional traffic, 6 GHz AP initialization, and unverified outside 6 GHz client association/EHT/MLO.
 - Modem Stage9B/10 historical LTE IPv4 data SUCCESS was recovered later than the original board ledger. NR and IPv6 remain UNVERIFIED.
 
-For the currently verified board-specific evidence, missing providers and independent full-DTS reconstruction conditions, see [Air6 DTS reconstruction (2026-10-29)](DTS-RECONSTRUCTION-20261029.md). There is no complete, independently reviewed Air6 DTS in this repository.
+For the currently verified board-specific evidence, missing providers and independent full-DTS reconstruction conditions, see [Air6 DTS reconstruction (2026-10-29)](DTS-RECONSTRUCTION-20261029.md). A new independently authored [Air6 board DTS source candidate](mt6990-air-terminal-6.dts) now exists. It depends on the separately pinned GPL-identified MT6990 SoC DTSI and cannot yet be described as complete/boot-validated. [Source-only syntax verifier](../scripts/verify-air6-board-dtc.sh).
 
 ## Safely imported files
 
