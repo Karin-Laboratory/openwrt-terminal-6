@@ -31,9 +31,24 @@ jobs:
           mkdir -p "$tmp/linux/drivers/net/ethernet/mediatek"
           git -C "$tmp/linux" init -q
           for file in mtk_eth_soc.c mtk_eth_soc.h; do
-            curl --fail --silent --show-error --location --retry 3 --max-time 45 \
-              "https://raw.githubusercontent.com/torvalds/linux/v6.18/drivers/net/ethernet/mediatek/$file" \
-              --output "$tmp/linux/drivers/net/ethernet/mediatek/$file"
+            destination="$tmp/linux/drivers/net/ethernet/mediatek/$file"
+            if ! curl --fail --silent --show-error --location --retry 2 --max-time 45 \
+                "https://raw.githubusercontent.com/torvalds/linux/v6.18/drivers/net/ethernet/mediatek/$file" \
+                --output "$destination"; then
+              # GitHub Contents API fallback when raw CDN returns HTTP 429.
+              # The existing RFC preflight still checks exact v6.18 Git blob SHAs.
+              curl --fail --silent --show-error --retry 2 --max-time 45 \
+                -H 'Accept: application/vnd.github+json' \
+                "https://api.github.com/repos/torvalds/linux/contents/drivers/net/ethernet/mediatek/$file?ref=v6.18" \
+                --output "$tmp/github-content.json"
+              python3 - "$tmp/github-content.json" "$destination" <<'PY'
+          import base64, json, pathlib, sys
+          record = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          if record.get("encoding") != "base64" or record.get("type") != "file":
+              raise SystemExit("Unexpected GitHub Contents API shape")
+          pathlib.Path(sys.argv[2]).write_bytes(base64.b64decode(record["content"], validate=False))
+          PY
+            fi
           done
           git -C "$tmp/linux" add drivers/net/ethernet/mediatek/mtk_eth_soc.c drivers/net/ethernet/mediatek/mtk_eth_soc.h
           git -C "$tmp/linux" -c user.name="Source-only CI" -c user.email="source-only@example.invalid" commit -qm "Record pinned v6.18 inputs for clean-worktree preflight"
