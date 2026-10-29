@@ -1,6 +1,6 @@
-# Experimental SGMII1 Ethernet board evidence
+# Air6 board Device Tree source and evidence
 
-**Status: OFFLINE EVIDENCE ONLY. This directory is not a board DTS, installable DTB, flash image, signed payload or proof of cold-boot bring-up.**
+**Status: independently authored board DTS candidate, offline source only.** `mt6990-air-terminal-6.dts` is a compile-time integration candidate, **not** a validated full board hardware definition, bootable DTB, signed payload or firmware image. Untested peripherals remain disabled.
 
 ## Independently reported hardware observations
 
