@@ -377,7 +377,7 @@
       "component": "board-dt",
       "origin": "independent-original",
       "license": "GPL-2.0-only",
-      "git_blob_sha1": "a6a158d05d4746f1da7b4843b96a34994c567c91",
+      "git_blob_sha1": "80a97fda52e315b4c733c4655afeade181f88522",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
