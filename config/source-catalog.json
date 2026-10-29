@@ -359,7 +359,7 @@
       "component": "board-dt",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "3e5539111a2ea18d7454929e2edb9fbf7d4d4c86",
+      "git_blob_sha1": "928c0574d97b96915fb0819a630d4c1c1b43789a",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -369,6 +369,33 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "917e91b0d37b7f33e219b657ed275c573a1dc67c",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "board/mt6990-air-terminal-6-ethernet-test.dts",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "80a97fda52e315b4c733c4655afeade181f88522",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch",
+      "component": "ethernet",
+      "origin": "modified-gpl-parent-derived",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "031a2d4837b7166000afcc868d05b8282e9fa5db",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_ethernet_variant.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "d4b6b3abaecb947e3409db2fc2b25809a2a441fb",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }

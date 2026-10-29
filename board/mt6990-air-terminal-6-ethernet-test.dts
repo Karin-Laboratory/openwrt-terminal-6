@@ -1,0 +1,125 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * SoftBank Air Terminal 6: NETSYS/SGMII1 Ethernet integration candidate.
+ *
+ * This variant explicitly enables the Test24 MAC1 -> SGMII1 -> MT7531 CPU5
+ * path, while the conservative board DTS remains disabled by default.
+ *
+ * This is a SOURCE-ONLY cold-boot candidate, not a tested or flashable DTB.
+ * Requires the matching MT6990 kernel clock/genpd, PCS, PHY and DSA drivers.
+ * No vendor-derived full board DTS, calibration, secrets or bootargs.
+ */
+#include "mt6990-air-terminal-6.dts"
+#include <dt-bindings/clock/mt6990-clk.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/power/mt6990-power.h>
+
+/ {
+	/*
+	 * The shared PLL register block was observed in the Test24 manual
+	 * initialization. Use a syscon phandle, not an unverified clock provider.
+	 */
+	air6_sgmii_pll: syscon@10014000 {
+		compatible = "syscon";
+		reg = <0x0 0x10014000 0x0 0x1000>;
+	};
+
+	/*
+	 * Only SGMII1 is enabled: the analog block's device address, genpd
+	 * index and link to the shared PLL are supported by the Test24/25
+	 * board measurements. The kernel PHY driver must implement the power
+	 * and configuration order without cycling the active shared domain.
+	 */
+	air6_sgmii_phy1: phy@11e60000 {
+		compatible = "mediatek,mt6990-sgmii-phy";
+		reg = <0x0 0x11e60000 0x0 0x10000>;
+		#phy-cells = <0>;
+		mediatek,sgmii-id = <1>;
+		mediatek,sgmii-pll = <&air6_sgmii_pll>;
+		mediatek,spm = <&scpsys>;
+		power-domains = <&scpsys MT6990_POWER_DOMAIN_SGMII_TOP_1>;
+		status = "okay";
+	};
+};
+
+/*
+ * Retain the original /netsys@15100000/ethernet@15100000 path. Linux
+ * Test22 found the parent lacked default-bus matching and the dynamically
+ * populated Ethernet child had no translated MEM resource. Unlike moving
+ * the child to the root, a simple-bus parent preserves the boot-time OF
+ * path while providing proper child address translation.
+ *
+ * Only the Ethernet child should own/request the overlapping NETSYS MMIO
+ * region. The simple-bus parent must not claim that region through a
+ * separate bound driver. Confirm this at runtime before treating it as safe.
+ */
+&netsys {
+	compatible = "mediatek,mt6990-netsys", "simple-bus";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	ranges;
+	status = "okay";
+
+	/*
+	 * The pinned SoC DTSI retains two obsolete SGMII power bring-up
+	 * helper children without reg. Do not instantiate these when the
+	 * parent becomes a simple-bus; the PHY/genpd path owns TOP1 power.
+	 */
+	/delete-node/ sgmii-pwr0;
+	/delete-node/ sgmii-pwr1;
+};
+
+&sgmiisys1 {
+	compatible = "mediatek,mt6990-sgmiisys", "syscon";
+	phys = <&air6_sgmii_phy1>;
+	phy-names = "sgmii";
+	status = "okay";
+};
+
+/*
+ * The captured MT6990 clock IDs are 46..51 for SGMII and USXGMII
+ * selectors, mapped by the pinned mt6990-clk.h header. A missing provider
+ * must fail/defer probe instead of silently substituting a fixed clock.
+ */
+&eth {
+	mediatek,ethsys = <&ethsys>;
+	mediatek,sgmiisys = <&sgmiisys0>, <&sgmiisys1>;
+	clocks = <&topckgen CLK_TOP_SGMII_0_SEL>,
+		 <&topckgen CLK_TOP_SGMII_SBUS_0_SEL>,
+		 <&topckgen CLK_TOP_SGMII_1_SEL>,
+		 <&topckgen CLK_TOP_SGMII_SBUS_1_SEL>,
+		 <&topckgen CLK_TOP_USXGMII_SBUS_0_SEL>,
+		 <&topckgen CLK_TOP_USXGMII_SBUS_1_SEL>;
+	clock-names = "sgmii_0_sel", "sgmii_sbus_0_sel",
+		      "sgmii_1_sel", "sgmii_sbus_1_sel",
+		      "usxgmii_sbus_0_sel", "usxgmii_sbus_1_sel";
+	/*
+	 * The MT6990 SDK MAC driver expects eight interrupt resources:
+	 * six GIC FE IRQs and two MT6990 pin-controller IRQs. Binding and
+	 * source-version equivalence remain a separate gate.
+	 */
+	interrupts-extended =
+		<&gic GIC_SPI 407 IRQ_TYPE_LEVEL_HIGH>,
+		<&gic GIC_SPI 408 IRQ_TYPE_LEVEL_HIGH>,
+		<&gic GIC_SPI 400 IRQ_TYPE_LEVEL_HIGH>,
+		<&gic GIC_SPI 401 IRQ_TYPE_LEVEL_HIGH>,
+		<&gic GIC_SPI 402 IRQ_TYPE_LEVEL_HIGH>,
+		<&gic GIC_SPI 403 IRQ_TYPE_LEVEL_HIGH>,
+		<&pio 50 IRQ_TYPE_LEVEL_LOW>,
+		<&pio 52 IRQ_TYPE_LEVEL_HIGH>;
+	status = "okay";
+};
+
+/*
+ * MAC0 is unconnected in the independently reported Air6 topology.
+ * MAC1 is the only established CPU uplink; CPU5/2500base-x is an
+ * internal fixed link and does not establish 2.5GbE at the RJ45 jack.
+ */
+&gmac0 {
+	status = "disabled";
+};
+
+&gmac1 {
+	status = "okay";
+};

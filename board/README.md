@@ -17,6 +17,10 @@ For the currently verified board-specific evidence, missing providers and indepe
 - [`mt6990-air-terminal-6.dts`](mt6990-air-terminal-6.dts): independently written Air6 board-specific topology, including MAC1 → SGMII1 / MDIO31 MT7531 CPU5 and the observed user port1, UART, MMC numbering aliases and explicit disabled peripheral gates. It deliberately has no memory map, OEM calibration, bootargs, signing or firmware artifacts. All non-proven Ethernet, USB, MMC and PCIe consumers stay disabled.
 - `bash scripts/verify-air6-board-dtc.sh` performs a pinned source-only SoC/DTC compile and DTB roundtrip, **without distributing the output**. The SoC baseline is the GPL/MIT-identified 969 patch at donor commit `a40df9a`, not the LG6851F board `.dts`. See the [reconstruction ledger](DTS-RECONSTRUCTION-20261029.md).
 
+## Opt-in Ethernet integration candidate (not boot-proven)
+
+The [NETSYS/SGMII1 Ethernet DTS variant](mt6990-air-terminal-6-ethernet-test.dts) preserves the existing nested NETSYS/Ethernet node path and proposes a `simple-bus` parent, explicit address translation, analog PHY1 and shared PLL bindings, and MAC1/MT7531 CPU5 enablement. It is **not enabled by the default board DTS**. The [source-verified PHY reset patch](../patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch) avoids the destructive donor SGMII_TOP power cycle and must still be built and tested with a matching kernel. The [validation document](../docs/NETSYS-SGMII1-BOOT-CANDIDATE.md) separates DTC-only PASS from necessary device cold-boot evidence.
+
 ## Safely imported files
 
 - `mt6990-air-terminal-6-sgmii1-experimental.dtso`: source-only GPL-2.0 overlay with **both target fragments disabled**. Copied byte-for-byte from the preserved Private v1 source tree. It records a possible PHY consumer link without guessing clock, reset, PLL or power-domain providers.
