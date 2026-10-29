@@ -28,6 +28,13 @@ The Stage10 research fix has a pinned source identity and a deterministic transf
 
 For a future fully reproducible upstream port, publish a rights-cleared kernel/SoC tree, device-tree bindings, OpenWrt feeds/build config and redistributable runtime dependencies. Preserve attribution for every imported component and never manufacture a third-party contributor sign-off.
 
+## Independent Air6 board DTS candidate (2026-10-29)
+
+- `board/mt6990-air-terminal-6.dts` was authored independently for this project from sanitized Air6 hardware observations. It is explicitly **incomplete for boot and not validated against a running Air6 kernel**; unproven consumers are disabled. SPDX: `GPL-2.0-only`, with source-catalog rights review pending. It is not a copied decompiled manufacturer board file.
+- Syntax verification obtains **only** two pinned GPL-identified source texts from public `13179415360/openwrt-mt6990-lg6851f` commit `a40df9a5afb46716dea799acea69f17480df4d82`: `969-arm64-dts-mediatek-add-mt6990-soc.patch` (Git blob `4f24ec8183c5495a312ec5f1109164d7b770a770`, SoC DTSI SPDX `GPL-2.0-only OR MIT`) and `include/dt-bindings/power/mt6990-power.h` (Git blob `c221b322fb437683d052ec4241a33afaecb33979`, MediaTek Copyright (c) 2022, GPL-2.0). The script extracts SoC-only text transiently and verifies source identities; it does not mirror donor board code or firmware.
+- Linux v6.18 standard dt-binding headers and a pinned upstream `dtc` are used transiently for the syntax check. A passing DTC build proves only that DT syntax and phandles resolve for this source arrangement. It does **not** establish legal suitability of any third-party vendor-derived historical FDT, genuine board memory layout, Linux driver/binding compatibility, or successful device boot.
+- DT-specific upstream schema checks (`dtbs_check`), genuine regulator/pinctrl mappings, full board memory regions, dual-Ethernet-port mapping, modem runtime, USB VBUS, MMC1, Wi-Fi reset/calibration and safe cold-boot are **not established**.
+
 ## Never import
 
 Signing materials or sample key copies, OEM firmware and calibration, chip-unique provisioning, SIM/subscriber details, private device/network endpoints, historical signed partitions, unaudited build outputs, or confidential vulnerability evidence. Their archival retention does not make them redistributable.
