@@ -128,6 +128,24 @@ class HistoryScannerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "non-commit Git ref"):
             gate.history_findings(set())
 
+    def test_annotated_tag_object_under_custom_ref_is_scanned(self):
+        (self.root / "safe.txt").write_text("safe\\n")
+        self.commit("safe commit")
+        # An annotated tag object can remain reachable outside refs/tags
+        # after its normal tag ref is deleted. Its message must be audited.
+        git(self.root, "tag", "-a", "temporary", "-m",
+            "PASS" + "WORD=synthetic_demo_value_not_real")
+        tag_sha = subprocess.check_output(
+            ["git", "rev-parse", "refs/tags/temporary"], cwd=self.root
+        ).decode().strip()
+        git(self.root, "update-ref", "refs/audit/retained-tag", tag_sha)
+        git(self.root, "tag", "-d", "temporary")
+        issues = set()
+        gate.history_findings(issues)
+        self.assertTrue(any(path.startswith("@tag/") and
+                            category == "potential embedded credential"
+                            for path, category in issues), issues)
+
     def test_benign_history_stays_clean(self):
         (self.root / "first.txt").write_text("hello\n")
         self.commit("first safe document")
