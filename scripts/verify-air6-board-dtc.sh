@@ -61,7 +61,14 @@ if len(out) < 400 or not out[0].startswith('// SPDX-License-Identifier:'):
 Path(sys.argv[2]).write_text('\n'.join(out) + '\n')
 PY
 LINUX=https://raw.githubusercontent.com/torvalds/linux/v6.18/include/dt-bindings
-for item in interrupt-controller/arm-gic.h interrupt-controller/irq.h gpio/gpio.h; do
+# The Linux v6.18 tag selects the source, but a tag alone is not a
+# content-integrity check. Verify the exact upstream Git blob for each header.
+for entry in \
+  "interrupt-controller/arm-gic.h:887f53363e8a633ba85c8a459313c37b71a729a5" \
+  "interrupt-controller/irq.h:9e3d183e138191fe5227cb5ffc5ff52d81036b15" \
+  "gpio/gpio.h:b5d531237448241f1870e7d8d4cf1a6411877562"; do
+  item="${entry%%:*}"
+  expected_blob="${entry#*:}"
   output="$TEMP/include/dt-bindings/$item"
   if ! curl --fail --silent --show-error --location --retry 2 --max-time 60 \
       "$LINUX/$item" -o "$output"; then
@@ -77,6 +84,10 @@ if record.get('encoding') != 'base64' or record.get('type') != 'file':
 pathlib.Path(sys.argv[2]).write_bytes(base64.b64decode(record['content'], validate=False))
 PY
   fi
+  test "$(git hash-object "$output")" = "$expected_blob" || {
+    echo "Unexpected pinned Linux binding identity: $item" >&2
+    exit 1
+  }
 done
 # GCC cpp supplies the Linux DTS preprocessor for symbolic irq and power cells.
 cpp -nostdinc -undef -D__DTS__ -x assembler-with-cpp \
