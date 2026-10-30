@@ -100,5 +100,32 @@ class Air6SourceScopeTests(unittest.TestCase):
         findings = guard.validate(self.base, trial)
         self.assertTrue(any("expected one root block" in f for f in findings), findings)
 
+    def test_reject_unreviewed_cpp_includes_and_macros(self):
+        trial = self.trial + '\n#include "unreviewed.dtsi"\n'
+        self.assertTrue(any("unreviewed preprocessor include" in f
+                            for f in guard.validate(self.base, trial)))
+        base = self.base + '\n#define ENABLE_UNREVIEWED 1\n'
+        self.assertTrue(any("unreviewed preprocessor directive" in f
+                            for f in guard.validate(base, self.trial)))
+
+    def test_reject_extra_dtc_node_deletion(self):
+        trial = self.trial + '\n&netsys { /delete-node/ ethernet@15100000; };\n'
+        self.assertTrue(any("unreviewed DTC node deletion" in f
+                            for f in guard.validate(self.base, trial)))
+        base = self.base + '\n&eth { /delete-node/ mac@1; };\n'
+        self.assertTrue(any("unreviewed DTC node deletion" in f
+                            for f in guard.validate(base, self.trial)))
+
+    def test_reject_dtc_include_and_property_deletion(self):
+        for extra, expected in (
+            ('\n/include/ "unreviewed.dtsi"\n', "unreviewed DTC include"),
+            ('\n&eth { /delete-property/ status; };\n',
+             "unreviewed DTC property deletion"),
+        ):
+            with self.subTest(directive=expected):
+                self.assertTrue(any(expected in f for f in
+                                    guard.validate(self.base, self.trial + extra)))
+
+
 if __name__ == "__main__":
     unittest.main()
