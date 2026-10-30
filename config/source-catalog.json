@@ -161,7 +161,7 @@
       "component": "ethernet",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "1c82647450b25d4082203ef6a2f3d2a29ae953e6",
+      "git_blob_sha1": "2c3498365aed83ee232e66705dabce94ab64b7ee",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
