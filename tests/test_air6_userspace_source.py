@@ -34,6 +34,12 @@ class Air6UserspaceSourceTests(unittest.TestCase):
             p["openwrt"]["commit"] = ref
             self.assertTrue(self.errors(p))
 
+    def test_reject_unreviewed_but_full_length_upstream_commit(self):
+        p = copy.deepcopy(self.plan)
+        # A syntactically valid SHA must not silently change the reviewed input.
+        p["openwrt"]["commit"] = "a" * 40
+        self.assertTrue(any("reviewed exact Git commit" in e for e in self.errors(p)))
+
     def test_reject_other_device_donor_or_untrusted_upstream(self):
         p = copy.deepcopy(self.plan)
         p["openwrt"]["url"] = "https://github.com/13179415360/openwrt-mt6990-lg6851f"

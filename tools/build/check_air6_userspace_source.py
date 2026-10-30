@@ -12,6 +12,9 @@ PLAN = ROOT / "config/sbat6-userspace-source.json"
 FEEDS = ROOT / "config/feeds.lock"
 SHA = re.compile(r"^[0-9a-f]{40}$")
 PACKAGES = ("base-files", "busybox", "procd", "ubus", "uci", "netifd")
+# An arbitrary full-length SHA is not the reviewed source selection.
+# Changing the snapshot requires updating this gate and its tests in a PR.
+REVIEWED_OPENWRT_COMMIT = "5700101d7c85381889d890dc1d3d001d0b4b6446"
 
 spec = importlib.util.spec_from_file_location(
     "air6_feedlock", ROOT / "tools/build/verify_feeds_lock.py"
@@ -38,8 +41,9 @@ def validate(plan: dict, feed_text: str) -> list[str]:
     else:
         if (source["url"] != "https://github.com/openwrt/openwrt.git"
                 or not isinstance(source["commit"], str)
-                or not SHA.fullmatch(source["commit"])):
-            errors.append("upstream must be official and pinned to a full Git commit")
+                or not SHA.fullmatch(source["commit"])
+                or source["commit"] != REVIEWED_OPENWRT_COMMIT):
+            errors.append("upstream must be official and match the reviewed exact Git commit")
         if source["selection"] != "upstream-main-snapshot-2026-10-30-not-tested-for-sbat6":
             errors.append("upstream compatibility must remain explicitly unverified")
     if plan["feeds_path"] != "config/feeds.lock":
