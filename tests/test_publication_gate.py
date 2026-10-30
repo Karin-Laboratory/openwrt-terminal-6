@@ -38,6 +38,28 @@ class PublicationGateTests(unittest.TestCase):
         gate.scan("notes/b.txt", sample, issues)
         self.assertIn(("notes/b.txt", "internal build directory"), issues)
 
+    def test_indented_credential_assignments_are_blocked(self):
+        # Split synthetic fixture names to avoid embedding credentials in tests.
+        cases = (
+            b"    PASS" + b"WORD=synthetic_value_not_real",
+            b"\t export ACCESS_" + b"TOKEN = 'synthetic_value_not_real'",
+            b"    API_" + b"KEY = synthetic_value_not_real",
+        )
+        for sample in cases:
+            with self.subTest(prefix=sample.split(b"=")[0]):
+                issues = set()
+                gate.scan("fixtures/synthetic.env", sample, issues)
+                self.assertIn(("fixtures/synthetic.env",
+                               "potential embedded credential"), issues)
+                self.assertNotIn("synthetic_value_not_real", str(issues))
+
+    def test_unrelated_indented_assignments_remain_clean(self):
+        issues = set()
+        gate.scan("fixtures/safe.env",
+                  b"    TIMEOUT = 30\n    DESCRIPTION = synthetic_value_not_real",
+                  issues)
+        self.assertEqual(issues, set())
+
     def test_default_config_block(self):
         issues = set()
         gate.scan("config/" + "kernel.config", b"CONFIG_SOMETHING=y\n", issues)
