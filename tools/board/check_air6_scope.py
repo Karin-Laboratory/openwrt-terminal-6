@@ -23,7 +23,7 @@ def uncomment(data: str) -> str:
 def reference_nodes(data: str) -> dict[str, str]:
     """Extract top-level reference blocks with balanced braces, no DT parser claim."""
     nodes: dict[str, str] = {}
-    for match in re.finditer(r"(?m)^[ \t]*&([A-Za-z_][A-Za-z_0-9]*)\s*\{", data):
+    for match in re.finditer(r"&([A-Za-z_][A-Za-z_0-9]*)\s*\{", data):
         name = match.group(1)
         if name in nodes:
             raise ValueError("duplicate reference block: " + name)
@@ -57,6 +57,12 @@ def validate(base: str, trial: str) -> list[str]:
     errors = []
     clean_base, clean_trial = uncomment(base), uncomment(trial)
     for name, source in (("base", clean_base), ("trial", clean_trial)):
+        # DTS supports &{/absolute/path} overrides, not only &label blocks.
+        # A path override can enable a disabled controller without touching
+        # its guarded label declaration; reject all until separately reviewed.
+        if re.search(r"&\s*\{\s*/", source):
+            errors.append(name + ": path-based reference override is unreviewed")
+
         if re.search(r"\bbootargs\s*=|/incbin/\s*\(|\bmemory(?:@[0-9a-fA-F]+)?\s*\{", source):
             errors.append(name + ": unreviewed bootargs, memory or binary embedding")
         if re.search(r"(?i)\b(?:mac-address|local-mac-address|password|imei)\s*=", source):
