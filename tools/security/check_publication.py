@@ -9,6 +9,7 @@ Results contain only category and escaped path, never matched secret bytes.
 """
 from pathlib import Path, PurePosixPath
 import argparse
+import hashlib
 import re
 import subprocess
 import sys
@@ -74,6 +75,15 @@ def history_findings(findings: set) -> int:
     """Scan path/blob PAIRS, not only blob IDs: same blob may have risky alias."""
     if git("rev-parse", "--is-shallow-repository").strip() != b"false":
         raise ValueError("shallow clone: cannot certify reachable history")
+    # Ref names are public metadata but are not commit/tree/blob contents.
+    # Scan them without echoing the names: a name itself may contain a token.
+    # Git replace refs can change what rev-list/cat-file appear to traverse.
+    refs = [ref for ref in git("for-each-ref", "--format=%(refname)", "refs").splitlines() if ref]
+    for ref in refs:
+        if not ref.startswith(b"refs/") or ref.startswith(b"refs/replace/"):
+            raise ValueError("unsupported or replace ref: history cannot be certified")
+        opaque_path = "@ref/" + hashlib.sha256(ref).hexdigest()[:12]
+        scan(opaque_path, ref, findings)
     commits = [c for c in git("rev-list", "--all").splitlines() if c]
     if len(commits) > MAX_COMMITS:
         raise ValueError("commit safety limit exceeded; manual audit needed")
