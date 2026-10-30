@@ -23,6 +23,21 @@ class TransportTests(unittest.TestCase):
                           route=True, bidirectional=True)
         self.assertEqual(self.m.phase, Phase.DATA_READY)
 
+    def test_data_ready_rejects_truthy_nonboolean_evidence(self):
+        self.ready()
+        fields = ("interface_up", "address", "route", "bidirectional")
+        for field in fields:
+            for value in (1, "yes", object()):
+                with self.subTest(field=field, value=type(value).__name__):
+                    flags = dict.fromkeys(fields, True)
+                    flags[field] = value
+                    with self.assertRaises(TransitionError):
+                        self.m.data_ready(self.g, **flags)
+                    self.assertEqual(self.m.phase, Phase.REGISTERED)
+        self.m.data_ready(self.g, interface_up=True, address=True,
+                          route=True, bidirectional=True)
+        self.assertEqual(self.m.phase, Phase.DATA_READY)
+
     def test_ccci_ready_not_data_ready(self):
         self.m.transport_ready(self.g)
         self.assertNotEqual(self.m.phase, Phase.DATA_READY)
