@@ -17,6 +17,46 @@ BASE_ALLOWED = BASE_DISABLED | {"uart0"}
 TRIAL_ALLOWED = frozenset({"netsys", "sgmiisys1", "eth", "gmac0", "gmac1"})
 TRIAL_ENABLED = frozenset({"netsys", "sgmiisys1", "eth", "gmac1"})
 
+
+# The &label allowlist does not cover new root-level nodes. Inspect the
+# *direct* children of the single / { } block before accepting either variant.
+# This is a conservative source guard, not a general DTS grammar parser.
+BASE_ROOT_CHILDREN = frozenset({"aliases", "chosen"})
+TRIAL_ROOT_CHILDREN = frozenset({"syscon@10014000", "phy@11e60000"})
+
+def root_children(data: str) -> set[str]:
+    roots = list(re.finditer(r"/[ \t]*\{", data))
+    if len(roots) != 1:
+        raise ValueError(f"expected one root block, found {len(roots)}")
+    start = roots[0].end()
+    depth, pos = 1, start
+    while depth and pos < len(data):
+        depth += (data[pos] == "{") - (data[pos] == "}")
+        pos += 1
+    if depth:
+        raise ValueError("unclosed root block")
+    body = data[start:pos - 1]
+    children = []
+    depth = 0
+    tokens = re.finditer(
+        r"(?P<node>(?:[A-Za-z_][\w-]*\s*:\s*)?[A-Za-z_][\w,.\-+@]*)\s*\{|(?P<brace>[{}])",
+        body,
+    )
+    for token in tokens:
+        if token.group("node"):
+            if depth == 0:
+                children.append(token.group("node").split(":")[-1].strip())
+            depth += 1
+        elif token.group("brace") == "{":
+            raise ValueError("unrecognized root child syntax")
+        else:
+            depth -= 1
+            if depth < 0:
+                raise ValueError("unbalanced root child")
+    if depth or len(children) != len(set(children)):
+        raise ValueError("unbalanced or duplicate root child")
+    return set(children)
+
 def uncomment(data: str) -> str:
     return re.sub(r"/\*.*?\*/|//[^\n]*", "", data, flags=re.DOTALL)
 
@@ -67,6 +107,17 @@ def validate(base: str, trial: str) -> list[str]:
             errors.append(name + ": unreviewed bootargs, memory or binary embedding")
         if re.search(r"(?i)\b(?:mac-address|local-mac-address|password|imei)\s*=", source):
             errors.append(name + ": per-device or credential property")
+    for name, source, allowed in (
+        ("base", clean_base, BASE_ROOT_CHILDREN),
+        ("trial", clean_trial, TRIAL_ROOT_CHILDREN),
+    ):
+        try:
+            actual = root_children(source)
+            if actual != allowed:
+                errors.append(name + ": unreviewed root children " +
+                              repr(sorted(actual ^ allowed)))
+        except ValueError as exc:
+            errors.append(name + ": " + str(exc))
     if '#include "mt6990.dtsi"' not in clean_base:
         errors.append("base: missing pinned SoC include")
     if '#include "mt6990-air-terminal-6.dts"' not in clean_trial:
