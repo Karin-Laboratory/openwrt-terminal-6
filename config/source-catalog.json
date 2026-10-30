@@ -62,7 +62,7 @@
       "component": "modem",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "86d6726d1e98fccd0db53593949c642a2ea90cb9",
+      "git_blob_sha1": "00025bfe857cd4cc7b3bbaada3a8c0e78d460253",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -197,7 +197,7 @@
       "component": "modem",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "9d3e79351808beaab397b99947bb35fb0ed3fed1",
+      "git_blob_sha1": "befc1d18c52840bc291d3393deca559790a123f7",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
