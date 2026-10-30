@@ -23,8 +23,10 @@ BLOCK_EXT = {
 BLOCK_FILES = {"id_rsa", "id_ed25519", "authorized_keys", "kernel.config"}
 RULES = {
     "private key header": re.compile(
-        b"-----BEGIN " + rb"(?:OPENSSH |RSA |EC |DSA )?" +
-        b"PRIVATE " + b"KEY-----"
+        # Include encrypted PKCS#8 and OpenPGP secret-key armor, not only
+        # unencrypted PEM/OpenSSH key blocks. Do not log matching bytes.
+        b"-----BEGIN " +
+        rb"(?:(?:OPENSSH |RSA |EC |DSA |ENCRYPTED )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)-----"
     ),
     "cloud access token": re.compile(
         rb"(?:gh[pousr]_[A-Za-z0-9_]{30,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{20,})"
