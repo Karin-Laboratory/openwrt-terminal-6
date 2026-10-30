@@ -26,6 +26,7 @@ class ModemState:
     phase: Phase = Phase.OFF
     generation: int = 0
     pending: dict[int, int] = field(default_factory=dict)
+    last_request_id: int = 0  # Per-generation monotonic ID: reject late response aliasing.
     max_payload: int = 65536
     max_pending: int = 32
     last_error: str = ""
@@ -35,6 +36,7 @@ class ModemState:
             raise TransitionError("already active")
         self.generation += 1
         self.pending.clear()
+        self.last_request_id = 0
         self.last_error = ""
         self.phase = Phase.INITIALIZING
         return self.generation
@@ -63,13 +65,16 @@ class ModemState:
                               Phase.REGISTERED, Phase.DATA_READY):
             raise TransitionError("transport not ready")
         self._current(generation)
-        if not (0 < request_id <= 0xFFFFFFFF):
+        if type(request_id) is not int or not (0 < request_id <= 0xFFFFFFFF):
             raise TransitionError("invalid local request id")
-        if not (0 <= size <= self.max_payload):
+        if type(size) is not int or not (0 <= size <= self.max_payload):
             raise TransitionError("payload length out of bounds")
-        if request_id in self.pending or len(self.pending) >= self.max_pending:
-            raise TransitionError("duplicate request or queue full")
+        if request_id <= self.last_request_id:
+            raise TransitionError("request ids must increase within one generation")
+        if len(self.pending) >= self.max_pending:
+            raise TransitionError("request queue full")
         self.pending[request_id] = size
+        self.last_request_id = request_id
 
     def complete(self, generation: int, request_id: int, size: int) -> bool:
         self._current(generation)
@@ -78,6 +83,18 @@ class ModemState:
             return False
         del self.pending[request_id]
         return True
+
+    def expire_local(self, generation: int, request_id: int) -> bool:
+        """Discard local pending correlation after a deadline.
+
+        This DOES NOT cancel an asynchronous request inside the modem, relay or
+        kernel transport. Its late reply is ignored. Do not reuse the request
+        ID within this generation; start a newly verified generation instead.
+        """
+        self._current(generation)
+        if type(request_id) is not int or not (0 < request_id <= 0xFFFFFFFF):
+            raise TransitionError("invalid local request id")
+        return self.pending.pop(request_id, None) is not None
 
     def fail(self, generation: int, error: str) -> None:
         self._current(generation)

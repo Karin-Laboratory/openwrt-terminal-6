@@ -68,6 +68,46 @@ class TransportTests(unittest.TestCase):
         with self.assertRaises(TransitionError):
             self.m.send(self.g, 1, 2)
 
+    def test_expired_local_request_cannot_accept_late_reply(self):
+        self.m.transport_ready(self.g)
+        self.m.send(self.g, 8, 0)
+        self.assertTrue(self.m.expire_local(self.g, 8))
+        self.assertFalse(self.m.expire_local(self.g, 8))
+        self.assertFalse(self.m.complete(self.g, 8, 0))
+        with self.assertRaises(TransitionError):
+            self.m.send(self.g, 8, 0)
+        self.m.send(self.g, 9, 0)
+        self.assertTrue(self.m.complete(self.g, 9, 0))
+
+    def test_monotonic_ids_after_completion_and_zero_length(self):
+        self.m.transport_ready(self.g)
+        self.m.send(self.g, 21, 0)
+        self.assertTrue(self.m.complete(self.g, 21, 0))
+        with self.assertRaises(TransitionError):
+            self.m.send(self.g, 21, 0)
+        with self.assertRaises(TransitionError):
+            self.m.send(self.g, 20, 0)
+        self.m.send(self.g, 22, 0)
+
+    def test_old_generation_cannot_expire_new_session(self):
+        self.m.transport_ready(self.g)
+        self.m.send(self.g, 10, 2)
+        self.m.stop()
+        new_gen = self.m.begin()
+        self.m.transport_ready(new_gen)
+        self.m.send(new_gen, 10, 2)
+        with self.assertRaises(TransitionError):
+            self.m.expire_local(self.g, 10)
+        self.assertTrue(self.m.complete(new_gen, 10, 2))
+
+    def test_bool_length_and_id_not_accepted(self):
+        self.m.transport_ready(self.g)
+        with self.assertRaises(TransitionError):
+            self.m.send(self.g, True, 0)
+        with self.assertRaises(TransitionError):
+            self.m.send(self.g, 1, False)
+        self.assertEqual(self.m.last_request_id, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
