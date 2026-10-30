@@ -10,7 +10,7 @@ were fetched as text from `raw.githubusercontent.com/openwrt/openwrt/<commit>/<p
 on 2026-10-31 UTC. For each response, the UTF-8 bytes were independently
 hashed with the Git blob-object formula:
 
-`SHA1(b"blob " + ascii_decimal(byte_length) + b"\\0" + file_bytes)`
+`SHA1(b"blob " + ascii_decimal(byte_length) + b"\0" + file_bytes)`
 
 The results were compared with `config/sbat6-userspace-source.json` and the
 hard-coded selection in `tools/build/check_air6_userspace_source.py`.
