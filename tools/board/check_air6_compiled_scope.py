@@ -53,8 +53,17 @@ def validate(base: str, trial: str) -> list[str]:
                 actual = status(body)
                 if actual != expected:
                     errors.append(f"{variant}: {name} compiled status {actual}, expected {expected}")
-            if variant == "trial" and status(node(tree, "phy@11e60000")) != "okay":
-                errors.append("trial: SGMII1 PHY must be enabled")
+            if variant == "trial":
+                # Check resolved MAC children, not only their parent:
+                # MAC0 is unreviewed, MAC1 is the sole observed CPU5 uplink.
+                for mac_name, required in (("mac@0", "disabled"), ("mac@1", "okay")):
+                    actual = status(node(eth, mac_name))
+                    if actual != required:
+                        errors.append(
+                            f"trial: {mac_name} compiled status {actual}, expected {required}"
+                        )
+                if status(node(tree, "phy@11e60000")) != "okay":
+                    errors.append("trial: SGMII1 PHY must be enabled")
         except ValueError as exc:
             errors.append(f"{variant}: {exc}")
     return errors
