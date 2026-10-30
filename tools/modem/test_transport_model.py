@@ -109,5 +109,42 @@ class TransportTests(unittest.TestCase):
         self.assertEqual(self.m.last_request_id, 0)
 
 
+    def test_untrusted_completion_types_cannot_alias_pending_request(self):
+        self.m.transport_ready(self.g)
+        self.m.send(self.g, 1, 1)
+        for request_id, size in (
+            (True, 1), (1, True), (1.0, 1), (1, 1.0),
+            ("1", 1), (1, "1"), (None, 1),
+        ):
+            with self.subTest(request_id=request_id, size=size):
+                self.assertFalse(self.m.complete(self.g, request_id, size))
+                self.assertEqual(self.m.pending, {1: 1})
+        self.assertTrue(self.m.complete(self.g, 1, 1))
+        self.assertEqual(self.m.pending, {})
+
+    def test_noninteger_generation_cannot_correlate_or_change_state(self):
+        self.m.transport_ready(self.g)
+        self.m.send(self.g, 1, 1)
+        for bad_generation in (True, 1.0, str(self.g), None):
+            with self.subTest(generation=bad_generation):
+                with self.assertRaises(TransitionError):
+                    self.m.complete(bad_generation, 1, 1)
+                with self.assertRaises(TransitionError):
+                    self.m.expire_local(bad_generation, 1)
+                with self.assertRaises(TransitionError):
+                    self.m.send(bad_generation, 2, 1)
+                self.assertEqual(self.m.pending, {1: 1})
+        self.assertTrue(self.m.complete(self.g, 1, 1))
+
+    def test_boolean_generation_cannot_advance_initialization(self):
+        model = ModemState()
+        generation = model.begin()
+        with self.assertRaises(TransitionError):
+            model.transport_ready(True)
+        self.assertEqual(model.phase, Phase.INITIALIZING)
+        model.transport_ready(generation)
+        self.assertEqual(model.phase, Phase.TRANSPORT_READY)
+
+
 if __name__ == "__main__":
     unittest.main()
