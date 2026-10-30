@@ -1,4 +1,8 @@
 /* SPDX-License-Identifier: MIT */
+/* Keep test assertions active even when the caller supplies -DNDEBUG. */
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include "t6_fe_recovery.h"
 #include <assert.h>
 #include <stdio.h>
