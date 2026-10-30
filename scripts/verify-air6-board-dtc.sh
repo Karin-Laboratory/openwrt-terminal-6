@@ -151,6 +151,12 @@ if 'sgmii-pwr0' in parent or 'sgmii-pwr1' in parent:
 print('AIR6_NETSYS_SGMII1_DTC_PASS (SOURCE ONLY; NO COLD-BOOT CLAIM)')
 PY
 
+# Check the *compiled* conservative and opt-in trees, not only their source
+# overrides: an upstream SoC DTSI change must not silently enable the
+# baseline Ethernet/PCS or disable the experimental PHY.
+python3 "$ROOT/tools/board/check_air6_compiled_scope.py" \
+  "$TEMP/air6.roundtrip.dts" "$TEMP/air6-ethernet.roundtrip.dts"
+
 # Validate a narrow, GPL-aware reset change against the exact donor PHY
 # source. The base file remains outside this repository; no kernel image.
 mkdir -p "$TEMP/phy-source/drivers/phy/mediatek"
