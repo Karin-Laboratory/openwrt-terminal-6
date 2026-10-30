@@ -19,7 +19,19 @@ def tree(eth: str, pcs: str, phy: str = "okay",
         ethernet@15100000 {{
             status = "{eth}";
             mac@0 {{ status = "{mac0}"; }};
-            mac@1 {{ status = "{mac1}"; }};
+            mac@1 {{
+                status = "{mac1}";
+                phandle = <0x10>;
+            }};
+            mdio-bus {{
+                switch@1f {{
+                    ports {{
+                        port@5 {{
+                            ethernet = <0x10>;
+                        }};
+                    }};
+                }};
+            }};
         }};
     }};
     syscon@11305000 {{ status = "{pcs}"; }};
@@ -55,6 +67,28 @@ class CompiledAir6ScopeTests(unittest.TestCase):
         findings = checker.validate(tree("disabled", "disabled"),
                                     tree("okay", "okay", mac1="disabled"))
         self.assertTrue(any("trial: mac@1" in x for x in findings), findings)
+
+    def test_trial_cpu5_wrong_mac_phandle_is_blocked(self):
+        bad = tree("okay", "okay").replace(
+            "ethernet = <0x10>;", "ethernet = <0x11>;")
+        findings = checker.validate(tree("disabled", "disabled"), bad)
+        self.assertTrue(any("CPU5 ethernet phandle" in x for x in findings), findings)
+
+    def test_trial_cpu5_missing_ethernet_reference_is_blocked(self):
+        bad = tree("okay", "okay").replace("ethernet = <0x10>;", "")
+        findings = checker.validate(tree("disabled", "disabled"), bad)
+        self.assertTrue(any("direct ethernet cell" in x for x in findings), findings)
+
+    def test_trial_mac1_missing_phandle_is_blocked(self):
+        bad = tree("okay", "okay").replace("phandle = <0x10>;", "")
+        findings = checker.validate(tree("disabled", "disabled"), bad)
+        self.assertTrue(any("direct phandle cell" in x for x in findings), findings)
+
+    def test_trial_cpu5_duplicate_ethernet_reference_is_blocked(self):
+        bad = tree("okay", "okay").replace(
+            "ethernet = <0x10>;", "ethernet = <0x10>;\\n                            ethernet = <0x10>;")
+        findings = checker.validate(tree("disabled", "disabled"), bad)
+        self.assertTrue(any("direct ethernet cell" in x for x in findings), findings)
 
     def test_trial_missing_mac_child_fails_closed(self):
         trial = tree("okay", "okay").replace(
