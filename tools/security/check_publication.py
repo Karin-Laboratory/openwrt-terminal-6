@@ -78,12 +78,23 @@ def history_findings(findings: set) -> int:
     # Ref names are public metadata but are not commit/tree/blob contents.
     # Scan them without echoing the names: a name itself may contain a token.
     # Git replace refs can change what rev-list/cat-file appear to traverse.
-    refs = [ref for ref in git("for-each-ref", "--format=%(refname)", "refs").splitlines() if ref]
-    for ref in refs:
+    # rev-list --all walks commits, not standalone blobs/trees targeted by
+    # lightweight tags or annotated tags. Such objects bypass blob scanning.
+    # Reject those refs rather than claiming a complete reachable audit.
+    for row in git("for-each-ref",
+                   "--format=%(refname)%00%(objecttype)%00%(*objecttype)",
+                   "refs").splitlines():
+        parts = row.split(b"\x00")
+        if len(parts) != 3:
+            raise ValueError("malformed Git ref metadata")
+        ref, obj_type, peeled_type = parts
         if not ref.startswith(b"refs/") or ref.startswith(b"refs/replace/"):
             raise ValueError("unsupported or replace ref: history cannot be certified")
         opaque_path = "@ref/" + hashlib.sha256(ref).hexdigest()[:12]
         scan(opaque_path, ref, findings)
+        if not (obj_type == b"commit" or
+                (obj_type == b"tag" and peeled_type == b"commit")):
+            raise ValueError("non-commit Git ref: history cannot be certified")
     commits = [c for c in git("rev-list", "--all").splitlines() if c]
     if len(commits) > MAX_COMMITS:
         raise ValueError("commit safety limit exceeded; manual audit needed")
