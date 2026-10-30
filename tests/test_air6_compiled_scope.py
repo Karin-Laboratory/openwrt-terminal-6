@@ -21,6 +21,11 @@ def tree(eth: str, pcs: str, phy: str = "okay",
             mac@0 {{ status = "{mac0}"; }};
             mac@1 {{
                 reg = <0x01>;
+                phy-mode = "2500base-x";
+                fixed-link {{
+                    speed = <0x9c4>;
+                    full-duplex;
+                }};
                 status = "{mac1}";
                 phandle = <0x10>;
             }};
@@ -31,6 +36,11 @@ def tree(eth: str, pcs: str, phy: str = "okay",
                         port@5 {{
                             reg = <0x05>;
                             ethernet = <0x10>;
+                            phy-mode = "2500base-x";
+                            fixed-link {{
+                                speed = <0x9c4>;
+                                full-duplex;
+                            }};
                         }};
                     }};
                 }};
@@ -70,6 +80,40 @@ class CompiledAir6ScopeTests(unittest.TestCase):
         findings = checker.validate(tree("disabled", "disabled"),
                                     tree("okay", "okay", mac1="disabled"))
         self.assertTrue(any("trial: mac@1" in x for x in findings), findings)
+
+
+    def test_trial_link_mode_mismatch_is_blocked_on_either_end(self):
+        for target in ("mac@1", "port@5"):
+            with self.subTest(target=target):
+                original = tree("okay", "okay")
+                prefix, suffix = original.split(target + " {", 1)
+                suffix = suffix.replace('phy-mode = "2500base-x";',
+                                        'phy-mode = "sgmii";', 1)
+                findings = checker.validate(tree("disabled", "disabled"),
+                                            prefix + target + " {" + suffix)
+                self.assertTrue(any("unexpected phy-mode" in x for x in findings),
+                                findings)
+
+    def test_trial_fixed_link_speed_mismatch_is_blocked_on_either_end(self):
+        for target in ("mac@1", "port@5"):
+            with self.subTest(target=target):
+                original = tree("okay", "okay")
+                prefix, suffix = original.split(target + " {", 1)
+                suffix = suffix.replace("speed = <0x9c4>;", "speed = <0x3e8>;", 1)
+                findings = checker.validate(tree("disabled", "disabled"),
+                                            prefix + target + " {" + suffix)
+                self.assertTrue(any("fixed-link speed mismatch" in x for x in findings),
+                                findings)
+
+    def test_trial_missing_full_duplex_is_blocked_on_either_end(self):
+        for target in ("mac@1", "port@5"):
+            with self.subTest(target=target):
+                original = tree("okay", "okay")
+                prefix, suffix = original.split(target + " {", 1)
+                suffix = suffix.replace("full-duplex;", "", 1)
+                findings = checker.validate(tree("disabled", "disabled"),
+                                            prefix + target + " {" + suffix)
+                self.assertTrue(any("full-duplex" in x for x in findings), findings)
 
     def test_trial_cpu5_wrong_register_is_blocked(self):
         bad = tree("okay", "okay").replace("reg = <0x05>;", "reg = <0x06>;")
