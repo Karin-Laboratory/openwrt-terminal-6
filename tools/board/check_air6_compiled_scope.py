@@ -42,6 +42,27 @@ def status(body: str) -> str:
     return found[0]
 
 
+
+def direct_cell(body: str, name: str) -> int:
+    """Require exactly one direct positive 32-bit cell in canonical DTC text."""
+    depth = 0
+    values = []
+    for line in body.splitlines():
+        if depth == 0 and re.match(r"\\s*" + re.escape(name) + r"\\s*=", line):
+            match = re.fullmatch(
+                r"\\s*" + re.escape(name) + r"\\s*=\\s*<(0x[0-9a-fA-F]+)>;\\s*", line
+            )
+            if not match:
+                raise ValueError(f"malformed {name} cell")
+            values.append(int(match.group(1), 16))
+        depth += line.count("{") - line.count("}")
+        if depth < 0:
+            raise ValueError("unbalanced node body")
+    if depth or len(values) != 1 or not (0 < values[0] <= 0xFFFFFFFF):
+        raise ValueError(f"missing, duplicated or invalid direct {name} cell")
+    return values[0]
+
+
 def validate(base: str, trial: str) -> list[str]:
     errors = []
     for variant, tree, expected in (("base", base, "disabled"),
@@ -62,6 +83,13 @@ def validate(base: str, trial: str) -> list[str]:
                         errors.append(
                             f"trial: {mac_name} compiled status {actual}, expected {required}"
                         )
+                # Check the resolved CPU5 -> MAC1 phandle after compilation.
+                # Merely finding both node names does not prove their wiring.
+                mac1 = node(eth, "mac@1")
+                ports = node(node(node(eth, "mdio-bus"), "switch@1f"), "ports")
+                cpu5 = node(ports, "port@5")
+                if direct_cell(cpu5, "ethernet") != direct_cell(mac1, "phandle"):
+                    errors.append("trial: CPU5 ethernet phandle does not reference MAC1")
                 if status(node(tree, "phy@11e60000")) != "okay":
                     errors.append("trial: SGMII1 PHY must be enabled")
         except ValueError as exc:
