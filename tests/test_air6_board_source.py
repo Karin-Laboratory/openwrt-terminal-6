@@ -41,6 +41,23 @@ class BoardDtsSourceTests(unittest.TestCase):
                                       r"wifi-psk|password\s*=|imei\s*=)")
         self.assertNotRegex(self.src, r"(?m)^\s*data\s*=\s*\[")
 
+    def test_linux_binding_headers_have_exact_blob_gates(self):
+        # Source-only regression: all three fetched Linux v6.18 binding
+        # headers must be checked against reviewed upstream Git blob IDs.
+        helper = RUNNER.read_text()
+        expected = {
+            "interrupt-controller/arm-gic.h": "887f53363e8a633ba85c8a459313c37b71a729a5",
+            "interrupt-controller/irq.h": "9e3d183e138191fe5227cb5ffc5ff52d81036b15",
+            "gpio/gpio.h": "b5d531237448241f1870e7d8d4cf1a6411877562",
+        }
+        pinned = dict(re.findall(
+            r'"(interrupt-controller/(?:arm-gic|irq)\\.h|gpio/gpio\\.h):([0-9a-f]{40})"',
+            helper,
+        ))
+        self.assertEqual(pinned, expected)
+        self.assertIn('test "$(git hash-object "$output")" = "$expected_blob"', helper)
+        self.assertIn("Unexpected pinned Linux binding identity", helper)
+
     def test_pinned_source_only_check(self):
         helper = RUNNER.read_text()
         self.assertIn("a40df9a5afb46716dea799acea69f17480df4d82", helper)
