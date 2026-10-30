@@ -71,6 +71,31 @@ def scan(path: str, payload: bytes, findings: set) -> None:
         if pattern.search(payload):
             findings.add((path, category))
 
+def safe_path_label(path_raw: bytes, findings: set) -> str:
+    """Inspect Git path metadata without revealing a sensitive filename.
+
+    Filenames are public Git tree data too. A credential in a directory or
+    basename is otherwise missed when only blob contents are inspected.
+    """
+    categories = {
+        category for fragment in (path_raw, *path_raw.split(b"/"))
+        for category, pattern in RULES.items() if pattern.search(fragment)
+    }
+    if not categories:
+        return path_raw.decode("utf-8", errors="backslashreplace")
+    label = "@path/" + hashlib.sha256(path_raw).hexdigest()[:12]
+    for category in categories:
+        findings.add((label, "path metadata: " + category))
+    return label
+
+
+def scan_tracked_path(path: str, label: str, payload: bytes, findings: set) -> None:
+    """Retain original filename/type checks but redact sensitive path labels."""
+    local = set()
+    scan(path, payload, local)
+    findings.update((label, category) for _, category in local)
+
+
 def history_findings(findings: set) -> int:
     """Scan path/blob PAIRS, not only blob IDs: same blob may have risky alias."""
     if git("rev-parse", "--is-shallow-repository").strip() != b"false":
@@ -127,20 +152,21 @@ def history_findings(findings: set) -> int:
                 raise ValueError("malformed Git tree entry")
             mode, kind, sha_raw = meta.split(b" ")
             path = path_raw.decode("utf-8", errors="backslashreplace")
+            label = safe_path_label(path_raw, findings)
             if kind != b"blob":
-                findings.add((path, "gitlink or unsupported object requires review"))
+                findings.add((label, "gitlink or unsupported object requires review"))
                 continue
             if mode == b"120000":
-                findings.add((path, "symlink requires manual review"))
+                findings.add((label, "symlink requires manual review"))
             sha = sha_raw.decode("ascii")
             if (sha, path) in pairs:
                 continue
             pairs.add((sha, path))
             size = int(git("cat-file", "-s", sha))
             if size > MAX_SIZE:
-                findings.add((path, "oversized historical blob"))
+                findings.add((label, "oversized historical blob"))
                 continue
-            scan(path, git("cat-file", "blob", sha), findings)
+            scan_tracked_path(path, label, git("cat-file", "blob", sha), findings)
             scanned += 1
     # Annotated tag objects may be pointed to by ANY Git ref namespace,
     # not just refs/tags (e.g. a custom ref retained after tag deletion).
@@ -161,11 +187,12 @@ def current_findings(findings: set) -> int:
         if not path_raw:
             continue
         path = path_raw.decode("utf-8", errors="backslashreplace")
+        label = safe_path_label(path_raw, findings)
         location = ROOT / path
         if not location.is_file() or location.is_symlink():
-            findings.add((path, "tracked file absent or symlink"))
+            findings.add((label, "tracked file absent or symlink"))
             continue
-        scan(path, location.read_bytes(), findings)
+        scan_tracked_path(path, label, location.read_bytes(), findings)
         scanned += 1
     return scanned
 
