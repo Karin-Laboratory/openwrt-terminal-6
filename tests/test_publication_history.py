@@ -82,6 +82,31 @@ class HistoryScannerTests(unittest.TestCase):
                             category == "potential embedded credential"
                             for path, category in issues))
 
+    def test_public_ref_name_with_synthetic_token_is_blocked_without_echo(self):
+        (self.root / "safe.txt").write_text("safe\\n")
+        self.commit("safe commit")
+        # Assemble the synthetic token so no token-shaped fixture is committed.
+        fake_token = "ghp_" + "A" * 35
+        git(self.root, "branch", "audit-" + fake_token)
+        issues = set()
+        gate.history_findings(issues)
+        self.assertTrue(any(path.startswith("@ref/") and
+                            category == "cloud access token"
+                            for path, category in issues), issues)
+        self.assertNotIn(fake_token, repr(issues))
+
+    def test_replace_ref_fails_closed_before_history_traversal(self):
+        (self.root / "safe.txt").write_text("safe\\n")
+        self.commit("safe commit")
+        head = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=self.root
+        ).decode().strip()
+        # A synthetic self-replacement makes normal Git traversal fail.
+        # Reject it explicitly before rev-list can hide/replace any object.
+        git(self.root, "update-ref", "refs/replace/" + head, head)
+        with self.assertRaisesRegex(ValueError, "replace ref"):
+            gate.history_findings(set())
+
     def test_benign_history_stays_clean(self):
         (self.root / "first.txt").write_text("hello\n")
         self.commit("first safe document")
