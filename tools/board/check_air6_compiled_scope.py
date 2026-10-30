@@ -48,9 +48,9 @@ def direct_cell(body: str, name: str) -> int:
     depth = 0
     values = []
     for line in body.splitlines():
-        if depth == 0 and re.match(r"\\s*" + re.escape(name) + r"\\s*=", line):
+        if depth == 0 and re.match(r"\s*" + re.escape(name) + r"\s*=", line):
             match = re.fullmatch(
-                r"\\s*" + re.escape(name) + r"\\s*=\\s*<(0x[0-9a-fA-F]+)>;\\s*", line
+                r"\s*" + re.escape(name) + r"\s*=\s*<(0x[0-9a-fA-F]+)>;\s*", line
             )
             if not match:
                 raise ValueError(f"malformed {name} cell")
