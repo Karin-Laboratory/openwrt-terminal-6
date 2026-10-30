@@ -25,7 +25,7 @@ BASE_ROOT_CHILDREN = frozenset({"aliases", "chosen"})
 TRIAL_ROOT_CHILDREN = frozenset({"syscon@10014000", "phy@11e60000"})
 
 def root_children(data: str) -> set[str]:
-    roots = list(re.finditer(r"/[ \\t]*\\{", data))
+    roots = list(re.finditer(r"/[ \t]*\{", data))
     if len(roots) != 1:
         raise ValueError(f"expected one root block, found {len(roots)}")
     start = roots[0].end()
@@ -39,7 +39,7 @@ def root_children(data: str) -> set[str]:
     children = []
     depth = 0
     tokens = re.finditer(
-        r"(?P<node>(?:[A-Za-z_][\\w-]*\\s*:\\s*)?[A-Za-z_][\\w,.\\-+@]*)\\s*\\{|(?P<brace>[{}])",
+        r"(?P<node>(?:[A-Za-z_][\w-]*\s*:\s*)?[A-Za-z_][\w,.\-+@]*)\s*\{|(?P<brace>[{}])",
         body,
     )
     for token in tokens:
