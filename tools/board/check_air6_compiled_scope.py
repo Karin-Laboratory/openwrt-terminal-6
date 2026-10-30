@@ -86,8 +86,20 @@ def validate(base: str, trial: str) -> list[str]:
                 # Check the resolved CPU5 -> MAC1 phandle after compilation.
                 # Merely finding both node names does not prove their wiring.
                 mac1 = node(eth, "mac@1")
-                ports = node(node(node(eth, "mdio-bus"), "switch@1f"), "ports")
+                switch = node(node(eth, "mdio-bus"), "switch@1f")
+                ports = node(switch, "ports")
                 cpu5 = node(ports, "port@5")
+                # Unit-address names do not prove the resolved DSA register
+                # indices. Fail closed if the switch or CPU uplink is remapped.
+                for name, body, expected_reg in (
+                    ("MAC1", mac1, 1),
+                    ("MT7531 switch", switch, 31),
+                    ("CPU5", cpu5, 5),
+                ):
+                    if direct_cell(body, "reg") != expected_reg:
+                        errors.append(
+                            f"trial: {name} compiled reg mismatch (expected {expected_reg})"
+                        )
                 if direct_cell(cpu5, "ethernet") != direct_cell(mac1, "phandle"):
                     errors.append("trial: CPU5 ethernet phandle does not reference MAC1")
                 if status(node(tree, "phy@11e60000")) != "okay":
