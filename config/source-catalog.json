@@ -398,6 +398,24 @@
       "git_blob_sha1": "d4b6b3abaecb947e3409db2fc2b25809a2a441fb",
       "rights_review": "pending",
       "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/check_air6_userspace_source.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "2d03e06ca68b63f8046f57fb61fa9e5067936e99",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_userspace_source.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "31539c5d2109d2852039de0db5fbf860b0cc33f8",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
     }
   ],
   "missing_dependencies": [
