@@ -124,7 +124,7 @@ def verify_local_makefiles(source_tree: Path, expected: tuple[tuple[str, str, st
                         raise ValueError("oversized source")
                     chunks.append(part)
                 data = b"".join(chunks)
-                actual = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+                actual = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
                 if actual != digest:
                     problems.append(f"{package}: upstream Makefile bytes differ from reviewed Git blob")
             finally:
