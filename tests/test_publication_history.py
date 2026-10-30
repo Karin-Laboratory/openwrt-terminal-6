@@ -107,6 +107,27 @@ class HistoryScannerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "replace ref"):
             gate.history_findings(set())
 
+    def test_lightweight_tag_to_uncommitted_blob_is_blocked(self):
+        (self.root / "safe.txt").write_text("safe\\n")
+        self.commit("safe commit")
+        (self.root / "uncommitted.txt").write_text("synthetic only\\n")
+        blob = subprocess.check_output(
+            ["git", "hash-object", "-w", "uncommitted.txt"], cwd=self.root
+        ).decode().strip()
+        git(self.root, "tag", "blob-target", blob)
+        with self.assertRaisesRegex(ValueError, "non-commit Git ref"):
+            gate.history_findings(set())
+
+    def test_annotated_tag_to_tree_is_blocked(self):
+        (self.root / "safe.txt").write_text("safe\\n")
+        self.commit("safe commit")
+        tree = subprocess.check_output(
+            ["git", "rev-parse", "HEAD^{tree}"], cwd=self.root
+        ).decode().strip()
+        git(self.root, "tag", "-a", "tree-target", "-m", "synthetic", tree)
+        with self.assertRaisesRegex(ValueError, "non-commit Git ref"):
+            gate.history_findings(set())
+
     def test_benign_history_stays_clean(self):
         (self.root / "first.txt").write_text("hello\n")
         self.commit("first safe document")

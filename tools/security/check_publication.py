@@ -78,12 +78,37 @@ def history_findings(findings: set) -> int:
     # Ref names are public metadata but are not commit/tree/blob contents.
     # Scan them without echoing the names: a name itself may contain a token.
     # Git replace refs can change what rev-list/cat-file appear to traverse.
+    # rev-list --all walks commits, not standalone blobs/trees targeted by
+    # lightweight tags or annotated tags. Such objects bypass blob scanning.
+    # Reject those refs rather than claiming a complete reachable audit.
+    # Enumerate names first: dereferencing object types can itself fail when
+    # a replace ref creates a cycle. Reject replace refs before that lookup.
     refs = [ref for ref in git("for-each-ref", "--format=%(refname)", "refs").splitlines() if ref]
+    ref_set = set(refs)
+    if len(refs) != len(ref_set):
+        raise ValueError("duplicate Git ref metadata")
     for ref in refs:
         if not ref.startswith(b"refs/") or ref.startswith(b"refs/replace/"):
             raise ValueError("unsupported or replace ref: history cannot be certified")
         opaque_path = "@ref/" + hashlib.sha256(ref).hexdigest()[:12]
         scan(opaque_path, ref, findings)
+    # Fail closed if refs change between name enumeration and type inspection.
+    seen = set()
+    for row in git("for-each-ref",
+                   "--format=%(refname)%00%(objecttype)%00%(*objecttype)",
+                   "refs").splitlines():
+        parts = row.split(b"\x00")
+        if len(parts) != 3:
+            raise ValueError("malformed Git ref metadata")
+        ref, obj_type, peeled_type = parts
+        if ref not in ref_set or ref in seen:
+            raise ValueError("Git refs changed during audit")
+        seen.add(ref)
+        if not (obj_type == b"commit" or
+                (obj_type == b"tag" and peeled_type == b"commit")):
+            raise ValueError("non-commit Git ref: history cannot be certified")
+    if seen != ref_set:
+        raise ValueError("Git refs changed during audit")
     commits = [c for c in git("rev-list", "--all").splitlines() if c]
     if len(commits) > MAX_COMMITS:
         raise ValueError("commit safety limit exceeded; manual audit needed")
