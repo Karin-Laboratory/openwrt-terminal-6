@@ -60,6 +60,44 @@ def root_children(data: str) -> set[str]:
 def uncomment(data: str) -> str:
     return re.sub(r"/\*.*?\*/|//[^\n]*", "", data, flags=re.DOTALL)
 
+# Only these includes and destructive node deletions are reviewed in the
+# source-only DTS candidates. DTC supports additional source directives that
+# can change resolved nodes without creating a new &label or root child.
+BASE_INCLUDES = ('"mt6990.dtsi"',)
+TRIAL_INCLUDES = (
+    '"mt6990-air-terminal-6.dts"',
+    '<dt-bindings/clock/mt6990-clk.h>',
+    '<dt-bindings/interrupt-controller/arm-gic.h>',
+    '<dt-bindings/interrupt-controller/irq.h>',
+    '<dt-bindings/power/mt6990-power.h>',
+)
+TRIAL_DELETIONS = ("sgmii-pwr0", "sgmii-pwr1")
+
+
+def directive_findings(name: str, source: str) -> list[str]:
+    """Fail closed on unreviewed CPP/DTC source transformations."""
+    errors = []
+    cpp = re.findall(
+        r"(?m)^[ \t]*#[ \t]*(include|define|undef|ifdef|ifndef|if|elif|else|endif|pragma|error|line)\b([^\n]*)",
+        source,
+    )
+    expected_includes = BASE_INCLUDES if name == "base" else TRIAL_INCLUDES
+    if tuple(value.strip() for op, value in cpp if op == "include") != expected_includes:
+        errors.append(name + ": unreviewed preprocessor include")
+    if any(op != "include" for op, _ in cpp):
+        errors.append(name + ": unreviewed preprocessor directive")
+    if "/include/" in source:
+        errors.append(name + ": unreviewed DTC include")
+    deletions = re.findall(r"/delete-node/\s+([^;\n]+);", source)
+    expected_deletions = () if name == "base" else TRIAL_DELETIONS
+    if (source.count("/delete-node/") != len(deletions)
+            or tuple(value.strip() for value in deletions) != expected_deletions):
+        errors.append(name + ": unreviewed DTC node deletion")
+    if "/delete-property/" in source:
+        errors.append(name + ": unreviewed DTC property deletion")
+    return errors
+
+
 def reference_nodes(data: str) -> dict[str, str]:
     """Extract top-level reference blocks with balanced braces, no DT parser claim."""
     nodes: dict[str, str] = {}
@@ -97,6 +135,7 @@ def validate(base: str, trial: str) -> list[str]:
     errors = []
     clean_base, clean_trial = uncomment(base), uncomment(trial)
     for name, source in (("base", clean_base), ("trial", clean_trial)):
+        errors.extend(directive_findings(name, source))
         # DTS supports &{/absolute/path} overrides, not only &label blocks.
         # A path override can enable a disabled controller without touching
         # its guarded label declaration; reject all until separately reviewed.
