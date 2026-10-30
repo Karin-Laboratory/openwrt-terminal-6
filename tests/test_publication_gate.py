@@ -32,6 +32,17 @@ class PublicationGateTests(unittest.TestCase):
         self.assertIn(("notes/a.txt", "private key header"), issues)
         self.assertNotIn(sample.decode(), str(issues))
 
+    def test_encrypted_and_openpgp_private_key_headers_are_blocked(self):
+        # Assemble synthetic armor at runtime to avoid triggering this
+        # repository's own reachable-history scanner on the fixture source.
+        for suffix in (b"ENCRYPTED PRIVATE KEY-----",
+                       b"PGP PRIVATE KEY BLOCK-----"):
+            with self.subTest(kind=suffix.split(b" ")[0]):
+                issues = set()
+                gate.scan("fixtures/synthetic.txt", b"-----BEGIN " + suffix + b"\\nnot-a-key", issues)
+                self.assertIn(("fixtures/synthetic.txt", "private key header"), issues)
+                self.assertNotIn("not-a-key", str(issues))
+
     def test_private_host_path(self):
         issues = set()
         sample = b"/home/" + b"buildworker/source"
