@@ -17,6 +17,38 @@
     "uci",
     "netifd"
   ],
+  "package_makefiles": [
+    {
+      "package": "base-files",
+      "path": "package/base-files/Makefile",
+      "git_blob_sha1": "910a3daa3fa545453e72423b463c1781078d9e8b"
+    },
+    {
+      "package": "busybox",
+      "path": "package/utils/busybox/Makefile",
+      "git_blob_sha1": "a950cfff73a340df24c61353b0a68784fdbc0fb4"
+    },
+    {
+      "package": "procd",
+      "path": "package/system/procd/Makefile",
+      "git_blob_sha1": "21868ce6b1e7beb708d6059fefdd113d1128f229"
+    },
+    {
+      "package": "ubus",
+      "path": "package/system/ubus/Makefile",
+      "git_blob_sha1": "716f993b56ff0c256727c9645e13e12256a2410c"
+    },
+    {
+      "package": "uci",
+      "path": "package/system/uci/Makefile",
+      "git_blob_sha1": "11f89b0b15a966f6cd3d3098cfdbcff706923dd0"
+    },
+    {
+      "package": "netifd",
+      "path": "package/network/config/netifd/Makefile",
+      "git_blob_sha1": "d9479102ad9da067b963dcf7d889436e33ae5f8d"
+    }
+  ],
   "output_policy": {
     "rootfs_build_allowed": false,
     "installable_image_allowed": false,
