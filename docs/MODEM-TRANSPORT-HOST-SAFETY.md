@@ -8,6 +8,7 @@ This project does **not** yet provide a rights-cleared CCCI/MIPC/RIL transport, 
 - `expire_local(generation, id)` discards only a local pending slot; it does **not** send a modem abort, cancel a relay or prove that an asynchronous hardware transaction finished. A late reply is rejected by `complete` after local expiry.
 - Wrong-generation operations are rejected. `stop()` invalidates the generation; a subsequent independent `begin()` resets correlation state.
 - Request IDs and length must be actual integers (not booleans); payload and queue bounds remain enforced.
+- Response correlation now rejects non-integer generation, request ID and payload length fields, including Python booleans and integer-equivalent floats. Invalid response fields return `False` without consuming the pending request; invalid generation is a state-transition error. These are host-only negative tests, not validation of a real CCCI/MIPC wire decoder.
 
 ## Limitations and follow-up
 
