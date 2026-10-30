@@ -20,13 +20,16 @@ def tree(eth: str, pcs: str, phy: str = "okay",
             status = "{eth}";
             mac@0 {{ status = "{mac0}"; }};
             mac@1 {{
+                reg = <0x01>;
                 status = "{mac1}";
                 phandle = <0x10>;
             }};
             mdio-bus {{
                 switch@1f {{
+                    reg = <0x1f>;
                     ports {{
                         port@5 {{
+                            reg = <0x05>;
                             ethernet = <0x10>;
                         }};
                     }};
@@ -67,6 +70,26 @@ class CompiledAir6ScopeTests(unittest.TestCase):
         findings = checker.validate(tree("disabled", "disabled"),
                                     tree("okay", "okay", mac1="disabled"))
         self.assertTrue(any("trial: mac@1" in x for x in findings), findings)
+
+    def test_trial_cpu5_wrong_register_is_blocked(self):
+        bad = tree("okay", "okay").replace("reg = <0x05>;", "reg = <0x06>;")
+        findings = checker.validate(tree("disabled", "disabled"), bad)
+        self.assertTrue(any("CPU5 compiled reg mismatch" in x for x in findings), findings)
+
+    def test_trial_switch_wrong_register_is_blocked(self):
+        bad = tree("okay", "okay").replace("reg = <0x1f>;", "reg = <0x1e>;")
+        findings = checker.validate(tree("disabled", "disabled"), bad)
+        self.assertTrue(any("MT7531 switch compiled reg mismatch" in x for x in findings), findings)
+
+    def test_trial_mac1_wrong_register_is_blocked(self):
+        bad = tree("okay", "okay").replace("reg = <0x01>;", "reg = <0x02>;")
+        findings = checker.validate(tree("disabled", "disabled"), bad)
+        self.assertTrue(any("MAC1 compiled reg mismatch" in x for x in findings), findings)
+
+    def test_trial_cpu5_missing_register_is_blocked(self):
+        bad = tree("okay", "okay").replace("reg = <0x05>;", "")
+        findings = checker.validate(tree("disabled", "disabled"), bad)
+        self.assertTrue(any("direct reg cell" in x for x in findings), findings)
 
     def test_trial_cpu5_wrong_mac_phandle_is_blocked(self):
         bad = tree("okay", "okay").replace(
