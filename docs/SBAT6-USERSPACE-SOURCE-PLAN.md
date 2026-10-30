@@ -15,6 +15,7 @@
 | ubus | `package/system/ubus/Makefile` | `716f993b56ff0c256727c9645e13e12256a2410c` |
 | uci | `package/system/uci/Makefile` | `11f89b0b15a966f6cd3d3098cfdbcff706923dd0` |
 | netifd | `package/network/config/netifd/Makefile` | `d9479102ad9da067b963dcf7d889436e33ae5f8d` |
+
 - [Machine-readable source selection](../config/sbat6-userspace-source.json) deliberately rejects rootfs/image generation, signing and device writes, forbids preset root authentication, and retains `rights_review=pending`.
 - Run `python3 tools/build/check_air6_userspace_source.py` for host-only validation. Synthetic negative tests cover floating revisions, malicious feeds, donor substitution, insecure defaults and accidental firmware enablement.
 
