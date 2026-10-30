@@ -11,13 +11,15 @@ checker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(checker)
 
 
-def tree(eth: str, pcs: str, phy: str = "okay") -> str:
+def tree(eth: str, pcs: str, phy: str = "okay",
+         mac0: str = "disabled", mac1: str = "okay") -> str:
     return f'''/dts-v1/;
 / {{
     netsys@15100000 {{
         ethernet@15100000 {{
             status = "{eth}";
-            mac@1 {{ status = "okay"; }};
+            mac@0 {{ status = "{mac0}"; }};
+            mac@1 {{ status = "{mac1}"; }};
         }};
     }};
     syscon@11305000 {{ status = "{pcs}"; }};
@@ -44,9 +46,25 @@ class CompiledAir6ScopeTests(unittest.TestCase):
                                     tree("okay", "okay", "disabled"))
         self.assertTrue(any("trial: SGMII1 PHY" in x for x in findings), findings)
 
+    def test_trial_unreviewed_mac0_enablement_is_blocked(self):
+        findings = checker.validate(tree("disabled", "disabled"),
+                                    tree("okay", "okay", mac0="okay"))
+        self.assertTrue(any("trial: mac@0" in x for x in findings), findings)
+
+    def test_trial_required_mac1_disablement_is_blocked(self):
+        findings = checker.validate(tree("disabled", "disabled"),
+                                    tree("okay", "okay", mac1="disabled"))
+        self.assertTrue(any("trial: mac@1" in x for x in findings), findings)
+
+    def test_trial_missing_mac_child_fails_closed(self):
+        trial = tree("okay", "okay").replace(
+            'mac@0 { status = "disabled"; };', 'unused@0 { status = "disabled"; };')
+        findings = checker.validate(tree("disabled", "disabled"), trial)
+        self.assertTrue(any("expected one mac@0" in x for x in findings), findings)
+
     def test_child_status_cannot_masquerade_as_parent_status(self):
         bad = tree("disabled", "disabled").replace(
-            'status = "disabled";\n            mac@1', '/* removed */\n            mac@1')
+            'status = "disabled";\n            mac@0', '/* removed */\n            mac@0')
         findings = checker.validate(bad, tree("okay", "okay"))
         self.assertTrue(any("missing, duplicated or malformed" in x for x in findings), findings)
 
