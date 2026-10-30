@@ -15,6 +15,17 @@ PACKAGES = ("base-files", "busybox", "procd", "ubus", "uci", "netifd")
 # An arbitrary full-length SHA is not the reviewed source selection.
 # Changing the snapshot requires updating this gate and its tests in a PR.
 REVIEWED_OPENWRT_COMMIT = "5700101d7c85381889d890dc1d3d001d0b4b6446"
+# GitHub's official openwrt/openwrt commit tree was inspected for these
+# six package Makefiles. These are Git blob identities, not license approvals,
+# dependency closure, or an online integrity check of future checkouts.
+REVIEWED_PACKAGE_MAKEFILES = (
+    ("base-files", "package/base-files/Makefile", "910a3daa3fa545453e72423b463c1781078d9e8b"),
+    ("busybox", "package/utils/busybox/Makefile", "a950cfff73a340df24c61353b0a68784fdbc0fb4"),
+    ("procd", "package/system/procd/Makefile", "21868ce6b1e7beb708d6059fefdd113d1128f229"),
+    ("ubus", "package/system/ubus/Makefile", "716f993b56ff0c256727c9645e13e12256a2410c"),
+    ("uci", "package/system/uci/Makefile", "11f89b0b15a966f6cd3d3098cfdbcff706923dd0"),
+    ("netifd", "package/network/config/netifd/Makefile", "d9479102ad9da067b963dcf7d889436e33ae5f8d"),
+)
 
 spec = importlib.util.spec_from_file_location(
     "air6_feedlock", ROOT / "tools/build/verify_feeds_lock.py"
@@ -26,7 +37,7 @@ spec.loader.exec_module(feed_module)
 def validate(plan: dict, feed_text: str) -> list[str]:
     errors: list[str] = []
     required = {"schema", "scope", "target", "architecture", "openwrt",
-                "feeds_path", "packages", "output_policy", "first_boot",
+                "feeds_path", "packages", "package_makefiles", "output_policy", "first_boot",
                 "rights_review"}
     if not isinstance(plan, dict) or set(plan) != required:
         return ["invalid source plan schema"]
@@ -52,6 +63,14 @@ def validate(plan: dict, feed_text: str) -> list[str]:
     if (type(plan["packages"]) is not list
             or tuple(plan["packages"]) != PACKAGES):
         errors.append("package selection must remain exact minimal source-only inventory")
+    records = plan["package_makefiles"]
+    if (type(records) is not list
+            or len(records) != len(REVIEWED_PACKAGE_MAKEFILES)
+            or any(type(item) is not dict
+                   or set(item) != {"package", "path", "git_blob_sha1"}
+                   or (item["package"], item["path"], item["git_blob_sha1"]) != expected
+                   for item, expected in zip(records, REVIEWED_PACKAGE_MAKEFILES))):
+        errors.append("package Makefile provenance must match reviewed upstream blob identities")
     if plan["output_policy"] != {
         "rootfs_build_allowed": False,
         "installable_image_allowed": False,
