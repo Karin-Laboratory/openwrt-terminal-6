@@ -80,10 +80,10 @@ class Air6SourceScopeTests(unittest.TestCase):
 
     def test_reject_new_root_peripheral_in_base_and_trial(self):
         base = self.base.replace(
-            "\\taliases {", '\\trogue@12340000 { status = "okay"; };\\n\\taliases {', 1)
+            "\taliases {", '\trogue@12340000 { status = "okay"; };\n\taliases {', 1)
         trial = self.trial.replace(
             "air6_sgmii_pll: syscon@10014000 {",
-            'rogue@12340000 { status = "okay"; };\\n\\tair6_sgmii_pll: syscon@10014000 {', 1)
+            'rogue@12340000 { status = "okay"; };\n\tair6_sgmii_pll: syscon@10014000 {', 1)
         for changed_base, changed_trial in ((base, self.trial), (self.base, trial)):
             with self.subTest(base=changed_base is base):
                 findings = guard.validate(changed_base, changed_trial)
@@ -91,12 +91,12 @@ class Air6SourceScopeTests(unittest.TestCase):
 
     def test_reject_duplicate_approved_root_child(self):
         base = self.base.replace(
-            "\\taliases {", "\\taliases { };\\n\\taliases {", 1)
+            "\taliases {", "\taliases { };\n\taliases {", 1)
         findings = guard.validate(base, self.trial)
         self.assertTrue(any("duplicate root child" in f for f in findings), findings)
 
     def test_reject_additional_root_override_block(self):
-        trial = self.trial + '\\n/ { rogue@12340000 { status = "okay"; }; };\\n'
+        trial = self.trial + '\n/ { rogue@12340000 { status = "okay"; }; };\n'
         findings = guard.validate(self.base, trial)
         self.assertTrue(any("expected one root block" in f for f in findings), findings)
 
