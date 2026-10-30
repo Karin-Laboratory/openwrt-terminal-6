@@ -56,7 +56,10 @@ class ModemState:
     def data_ready(self, generation: int, *, interface_up: bool, address: bool,
                    route: bool, bidirectional: bool) -> None:
         self._require(generation, Phase.REGISTERED)
-        if not all((interface_up, address, route, bidirectional)):
+        # Truthy integers/strings/objects are not independent dataplane evidence.
+        # Require explicit booleans for each of the four host-only checks.
+        if not all(type(flag) is bool and flag for flag in
+                   (interface_up, address, route, bidirectional)):
             raise TransitionError("data plane unverified")
         self.phase = Phase.DATA_READY
 
