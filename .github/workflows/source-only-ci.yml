@@ -20,8 +20,11 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
       - name: Validate synthetic modem lifecycle
         run: python3 -m unittest discover -s tools/modem -p 'test_*.py' -v
-      - name: Validate independent FE recovery model
-        run: make -C examples/fe-recovery test
+      - name: Validate independent FE recovery model with and without NDEBUG
+        run: |
+          make -C examples/fe-recovery clean test
+          make -C examples/fe-recovery clean test CFLAGS="-O2 -g -Wall -Wextra -Werror -std=c11 -DNDEBUG"
+          make -C examples/fe-recovery clean
       - name: Verify both Ethernet RFC patches against pinned Linux v6.18 source
         shell: bash
         run: |
