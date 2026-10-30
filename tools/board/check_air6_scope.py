@@ -57,7 +57,7 @@ def validate(base: str, trial: str) -> list[str]:
     errors = []
     clean_base, clean_trial = uncomment(base), uncomment(trial)
     for name, source in (("base", clean_base), ("trial", clean_trial)):
-        if re.search(r"(?m)\bbootargs\s*=|/incbin/\s*\(|^\s*memory(?:@[0-9a-fA-F]+)?\s*\{", source):
+        if re.search(r"\bbootargs\s*=|/incbin/\s*\(|\bmemory(?:@[0-9a-fA-F]+)?\s*\{", source):
             errors.append(name + ": unreviewed bootargs, memory or binary embedding")
         if re.search(r"(?i)\b(?:mac-address|local-mac-address|password|imei)\s*=", source):
             errors.append(name + ": per-device or credential property")
