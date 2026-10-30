@@ -56,6 +56,23 @@ class Air6SourceScopeTests(unittest.TestCase):
                         '\n/ { test { data = /incbin/("factory.bin"); }; };\n'):
             self.assertTrue(guard.validate(self.base + payload, self.trial))
 
+    def test_reject_absolute_path_reference_overrides(self):
+        # &{/path} can change an existing SoC node without an &label block.
+        override = '\n&{/soc/mmc@11230000} { status = "okay"; };\n'
+        for extra_base, extra_trial in ((override, ""), ("", override)):
+            with self.subTest(base=bool(extra_base)):
+                findings = guard.validate(self.base + extra_base,
+                                          self.trial + extra_trial)
+                self.assertTrue(any("path-based reference override" in f
+                                    for f in findings), findings)
+
+    def test_reject_nonleading_label_override(self):
+        # The DTS grammar does not require a reference block to begin a line.
+        extra = '\n/ { }; &mmc0 { status = "okay"; };\n'
+        findings = guard.validate(self.base, self.trial + extra)
+        self.assertTrue(any("unexpected or missing references" in f
+                            for f in findings), findings)
+
     def test_reject_duplicate_reference_block(self):
         self.assertTrue(guard.validate(self.base + '\n&eth { status = "disabled"; };\n',
                                        self.trial))
