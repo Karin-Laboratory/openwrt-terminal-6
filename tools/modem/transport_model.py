@@ -78,6 +78,12 @@ class ModemState:
 
     def complete(self, generation: int, request_id: int, size: int) -> bool:
         self._current(generation)
+        # Python bool and float compare equal to integers (True == 1, 1.0 == 1).
+        # Untrusted response fields must not alias an outstanding request.
+        if (type(request_id) is not int or type(size) is not int
+                or not (0 < request_id <= 0xFFFFFFFF)
+                or not (0 <= size <= self.max_payload)):
+            return False
         expected = self.pending.get(request_id)
         if expected is None or expected != size:
             return False
@@ -109,8 +115,10 @@ class ModemState:
         self.last_error = ""
 
     def _current(self, generation: int) -> None:
-        if generation != self.generation:
-            raise TransitionError("stale generation")
+        # Avoid True == 1 and 1.0 == 1 bypassing generation correlation.
+        if (type(generation) is not int or generation <= 0
+                or generation != self.generation):
+            raise TransitionError("stale or invalid generation")
 
     def _require(self, generation: int, phase: Phase) -> None:
         self._current(generation)
