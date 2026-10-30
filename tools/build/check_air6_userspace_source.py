@@ -2,9 +2,13 @@
 # SPDX-License-Identifier: MIT
 """Fail-closed Air6 userland source-selection contract. Never builds/installs."""
 from pathlib import Path
+import argparse
+import hashlib
 import importlib.util
 import json
+import os
 import re
+import stat
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -86,7 +90,57 @@ def validate(plan: dict, feed_text: str) -> list[str]:
         errors.append("rights clearance cannot be inferred from source selection")
     return errors
 
+
+def verify_local_makefiles(source_tree: Path, expected: tuple[tuple[str, str, str], ...]) -> list[str]:
+    """Verify actual Makefile bytes in a local tree; never fetch or execute source."""
+    problems = []
+    max_size = 1024 * 1024
+    # The POSIX no-follow operations reject symlinks at every traversed level.
+    # Unsupported platforms must fail closed, not silently follow links.
+    if not (hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")):
+        return ["local byte verification requires POSIX no-follow file operations"]
+    for package, path, digest in expected:
+        fd = None
+        try:
+            fd = os.open(source_tree, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            parts = path.split("/")
+            for part in parts[:-1]:
+                next_fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+                os.close(fd)
+                fd = next_fd
+            leaf_fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
+            try:
+                meta = os.fstat(leaf_fd)
+                if not stat.S_ISREG(meta.st_mode) or meta.st_size > max_size:
+                    raise ValueError("not a bounded regular file")
+                chunks = []
+                total = 0
+                while True:
+                    part = os.read(leaf_fd, min(65536, max_size + 1 - total))
+                    if not part:
+                        break
+                    total += len(part)
+                    if total > max_size:
+                        raise ValueError("oversized source")
+                    chunks.append(part)
+                data = b"".join(chunks)
+                actual = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+                if actual != digest:
+                    problems.append(f"{package}: upstream Makefile bytes differ from reviewed Git blob")
+            finally:
+                os.close(leaf_fd)
+        except (OSError, ValueError):
+            problems.append(f"{package}: upstream Makefile unavailable or unsafe")
+        finally:
+            if fd is not None:
+                os.close(fd)
+    return problems
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Air6 source-only userspace inspection")
+    parser.add_argument("--source-tree", type=Path,
+                        help="optional local OpenWrt tree; read six Makefiles only, no Git/network/build")
+    args = parser.parse_args()
     try:
         if (PLAN.is_symlink() or FEEDS.is_symlink()
                 or PLAN.stat().st_size > 16384 or FEEDS.stat().st_size > 16384):
@@ -101,6 +155,13 @@ def main() -> int:
         print("AIR6_USERSPACE_SOURCE_PLAN_BLOCKED:", finding)
     if findings:
         return 1
+    if args.source_tree is not None:
+        byte_findings = verify_local_makefiles(args.source_tree, REVIEWED_PACKAGE_MAKEFILES)
+        for finding in byte_findings:
+            print("AIR6_USERSPACE_BYTES_BLOCKED:", finding)
+        if byte_findings:
+            return 1
+        print("AIR6_USERSPACE_BYTES_PASS (six local Makefiles only; NOT full commit verification)")
     print("AIR6_USERSPACE_SOURCE_PLAN_PASS (selection only; NO ROOTFS BUILD)")
     return 0
 
