@@ -142,9 +142,10 @@ def history_findings(findings: set) -> int:
                 continue
             scan(path, git("cat-file", "blob", sha), findings)
             scanned += 1
-    # Annotated tags may contain their own sensitive metadata even when the
-    # commits and tree contents are clean.
-    for row in git("for-each-ref", "--format=%(objectname) %(objecttype)", "refs/tags").splitlines():
+    # Annotated tag objects may be pointed to by ANY Git ref namespace,
+    # not just refs/tags (e.g. a custom ref retained after tag deletion).
+    # Their messages are public reachable metadata outside commit trees.
+    for row in git("for-each-ref", "--format=%(objectname) %(objecttype)", "refs").splitlines():
         ref_sha, sep, ref_type = row.partition(b" ")
         if not sep:
             raise ValueError("malformed tag reference")
