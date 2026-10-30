@@ -50,3 +50,7 @@ The new independent script `scripts/fetch-pinned-openwrt-donor.sh` references a 
 ### Donor source safety correction (2026-10-27)
 
 The donor contains Wi-Fi EEPROM/firmware binary paths and a multi-megabyte communications firmware image of unclear independent reuse/redistribution rights. The source-inspection script was restricted to four independently blob-pinned text files and now **never checks out the donor tree**. All binary-bearing paths remain excluded. Full OpenWrt source acquisition and build require a separate, explicitly vetted rights-safe process.
+
+## Rights review execution queue (2026-10-30)
+
+The [dated rights-review audit queue](RIGHTS-REVIEW-20261030.md) groups all tracked source/test/build files by declared origin and sets concrete evidence requirements. It does **not** approve their redistribution rights or relax the existing source and firmware gates.
