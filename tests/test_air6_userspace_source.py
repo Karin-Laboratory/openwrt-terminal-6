@@ -2,9 +2,12 @@
 """Host-only regression for pinned non-installable Air6 source selection."""
 from pathlib import Path
 import copy
+import hashlib
 import importlib.util
 import json
+import os
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +70,56 @@ class Air6UserspaceSourceTests(unittest.TestCase):
                 else:
                     p["package_makefiles"][0] = None
                 self.assertTrue(any("Makefile provenance" in e for e in self.errors(p)))
+
+    def local_fixture(self, root):
+        path = root / "package" / "base-files" / "Makefile"
+        path.parent.mkdir(parents=True)
+        data = b"synthetic Makefile fixture\n"
+        path.write_bytes(data)
+        digest = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+        return path, (("base-files", "package/base-files/Makefile", digest),)
+
+    def test_local_makefile_bytes_match_and_tamper_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path, records = self.local_fixture(root)
+            self.assertEqual(checker.verify_local_makefiles(root, records), [])
+            path.write_bytes(b"tampered fixture\n")
+            self.assertIn("bytes differ", str(checker.verify_local_makefiles(root, records)))
+
+    def test_local_makefile_missing_and_symlink_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path, records = self.local_fixture(root)
+            path.unlink()
+            self.assertIn("unavailable or unsafe", str(checker.verify_local_makefiles(root, records)))
+            target = root / "unreviewed"
+            target.write_bytes(b"unreviewed source")
+            path.symlink_to(target)
+            self.assertIn("unavailable or unsafe", str(checker.verify_local_makefiles(root, records)))
+
+    def test_local_makefile_symlinked_parent_and_oversize_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path, records = self.local_fixture(root)
+            path.write_bytes(b"x" * (1024 * 1024 + 1))
+            self.assertIn("unavailable or unsafe", str(checker.verify_local_makefiles(root, records)))
+            path.unlink()
+            original = root / "package" / "base-files"
+            relocated = root / "relocated"
+            original.rename(relocated)
+            original.symlink_to(relocated, target_is_directory=True)
+            self.assertIn("unavailable or unsafe", str(checker.verify_local_makefiles(root, records)))
+
+    def test_local_makefile_nonregular_fifo_is_rejected_without_blocking(self):
+        if not hasattr(os, "mkfifo"):
+            self.skipTest("POSIX only")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path, records = self.local_fixture(root)
+            path.unlink()
+            os.mkfifo(path)
+            self.assertIn("unavailable or unsafe", str(checker.verify_local_makefiles(root, records)))
 
     def test_reject_floating_feed_or_source_link(self):
         self.assertTrue(self.errors(feeds=self.feeds.replace(
