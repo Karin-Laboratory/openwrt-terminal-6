@@ -86,7 +86,7 @@ class CompiledAir6ScopeTests(unittest.TestCase):
 
     def test_trial_cpu5_duplicate_ethernet_reference_is_blocked(self):
         bad = tree("okay", "okay").replace(
-            "ethernet = <0x10>;", "ethernet = <0x10>;\\n                            ethernet = <0x10>;")
+            "ethernet = <0x10>;", "ethernet = <0x10>;\n                            ethernet = <0x10>;")
         findings = checker.validate(tree("disabled", "disabled"), bad)
         self.assertTrue(any("direct ethernet cell" in x for x in findings), findings)
 
