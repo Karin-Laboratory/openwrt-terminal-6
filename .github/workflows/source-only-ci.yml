@@ -58,6 +58,8 @@ jobs:
           bash scripts/apply-public-rfc-series.sh "$tmp/linux"
       - name: Compile disabled SGMII overlay with pinned Linux host dtc
         run: bash scripts/verify-disabled-sgmii-dtc.sh
+      - name: Reject unreviewed Air6 peripheral enablement
+        run: python3 tools/board/check_air6_scope.py
       - name: Compile independent Air6 board DTS with pinned SoC source (no firmware)
         run: bash scripts/verify-air6-board-dtc.sh
       - name: Reject unpinned or untrusted OpenWrt feeds
