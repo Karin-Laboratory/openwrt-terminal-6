@@ -63,6 +63,33 @@ def direct_cell(body: str, name: str) -> int:
     return values[0]
 
 
+
+def direct_property(body: str, name: str) -> str:
+    """Return a unique direct, one-line property in canonical DTC output."""
+    depth = 0
+    found = []
+    for line in body.splitlines():
+        if depth == 0 and re.match(r"\s*" + re.escape(name) + r"(?:\s*[=;])", line):
+            found.append(line.strip())
+        depth += line.count("{") - line.count("}")
+        if depth < 0:
+            raise ValueError("unbalanced node body")
+    if depth or len(found) != 1:
+        raise ValueError(f"missing or duplicated direct {name} property")
+    return found[0]
+
+
+def require_fixed_link(body: str, label: str) -> None:
+    """Guard the observed 2500base-x CPU5/MAC1 internal link contract."""
+    if direct_property(body, "phy-mode") != 'phy-mode = "2500base-x";':
+        raise ValueError(f"{label} unexpected phy-mode")
+    fixed = node(body, "fixed-link")
+    if direct_cell(fixed, "speed") != 2500:
+        raise ValueError(f"{label} fixed-link speed mismatch")
+    if direct_property(fixed, "full-duplex") != "full-duplex;":
+        raise ValueError(f"{label} fixed-link must be full-duplex")
+
+
 def validate(base: str, trial: str) -> list[str]:
     errors = []
     for variant, tree, expected in (("base", base, "disabled"),
@@ -102,6 +129,9 @@ def validate(base: str, trial: str) -> list[str]:
                         )
                 if direct_cell(cpu5, "ethernet") != direct_cell(mac1, "phandle"):
                     errors.append("trial: CPU5 ethernet phandle does not reference MAC1")
+                # Check both ends of the observed internal 2.5G fixed link.
+                require_fixed_link(mac1, "MAC1")
+                require_fixed_link(cpu5, "CPU5")
                 if status(node(tree, "phy@11e60000")) != "okay":
                     errors.append("trial: SGMII1 PHY must be enabled")
         except ValueError as exc:
