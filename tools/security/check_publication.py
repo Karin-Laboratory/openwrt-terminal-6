@@ -41,8 +41,8 @@ RULES = {
     "embedded boot command line": re.compile(
         rb'CONFIG_CMDLINE\s*=\s*"[^"\n]{15,}"'
     ),
-    "potential embedded credential": re.compile(
-        rb"(?m)^(?:export\s+)?(?:API_KEY|ACCESS_TOKEN|PASSWORD|PASSWD|CLIENT_SECRET|PRIVATE_KEY)\s*=\s*['\"]?[^'\"\s#]{8,}"
+    # Indented assignments can carry secrets too. Horizontal whitespace\n    # prevents a preceding newline from acting as an export prefix.\n    "potential embedded credential": re.compile(
+        rb"(?m)^[ \t]*(?:export[ \t]+)?(?:API_KEY|ACCESS_TOKEN|PASSWORD|PASSWD|CLIENT_SECRET|PRIVATE_KEY)[ \t]*=[ \t]*['\"]?[^'\"\s#]{8,}"
     ),
 }
 
