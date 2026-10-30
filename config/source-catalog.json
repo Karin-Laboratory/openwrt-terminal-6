@@ -400,6 +400,24 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/board/check_air6_scope.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "83f69dcf3114088b0f89d842a3fbd25f498696ce",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_source_scope.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "6a6c1acd4a1efdeb1d5a5f9e5ff9497aa7f978ea",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/build/check_air6_userspace_source.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
