@@ -359,7 +359,7 @@
       "component": "board-dt",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "928c0574d97b96915fb0819a630d4c1c1b43789a",
+      "git_blob_sha1": "2011fb62c7f4ea2ac5622f1a19965a3c855390d1",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -432,6 +432,24 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "4ec8ff9400966e156afb9faf660aa8c54d0861c3",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/board/check_air6_compiled_scope.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "9d8b2258a7d0772d51c144842e8a4f7b05a2b853",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_compiled_scope.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "920919a72eec99680fca1ed35f9104bd82a29cb4",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
