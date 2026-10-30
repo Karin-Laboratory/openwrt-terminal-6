@@ -98,7 +98,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "caf770b69842fc5af01aae45f108a2b81f756d44",
+      "git_blob_sha1": "5dc93dbec7085bc37ab2533c2a08c594363849df",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -233,7 +233,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "fa95bc3baf7dd3decdb56736eca490dccfe1c2f4",
+      "git_blob_sha1": "9345ad1752c6f22a04eaab01dd01440755c9e0e2",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
