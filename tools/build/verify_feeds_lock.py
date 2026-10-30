@@ -12,6 +12,15 @@ import sys
 
 FEED_NAMES = {"packages", "luci", "routing", "telephony", "video"}
 FEED_KINDS = {"src-git", "src-git-full"}
+# Reviewed *selection*, not proof of canonical origin reachability or license.
+# A syntactically valid 40-character SHA is not sufficient to change feeds.
+REVIEWED_COMMITS = {
+    "packages": "11396c3434272b73294d29aa9d86497b25cf33da",
+    "luci": "a8c110bed82375b69eb3881b2e54e617520e8c7d",
+    "routing": "4b9891b9136259f93294a424507ed24c5e8c1cbd",
+    "telephony": "5d68d53c160a325ea9d03fce393e051573bcc736",
+    "video": "644a66261288b4a95dbc6e46fe805d33cb9f71d9",
+}
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 NAME = re.compile(r"^[a-z][a-z0-9_-]*$")
 
@@ -40,6 +49,9 @@ def inspect(text: str):
         url, delimiter, revision = spec.rpartition("^")
         if not delimiter or not COMMIT.fullmatch(revision):
             errors.append(f"line {lineno}: feed must have exact 40-char Git SHA")
+            continue
+        if revision != REVIEWED_COMMITS[name]:
+            errors.append(f"line {lineno}: feed revision differs from reviewed exact commit")
             continue
         parsed = urlsplit(url)
         if (parsed.scheme != "https" or parsed.username or parsed.password

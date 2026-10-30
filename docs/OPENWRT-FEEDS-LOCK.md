@@ -14,7 +14,7 @@ This project now retains [config/feeds.lock](../config/feeds.lock), with a propo
 | telephony | [openwrt/telephony](https://github.com/openwrt/telephony) | `5d68d53c160a325ea9d03fce393e051573bcc736` |
 | video | [openwrt/video](https://github.com/openwrt/video) | `644a66261288b4a95dbc6e46fe805d33cb9f71d9` |
 
-The [feed-lock verifier](../tools/build/verify_feeds_lock.py) rejects missing or non-40-character revisions, insecure/credentialed URLs, unknown hosts and arbitrary local feeds, unexpected feed names and duplicates. Run it read-only:
+The [feed-lock verifier](../tools/build/verify_feeds_lock.py) rejects missing or non-40-character revisions, **any full-length commit substituted for one of the five reviewed snapshot IDs**, insecure/credentialed URLs, unknown hosts and arbitrary local feeds, unexpected feed names and duplicates. A different feed commit requires an explicit review and matching update to the verifier and its regression tests; passing this source-only check is not a license or origin-authenticity finding. Run it read-only:
 
 `python3 tools/build/verify_feeds_lock.py config/feeds.lock`
 
