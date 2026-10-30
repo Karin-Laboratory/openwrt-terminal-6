@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "scope": "SOURCE_INSPECTION_ONLY",
+  "target": "softbank-air-terminal-6",
+  "architecture": "aarch64",
+  "openwrt": {
+    "url": "https://github.com/openwrt/openwrt.git",
+    "commit": "5700101d7c85381889d890dc1d3d001d0b4b6446",
+    "selection": "upstream-main-snapshot-2026-10-30-not-tested-for-sbat6"
+  },
+  "feeds_path": "config/feeds.lock",
+  "packages": [
+    "base-files",
+    "busybox",
+    "procd",
+    "ubus",
+    "uci",
+    "netifd"
+  ],
+  "output_policy": {
+    "rootfs_build_allowed": false,
+    "installable_image_allowed": false,
+    "signing_allowed": false,
+    "device_write_allowed": false
+  },
+  "first_boot": {
+    "preset_root_password": null,
+    "remote_admin_preconfigured": false
+  },
+  "rights_review": "pending"
+}

@@ -64,6 +64,8 @@ jobs:
         run: bash scripts/verify-air6-board-dtc.sh
       - name: Reject unpinned or untrusted OpenWrt feeds
         run: python3 tools/build/verify_feeds_lock.py config/feeds.lock
+      - name: Validate pinned noninstallable Air6 userland selection
+        run: python3 tools/build/check_air6_userspace_source.py
       - name: Verify pinned source-only build contract
         run: python3 tools/build/verify_source_catalog.py
       - name: Verify public CI trust policy
