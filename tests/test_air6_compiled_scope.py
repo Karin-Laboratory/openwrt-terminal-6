@@ -64,7 +64,7 @@ class CompiledAir6ScopeTests(unittest.TestCase):
 
     def test_child_status_cannot_masquerade_as_parent_status(self):
         bad = tree("disabled", "disabled").replace(
-            'status = "disabled";\n            mac@1', '/* removed */\n            mac@1')
+            'status = "disabled";\n            mac@0', '/* removed */\n            mac@0')
         findings = checker.validate(bad, tree("okay", "okay"))
         self.assertTrue(any("missing, duplicated or malformed" in x for x in findings), findings)
 
