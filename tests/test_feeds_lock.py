@@ -54,7 +54,7 @@ class FeedLockTests(unittest.TestCase):
         self.assertTrue(mod.inspect(TEXT.replace(
             "https://github.com/openwrt/video.git",
             "https://example.invalid/openwrt/video.git")))
-        self.assertTrue(mod.inspect(TEXT + f"\nsrc-git extra https://git.openwrt.org/feed/extra.git^{"a" * 40}"))
+        self.assertTrue(mod.inspect(TEXT + "\nsrc-git extra https://git.openwrt.org/feed/extra.git^" + "a" * 40))
 
     def test_unreviewed_full_length_feed_commits_are_rejected(self):
         for name, original in PINS.items():
