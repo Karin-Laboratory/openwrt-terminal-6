@@ -146,6 +146,31 @@ class HistoryScannerTests(unittest.TestCase):
                             category == "potential embedded credential"
                             for path, category in issues), issues)
 
+    def test_sensitive_filename_in_history_is_detected_without_echo(self):
+        fake_token = "ghp_" + "A" * 35
+        (self.root / (fake_token + ".txt")).write_text("harmless\\n")
+        self.commit("synthetic filename metadata")
+        issues = set()
+        gate.history_findings(issues)
+        self.assertTrue(any(path.startswith("@path/") and
+                            category == "path metadata: cloud access token"
+                            for path, category in issues), issues)
+        self.assertNotIn(fake_token, repr(issues))
+
+    def test_sensitive_current_path_retains_artifact_type_check(self):
+        fake_name = "PASS" + "WORD=synthetic_value_not_real.img"
+        (self.root / fake_name).write_bytes(b"harmless\\n")
+        self.commit("synthetic filename and restricted extension")
+        issues = set()
+        gate.current_findings(issues)
+        self.assertTrue(any(path.startswith("@path/") and
+                            category == "path metadata: potential embedded credential"
+                            for path, category in issues), issues)
+        self.assertTrue(any(path.startswith("@path/") and
+                            category == "restricted artifact filename/type"
+                            for path, category in issues), issues)
+        self.assertNotIn(fake_name, repr(issues))
+
     def test_benign_history_stays_clean(self):
         (self.root / "first.txt").write_text("hello\n")
         self.commit("first safe document")
