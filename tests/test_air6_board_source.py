@@ -51,7 +51,7 @@ class BoardDtsSourceTests(unittest.TestCase):
             "gpio/gpio.h": "b5d531237448241f1870e7d8d4cf1a6411877562",
         }
         pinned = dict(re.findall(
-            r'"(interrupt-controller/(?:arm-gic|irq)\\.h|gpio/gpio\\.h):([0-9a-f]{40})"',
+            r'"(interrupt-controller/(?:arm-gic|irq)\.h|gpio/gpio\.h):([0-9a-f]{40})"',
             helper,
         ))
         self.assertEqual(pinned, expected)
