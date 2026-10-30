@@ -45,6 +45,29 @@ class Air6UserspaceSourceTests(unittest.TestCase):
         p["openwrt"]["url"] = "https://github.com/13179415360/openwrt-mt6990-lg6851f"
         self.assertTrue(self.errors(p))
 
+    def test_pin_six_official_upstream_package_makefiles(self):
+        self.assertEqual(len(self.plan["package_makefiles"]), 6)
+        self.assertEqual(self.errors(), [])
+        for key, replacement in (
+            ("package", "other-package"),
+            ("path", "package/unreviewed/Makefile"),
+            ("git_blob_sha1", "a" * 40),
+        ):
+            with self.subTest(field=key):
+                p = copy.deepcopy(self.plan)
+                p["package_makefiles"][0][key] = replacement
+                self.assertTrue(any("Makefile provenance" in e for e in self.errors(p)))
+        for mutation in ("extra", "missing", "nonmapping"):
+            with self.subTest(mutation=mutation):
+                p = copy.deepcopy(self.plan)
+                if mutation == "extra":
+                    p["package_makefiles"].append(copy.deepcopy(p["package_makefiles"][0]))
+                elif mutation == "missing":
+                    p["package_makefiles"].pop()
+                else:
+                    p["package_makefiles"][0] = None
+                self.assertTrue(any("Makefile provenance" in e for e in self.errors(p)))
+
     def test_reject_floating_feed_or_source_link(self):
         self.assertTrue(self.errors(feeds=self.feeds.replace(
             "^11396c3434272b73294d29aa9d86497b25cf33da", "")))
