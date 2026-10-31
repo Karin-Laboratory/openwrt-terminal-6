@@ -30,7 +30,8 @@ test "$(git -C "$tmp/musl" rev-parse HEAD)" = \
 }
 (
   cd "$tmp/musl"
-  ./configure --prefix="$tmp/musl-prefix" --disable-shared
+  ./configure --prefix="$tmp/musl-prefix" \
+    --syslibdir="$tmp/musl-prefix/lib" --disable-shared
   timeout 360s make -j2
   timeout 180s make install
 )
