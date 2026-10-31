@@ -76,3 +76,21 @@ jobs:
         run: |
           echo "Source checks do not scan GitHub issue/PR text, Actions logs, prior archives, third-party rights or firmware safety."
           echo "A successful run is NOT authorization to publish firmware."
+
+  arm64-initramfs:
+    name: Build unsigned ARM64 diagnostic initramfs
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build ephemeral native AArch64 PID1 initramfs (not firmware)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          python3 scripts/build-minimal-arm64-initramfs.py "$tmp/staging"
+          test -s "$tmp/staging/initramfs.cpio.gz"
+          test -s "$tmp/staging/manifest.json"
