@@ -134,7 +134,16 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "f910ef65e0b83f061e9a39f6c3a0b452aa35d788",
+      "git_blob_sha1": "0937f9b2ed2427ed35243e3c203359f8c95aaf24",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/build-arm64-musl-procd-init.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "66c857a4550b9c28c4e005335ff32d94fe364756",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
