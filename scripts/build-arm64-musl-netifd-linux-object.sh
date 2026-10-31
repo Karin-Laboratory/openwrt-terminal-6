@@ -109,13 +109,17 @@ core_sources=(bridge.c vlan.c vlandev.c proto-static.c)
 mkdir "$deps/netifd-core-obj"
 for file in "${core_sources[@]}"; do
   test -f "$netifd/$file"
-  # The pinned bridge.c uses assert() without including <assert.h>.
-  # Force the standard declaration into this compile-only TU; do not
-  # modify the pinned upstream source or disable implicit-decl checking.
-  extra_headers=()
-  if [[ "$file" == bridge.c ]]; then extra_headers=(-include assert.h); fi
+  # Pinned bridge.c includes assert.h before the netifd headers, but
+  # the resulting musl build still has assert() undefined at the call site.
+  # Add a second standard-header include AFTER netifd's includes in the
+  # ephemeral checkout only, preserving the pinned Git revision and
+  # retaining -Werror=implicit-function-declaration.
+  if [[ "$file" == bridge.c ]]; then
+    grep -Fxq '#include "ubus.h"' "$netifd/bridge.c"
+    sed -i '/^#include "ubus.h"$/a #include <assert.h>' "$netifd/bridge.c"
+  fi
   timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
-    -Werror=implicit-function-declaration "${extra_headers[@]}" \
+    -Werror=implicit-function-declaration \
     -I "$ud" -I "$deps" -I "$deps/libubox" -I "$deps/ubus" -I "$deps/uci" \
     -I "$nl/include" -I "$netifd" \
     -c "$netifd/$file" -o "$deps/netifd-core-obj/${file%.c}.o"
