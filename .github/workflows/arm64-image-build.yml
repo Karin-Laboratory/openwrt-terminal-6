@@ -7,6 +7,8 @@ on:
       - scripts/build-minimal-arm64-initramfs.py
       - scripts/build-arm64-busybox-smoke.sh
       - scripts/build-arm64-musl-busybox-stage.sh
+      - scripts/build-arm64-musl-libubox-core.sh
+      - scripts/build-arm64-musl-netifd-linux-object.sh
       - scripts/package-arm64-busybox-initramfs.py
       - scripts/package-arm64-busybox-rootfs.py
       - scripts/package-arm64-procd-stage-initramfs.py
@@ -21,6 +23,8 @@ on:
       - scripts/build-minimal-arm64-initramfs.py
       - scripts/build-arm64-busybox-smoke.sh
       - scripts/build-arm64-musl-busybox-stage.sh
+      - scripts/build-arm64-musl-libubox-core.sh
+      - scripts/build-arm64-musl-netifd-linux-object.sh
       - scripts/package-arm64-busybox-initramfs.py
       - scripts/package-arm64-busybox-rootfs.py
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
@@ -48,13 +52,14 @@ jobs:
           tmp="$(mktemp -d)"
           trap 'rm -rf -- "$tmp"' EXIT
           # Compile the real pinned OpenWrt procd init and service manager
-          # alongside BusyBox, ubusd, ubus and UCI using one native musl ABI.
+          # alongside BusyBox, ubusd, ubus, UCI and netifd using one native musl ABI.
           # Convert their verified noninstallable rootfs stage into newc.
           # No device/login/network configuration, upload or release.
           mkdir -p "$tmp/ramfs"
           SBAT6_MUSL_SERVICES_ROOTFS_OUTPUT="$tmp/ramfs/services.tar.gz" \
           SBAT6_MUSL_SERVICES_MANIFEST_OUTPUT="$tmp/ramfs/services.json" \
-          SBAT6_BUILD_ROOTFS_SERVICES=1 SBAT6_BUILD_PROCD_SERVICE=1 \
+          SBAT6_BUILD_ROOTFS_SERVICES=1 SBAT6_BUILD_NETIFD_LINUX_OBJECT=1 \
+          SBAT6_BUILD_PROCD_SERVICE=1 \
           SBAT6_BUILD_PROCD_INIT=1 SBAT6_BUILD_UCI=1 SBAT6_BUILD_UBUSD=1 \
           SBAT6_BUILD_UBUS_CORE=1 SBAT6_BUILD_LIBUBOX_CORE=1 \
             bash scripts/build-arm64-musl-busybox-stage.sh
@@ -69,6 +74,7 @@ jobs:
           assert manifest["scope"] == "NONINSTALLABLE_AIR6_PROCD_STAGE_EMBEDDED_INITRAMFS"
           assert manifest["rights_review"] == "pending"
           assert manifest["init"] == "symlink-to-real-upstream-procd-init-ELF"
+          assert "sbin/netifd" in manifest["files_sha256"]
           PY
           test -s "$tmp/ramfs/initramfs.cpio.gz"
           test -s "$tmp/ramfs/manifest.json"
@@ -199,7 +205,7 @@ jobs:
           sha256sum arch/arm64/boot/Image "$tmp/ramfs/initramfs.cpio.gz"
           wc -c arch/arm64/boot/Image "$tmp/ramfs/initramfs.cpio.gz"
           echo 'UPSTREAM_ARM64_IMAGE_WITH_PID1_BUILD_PASS'
-          echo 'SBAT6_PROCD_INIT_STAGE_EMBEDDED_IMAGE_PASS (native musl-static, no procd runtime/boot)'
+          echo 'SBAT6_PROCD_NETIFD_STAGE_EMBEDDED_IMAGE_PASS (native musl-static, no daemon runtime/boot)'
 
           # Stage only three byte-pinned, public GPL-identified MT6990 DTS
           # inputs already used by the source-only DTC preflight. This is
@@ -264,4 +270,4 @@ jobs:
           wc -c arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6*.dtb
           echo 'UPSTREAM_KERNEL_TREE_AIR6_DTBS_BUILD_PASS'
           echo 'LIMIT: MT6990 SoC DTSI provenance/rights and matching drivers remain unverified; no dtbs_check or device boot.'
-          echo 'LIMIT: Image contains pinned native musl-static procd init/service stage; no /etc/preinit, netifd, wpad, OpenWrt toolchain, boot or AP evidence.'
+          echo 'LIMIT: Image contains pinned native musl-static procd init/service stage; no /etc/preinit, netifd runtime, wpad, OpenWrt toolchain, boot or AP evidence.'
