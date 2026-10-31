@@ -193,7 +193,22 @@ if readelf -l "$deps/netifd-daemon" | grep -q INTERP; then
   echo 'Unexpected dynamic interpreter in netifd daemon' >&2
   exit 1
 fi
-nm --defined-only "$deps/netifd-daemon" | grep -Eq ' [TW] main$'
+nm --defined-only "$deps/netifd-daemon" | grep -Eq ' [TW] main
+echo 'SBAT6_MUSL_NETIFD_REAL_DAEMON_STATIC_LINK_PASS'
+echo 'LIMIT: no daemon execution, procd service registration, rootfs AP, hardware boot or rights approval.'
+
+# Optional handoff to the caller's ephemeral, noninstallable rootfs stage.
+# The compiled executable is not executed, uploaded or deployed.
+if [[ -n "${SBAT6_MUSL_NETIFD_OUTPUT:-}" ]]; then
+  [[ "$SBAT6_MUSL_NETIFD_OUTPUT" == /* &&
+     ! -e "$SBAT6_MUSL_NETIFD_OUTPUT" &&
+     ! -L "$SBAT6_MUSL_NETIFD_OUTPUT" ]] || {
+    echo 'Unsafe netifd staging output' >&2; exit 2;
+  }
+  cp -- "$deps/netifd-daemon" "$SBAT6_MUSL_NETIFD_OUTPUT"
+  chmod 0600 "$SBAT6_MUSL_NETIFD_OUTPUT"
+  cmp "$deps/netifd-daemon" "$SBAT6_MUSL_NETIFD_OUTPUT"
+fi
 sha256sum "$deps/netifd-daemon"
 echo 'SBAT6_MUSL_NETIFD_REAL_DAEMON_STATIC_LINK_PASS'
 echo 'LIMIT: no daemon execution, procd service registration, rootfs AP, hardware boot or rights approval.'
