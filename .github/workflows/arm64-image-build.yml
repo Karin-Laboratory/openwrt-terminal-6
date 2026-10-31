@@ -27,6 +27,7 @@ on:
       - scripts/build-arm64-musl-netifd-linux-object.sh
       - scripts/package-arm64-busybox-initramfs.py
       - scripts/package-arm64-busybox-rootfs.py
+      - scripts/package-arm64-procd-stage-initramfs.py
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
   workflow_dispatch:
 permissions:
@@ -205,6 +206,7 @@ jobs:
           sha256sum arch/arm64/boot/Image "$tmp/ramfs/initramfs.cpio.gz"
           wc -c arch/arm64/boot/Image "$tmp/ramfs/initramfs.cpio.gz"
           echo 'UPSTREAM_ARM64_IMAGE_WITH_PID1_BUILD_PASS'
+          echo 'SBAT6_PROCD_INIT_STAGE_EMBEDDED_IMAGE_PASS (native musl-static, no procd runtime/boot)'
           echo 'SBAT6_PROCD_NETIFD_STAGE_EMBEDDED_IMAGE_PASS (native musl-static, no daemon runtime/boot)'
 
           # Stage only three byte-pinned, public GPL-identified MT6990 DTS
