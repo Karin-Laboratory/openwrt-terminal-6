@@ -57,6 +57,53 @@ if readelf -l "$deps/nl-link-smoke" | grep -q INTERP; then
 fi
 echo 'SBAT6_MUSL_LIBNL_TINY_REAL_OBJECTS_STATIC_LINK_PASS'
 
+# netifd uses the separate libudebug API, not libubox's ring-buffer
+# udebug.h. Build both upstream libudebug C objects and prefer its header.
+ud="$deps/udebug"
+git init --quiet "$ud"
+git -C "$ud" remote add origin https://github.com/openwrt/udebug.git
+ud_rev=6726e98ad69402e79b6d0b305012ace857ca0786
+timeout 180s git -C "$ud" -c protocol.version=2 fetch --quiet --depth 1 origin "$ud_rev"
+test "$(git -C "$ud" rev-parse FETCH_HEAD)" = "$ud_rev"
+git -C "$ud" checkout --quiet --detach FETCH_HEAD
+test "$(git -C "$ud" rev-parse HEAD)" = "$ud_rev"
+mkdir "$deps/ud-obj"
+for file in lib.c lib-pcap.c; do
+  test -f "$ud/$file"
+  timeout 90s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
+    -Werror=implicit-function-declaration \
+    -I "$deps" -I "$deps/ubus" -I "$ud" \
+    -c "$ud/$file" -o "$deps/ud-obj/${file%.c}.o"
+done
+ar rcs "$deps/libudebug.a" "$deps/ud-obj/"*.o
+test "$(ar t "$deps/libudebug.a" | wc -l)" -eq 2
+nm --defined-only "$deps/libudebug.a" | grep -Eq ' [TW] udebug_netlink_msg
+# This is the first netifd C object; the full daemon still requires ucode,
+# libudebug and the remaining netifd sources before it can be linked.
+netifd="$deps/netifd"
+git init --quiet "$netifd"
+git -C "$netifd" remote add origin https://github.com/openwrt/netifd.git
+netifd_rev=a1e39a458f9601100ee6bf91b0d6800688cf6a5b
+timeout 180s git -C "$netifd" -c protocol.version=2 fetch --quiet --depth 1 origin "$netifd_rev"
+test "$(git -C "$netifd" rev-parse FETCH_HEAD)" = "$netifd_rev"
+git -C "$netifd" checkout --quiet --detach FETCH_HEAD
+test "$(git -C "$netifd" rev-parse HEAD)" = "$netifd_rev"
+# Upstream generates this header from the active compiler's Linux UAPI.
+sh "$netifd/make_ethtool_modes_h.sh" "$cc" > "$deps/ethtool-modes.h"
+test -s "$deps/ethtool-modes.h"
+timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
+  -Werror=implicit-function-declaration \
+  -I "$ud" -I "$deps" -I "$deps/libubox" -I "$deps/ubus" -I "$deps/uci" \
+  -I "$nl/include" -I "$netifd" \
+  -c "$netifd/system-linux.c" -o "$deps/netifd-system-linux.o"
+test -s "$deps/netifd-system-linux.o"
+nm --defined-only "$deps/netifd-system-linux.o" | grep -Eq ' [TW] system_init$'
+sha256sum "$deps/libnl-tiny.a" "$deps/libudebug.a" "$deps/netifd-system-linux.o"
+echo 'SBAT6_MUSL_NETIFD_REAL_LINUX_BACKEND_OBJECT_PASS'
+echo 'LIMIT: no full netifd executable, ucode closure, service execution, AP, hardware or rights approval.'
+
+echo 'SBAT6_MUSL_LIBUDEBUG_REAL_OBJECTS_PASS'
+
 # Compile netifd's actual Linux backend, not a placeholder or DUMMY_MODE.
 # This is the first netifd C object; the full daemon still requires ucode,
 # libudebug and the remaining netifd sources before it can be linked.
