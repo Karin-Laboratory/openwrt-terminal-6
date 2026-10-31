@@ -32,3 +32,20 @@ Compare `sha`, `tree.sha` and `parents[].sha` from the commit response and `sha`
 3. **SBAT6 integration:** no distinct SBAT6 OpenWrt target, rootfs, kernel ABI match, `dtbs_check`, modem runtime, device boot or safe recovery was tested. All existing `rights_review` statuses remain pending.
 
 **Next gate:** compare the exact commit and root tree IDs with independently obtained canonical Git objects (without executing source), then review feed/package rights and dependency closure before considering an isolated noninstallable userspace build. Keep #21 and #4 OPEN. This audit is independent of GitHub-hosted source-only CI and is **not rerun by that CI**.
+
+## Optional offline raw Git-object verification (2026-10-31)
+
+A separate [read-only local checker](../tools/build/verify_feed_git_objects.py) now makes the next **byte identity** gate reproducible without fetching or executing third-party source. After obtaining **five local bare Git repositories through independently assessed sources**, supply each Git directory explicitly:
+
+```sh
+python3 tools/build/verify_feed_git_objects.py \
+  --repo packages=/path/to/packages.git \
+  --repo luci=/path/to/luci.git \
+  --repo routing=/path/to/routing.git \
+  --repo telephony=/path/to/telephony.git \
+  --repo video=/path/to/video.git
+```
+
+The tool uses read-only `git cat-file` to retrieve the pinned commit and root tree **raw object bytes**, recomputes their Git SHA-1 object identities, and checks that each commit references its recorded root tree. It rejects missing feeds/objects, mismatched bytes or tree relationships, and symlinked Git-directory arguments. Git replacement objects are disabled. It does **not** clone, fetch, checkout, install, build, sign or touch a device.
+
+**Current evidence boundary:** GitHub-hosted CI runs **synthetic local Git-object regression fixtures only**, not the five actual feed repositories. No actual canonical `git.openwrt.org` byte verification has been completed by this addition. The origin and transport of any supplied local Git directories must be assessed independently; feeding the checker a GitHub-mirror clone does **not** establish independent canonical-origin trust. Checking only the root commit/tree objects does not validate recursive blobs, dependency closure, package licenses, Git signatures, firmware safety or build reproducibility. All rights decisions remain pending and Issues #21/#4 remain open.
