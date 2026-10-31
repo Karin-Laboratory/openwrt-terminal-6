@@ -35,8 +35,8 @@ procd_src="$tmp/procd"
     test -f "$procd_src/$file"
     obj="${file//\//_}"
     timeout 90s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE \
-      -Werror=implicit-function-declaration -I "$libubox_root" -I "$procd_src" \
-      -I "$ubus_src" -c "$procd_src/$file" \
+      -Werror=implicit-function-declaration -I "$libubox_root" \
+      -I "$libubox_root/libubox" -I "$procd_src" -I "$ubus_src" -c "$procd_src/$file" \
       -o "$tmp/procd-init-obj/${obj%.c}.o"
   done
   test "$(find "$tmp/procd-init-obj" -name '*.o' | wc -l)" -eq "${#procd_init_sources[@]}"
