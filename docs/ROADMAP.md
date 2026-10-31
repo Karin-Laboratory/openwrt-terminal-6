@@ -1,3 +1,5 @@
+> **Current execution priority (2026-10-31):** [#74 AP-first](https://github.com/Karin-Laboratory/openwrt-terminal-6/issues/74) supersedes this older feature-order narrative for near-term implementation. First deliver reproducible **unsigned, non-installable** ARM64 kernel/DTB/initramfs and a distinct SBAT6 OpenWrt Ethernet-backed 2.4/5 GHz AP userspace, then owner-authorized cold-boot validation. Modem/NR, 6 GHz/MLO and upstream merge are not AP milestone prerequisites. The existing [ARM64 Image workflow](../.github/workflows/arm64-image-build.yml) compiles a generic upstream Image, diagnostic PID1 and candidate DTBs, but **not** a fully matched MT6990/OpenWrt AP firmware. See [external-audit triage](EXTERNAL-AUDIT-TRIAGE-20261031.md) for unresolved source dependencies. This numbered sequence remains a long-term research map, not current task order.
+
 # From research to upstreamable OpenWrt support
 
 This is a staged **source-development** sequence, not a deployment checklist.

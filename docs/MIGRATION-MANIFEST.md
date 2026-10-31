@@ -1,3 +1,5 @@
+> **Historical record notice (2026-10-31):** This document describes migration and CI observations **as of 2026-10-27**. Phrases such as “Private”, “hosted CI blocked”, and “30” entries below are historical, not present-day status or repository visibility. For current CI/source scope use [STATUS](STATUS.md), [AP-first #74](https://github.com/Karin-Laboratory/openwrt-terminal-6/issues/74), and the machine-readable [catalog](../config/source-catalog.json). Do not use this migration narrative as the active inventory. See [external-audit triage](EXTERNAL-AUDIT-TRIAGE-20261031.md).
+
 # Clean-history source migration audit
 
 Date: 2026-10-27. Destination: the new Private repository at the canonical project URL.
