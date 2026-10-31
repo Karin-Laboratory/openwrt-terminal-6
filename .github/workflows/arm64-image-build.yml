@@ -80,7 +80,7 @@ jobs:
           assert manifest["rights_review"] == "pending"
           assert manifest["init"] == "symlink-to-real-upstream-procd-init-ELF"
           assert "sbin/netifd" in manifest["files_sha256"]
-          for policy in ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network"):
+          for policy in ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network", "etc/passwd", "etc/group"):
               assert policy in manifest["files_sha256"]
           PY
           test -s "$tmp/ramfs/initramfs.cpio.gz"
