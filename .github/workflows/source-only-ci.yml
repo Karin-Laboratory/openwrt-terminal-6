@@ -130,9 +130,12 @@ jobs:
           test -s arch/arm64/boot/Image
           test -s usr/initramfs_data.o
           test -s vmlinux
+          # Linux v6.18 uses __irf_start/__irf_end and __initramfs_size;
+          # it does not define the obsolete __initramfs_start/end symbols.
           nm vmlinux > "$tmp/kernel-symbols.txt"
-          grep -q '__initramfs_start' "$tmp/kernel-symbols.txt"
-          grep -q '__initramfs_end' "$tmp/kernel-symbols.txt"
+          grep -q '__initramfs_size' "$tmp/kernel-symbols.txt"
+          test -s usr/initramfs_inc_data
+          cmp "$tmp/ramfs/initramfs.cpio.gz" usr/initramfs_inc_data
           python3 - "$tmp/ramfs/initramfs.cpio.gz" usr/initramfs_data.o <<'PY'
           import gzip
           from pathlib import Path
