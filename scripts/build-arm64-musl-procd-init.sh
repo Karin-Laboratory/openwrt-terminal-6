@@ -87,6 +87,20 @@ if (( $# == 9 )); then
   timeout 90s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE \
     -Werror=implicit-function-declaration -I "$libubox_root" \
     -c "$libubox_src/udebug.c" -o "$tmp/udebug.o"
+  # The procd <udebug.h> is the OpenWrt udebug ubus integration API,
+  # NOT the lower-level libubox/udebug.h. Build the actual pinned library.
+  udebug_src="$tmp/udebug-source"
+  git init --quiet "$udebug_src"
+  git -C "$udebug_src" remote add origin https://github.com/openwrt/udebug.git
+  udebug_revision=6726e98ad69402e79b6d0b305012ace857ca0786
+  timeout 180s git -C "$udebug_src" -c protocol.version=2 fetch --quiet --depth 1 origin "$udebug_revision"
+  test "$(git -C "$udebug_src" rev-parse FETCH_HEAD)" = "$udebug_revision"
+  git -C "$udebug_src" checkout --quiet --detach FETCH_HEAD
+  test "$(git -C "$udebug_src" rev-parse HEAD)" = "$udebug_revision"
+  timeout 90s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE \
+    -Werror=implicit-function-declaration -I "$udebug_src" \
+    -I "$libubox_root" -I "$ubus_src" \
+    -c "$udebug_src/lib.c" -o "$tmp/udebug-ubus.o"
   procd_sources=(procd.c signal.c state.c hotplug-dispatch.c inittab.c
     rcS.c ubus.c system.c sysupgrade.c service/service.c
     service/instance.c service/validate.c service/trigger.c
@@ -98,13 +112,13 @@ if (( $# == 9 )); then
     obj="${file//\//_}"
     timeout 90s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE -DHAS_UDEBUG \
       -Werror=implicit-function-declaration -I "$libubox_root" \
-      -I "$libubox_src" -I "$ubus_src" -I "$procd_src" \
+      -I "$udebug_src" -I "$libubox_src" -I "$ubus_src" -I "$procd_src" \
       -I "$json_src" -I "$json_build" \
       -c "$procd_src/$file" -o "$tmp/procd-obj/${obj%.c}.o"
   done
   test "$(find "$tmp/procd-obj" -name '*.o' | wc -l)" -eq "${#procd_sources[@]}"
   timeout 120s "$compiler" -static "$tmp/procd-obj/"*.o \
-    -Wl,--start-group "$tmp/json_script.o" "$tmp/udebug.o" \
+    -Wl,--start-group "$tmp/json_script.o" "$tmp/udebug.o" "$tmp/udebug-ubus.o" \
     "$libubus_archive" "$libuci_archive" "$blobmsg_json_archive" \
     "$libubox_archive" "$json_archive" -Wl,--end-group -lm \
     -o "$tmp/procd-service"
