@@ -47,7 +47,21 @@ jobs:
           make ARCH=arm64 defconfig
           scripts/config --enable BLK_DEV_INITRD \
             --set-str INITRAMFS_SOURCE "$tmp/ramfs/initramfs.cpio.gz"
+          # Compile upstream GPL Ethernet pieces needed by the observed
+          # MAC1 -> MT7531 MDIO switch path into this exact Image.
+          # These are upstream generic drivers, NOT MT6990-specific support.
+          scripts/config --enable NET_DSA \
+            --enable NET_DSA_MT7530 --enable NET_DSA_MT7530_MDIO \
+            --disable NET_DSA_MT7530_MMIO \
+            --enable NET_VENDOR_MEDIATEK --enable NET_MEDIATEK_SOC
           make ARCH=arm64 olddefconfig
+          for option in NET_DSA NET_DSA_MT7530 NET_DSA_MT7530_MDIO \
+                        NET_VENDOR_MEDIATEK NET_MEDIATEK_SOC PCS_MTK_LYNXI; do
+            grep -qx "CONFIG_${option}=y" .config || {
+              echo "Required upstream Ethernet component disabled: $option" >&2
+              exit 1
+            }
+          done
           grep -Fq "CONFIG_INITRAMFS_SOURCE=\"$tmp/ramfs/initramfs.cpio.gz\"" .config
           export KBUILD_BUILD_USER=air6-source-only KBUILD_BUILD_HOST=github-hosted
           export KBUILD_BUILD_TIMESTAMP="Thu Jan  1 00:00:00 UTC 1970"
@@ -56,6 +70,14 @@ jobs:
           test -s arch/arm64/boot/Image
           test -s usr/initramfs_data.o
           test -s vmlinux
+          # Real Kbuild objects, not merely requested Kconfig flags.
+          for obj in drivers/net/dsa/mt7530.o \
+                     drivers/net/dsa/mt7530-mdio.o \
+                     drivers/net/pcs/pcs-mtk-lynxi.o \
+                     drivers/net/ethernet/mediatek/mtk_eth.o; do
+            test -s "$obj" || { echo "Missing built-in object: $obj" >&2; exit 1; }
+          done
+          echo 'UPSTREAM_MT7531_DSA_MEDIATEK_PCS_IMAGE_OBJECTS_PASS'
           # Linux v6.18 uses __irf_start/__irf_end and __initramfs_size;
           # it does not define the obsolete __initramfs_start/end symbols.
           nm vmlinux > "$tmp/kernel-symbols.txt"
