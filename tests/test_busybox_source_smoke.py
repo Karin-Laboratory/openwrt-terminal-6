@@ -116,7 +116,8 @@ class BusyBoxSourceSmokeTests(unittest.TestCase):
         stage = (ROOT / "scripts/build-arm64-musl-busybox-stage.sh").read_text()
         ci = (ROOT / ".github/workflows/source-only-ci.yml").read_text()
         for token in ("5aef7c33b01455157c1373a14e2a3fa47d024c6c",
-                      "procd.c", "service/instance.c", "service/trigger.c",
+                      "6726e98ad69402e79b6d0b305012ace857ca0786",
+                      "udebug-ubus.o", "procd.c", "service/instance.c", "service/trigger.c",
                       "plug/hotplug.c", "json_script.c", "udebug.c",
                       "libubus_archive", "libuci_archive",
                       "SBAT6_MUSL_PROCD_SERVICE_STATIC_LINK_PASS",
