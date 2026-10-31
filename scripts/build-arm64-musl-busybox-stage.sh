@@ -212,5 +212,24 @@ PY
   test -s "$tmp/sbat6-services-rootfs.tar.gz"
   test -s "$tmp/sbat6-services-manifest.json"
   sha256sum "$tmp/sbat6-services-rootfs.tar.gz"
+  # Opt-in handoff to the SAME hosted Image job. The destination must be
+  # new, absolute and temporary; never upload or install the rootfs stage.
+  if [[ -n "${SBAT6_MUSL_SERVICES_ROOTFS_OUTPUT:-}" ||
+        -n "${SBAT6_MUSL_SERVICES_MANIFEST_OUTPUT:-}" ]]; then
+    [[ -n "${SBAT6_MUSL_SERVICES_ROOTFS_OUTPUT:-}" &&
+       -n "${SBAT6_MUSL_SERVICES_MANIFEST_OUTPUT:-}" &&
+       "$SBAT6_MUSL_SERVICES_ROOTFS_OUTPUT" == /* &&
+       "$SBAT6_MUSL_SERVICES_MANIFEST_OUTPUT" == /* &&
+       "$SBAT6_MUSL_SERVICES_ROOTFS_OUTPUT" != "$SBAT6_MUSL_SERVICES_MANIFEST_OUTPUT" &&
+       ! -e "$SBAT6_MUSL_SERVICES_ROOTFS_OUTPUT" &&
+       ! -L "$SBAT6_MUSL_SERVICES_ROOTFS_OUTPUT" &&
+       ! -e "$SBAT6_MUSL_SERVICES_MANIFEST_OUTPUT" &&
+       ! -L "$SBAT6_MUSL_SERVICES_MANIFEST_OUTPUT" ]] || {
+      echo 'Unsafe rootfs stage handoff' >&2; exit 2;
+    }
+    cp -- "$tmp/sbat6-services-rootfs.tar.gz" "$SBAT6_MUSL_SERVICES_ROOTFS_OUTPUT"
+    cp -- "$tmp/sbat6-services-manifest.json" "$SBAT6_MUSL_SERVICES_MANIFEST_OUTPUT"
+    chmod 0600 "$SBAT6_MUSL_SERVICES_ROOTFS_OUTPUT" "$SBAT6_MUSL_SERVICES_MANIFEST_OUTPUT"
+  fi
 fi
 echo 'LIMIT: procd init/service compiled and staged but not executed; no /etc/preinit, netifd, AP or release.'
