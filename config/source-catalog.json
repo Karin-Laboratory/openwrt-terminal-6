@@ -134,7 +134,16 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "f4186d400c087c4014873a9e565300ef076c62d8",
+      "git_blob_sha1": "9bc1addac246bee02a13f29f810eff4c5e1371cc",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/build-arm64-musl-netifd-linux-object.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "e08789d3c97c4bf6169c492068fc8852921f7553",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },

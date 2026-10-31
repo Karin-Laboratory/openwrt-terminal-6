@@ -278,4 +278,14 @@ if [[ "${SBAT6_BUILD_PROCD_INIT:-0}" == 1 ]]; then
       "$compiler" "$tmp/libubox.a" "$ubus_src"
   fi
 fi
+# Compile real pinned netifd Linux/netlink backend and libnl-tiny in the same
+# musl ABI as the already compiled libubox, ubus, UCI and procd components.
+# The full daemon is NOT linked, staged or executed in this milestone.
+if [[ "${SBAT6_BUILD_NETIFD_LINUX_OBJECT:-0}" == 1 ]]; then
+  [[ "${SBAT6_BUILD_UBUSD:-0}" == 1 && "${SBAT6_BUILD_UCI:-0}" == 1 ]] || {
+    echo 'netifd Linux backend requires pinned ubus and UCI inputs' >&2; exit 2;
+  }
+  bash "$(dirname "${BASH_SOURCE[0]}")/build-arm64-musl-netifd-linux-object.sh" \
+    "$compiler" "$tmp"
+fi
 echo 'LIMIT: procd binaries linked but not executed; no bootable OpenWrt target, netifd, device or release.'
