@@ -97,18 +97,18 @@ jobs:
 
 
   arm64-busybox-native:
-    name: Compile pinned BusyBox 1.36.1 as native AArch64 ELF (no rootfs)
+    name: Compile static AArch64 BusyBox and package noninstallable rootfs stage
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-      - name: Build ephemeral ARM64 BusyBox userspace binary
+      - name: Build ephemeral static ARM64 BusyBox and rootfs-stage archive
         shell: bash
         run: |
           set -euo pipefail
           test "$(uname -m)" = aarch64
           test "$(id -u)" -ne 0
-          bash scripts/build-arm64-busybox-smoke.sh native
-          echo 'SBAT6_BUSYBOX_NATIVE_ARM64_SMOKE_PASS (no rootfs, no firmware)'
+          bash scripts/build-arm64-busybox-smoke.sh native-static-stage
+          echo 'SBAT6_STATIC_BUSYBOX_HOSTED_BUILD_PASS (glibc-static stage, not OpenWrt/musl/firmware)'
