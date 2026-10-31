@@ -90,6 +90,22 @@ class ProcdImageStageTests(unittest.TestCase):
             self.assertEqual(result["initramfs_sha256"],
                              hashlib.sha256(out.read_bytes()).hexdigest())
 
+    def test_locked_service_identity_is_staged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rootfs, source = self.make_source(root)
+            out, manifest = root / "initramfs.cpio.gz", root / "out.json"
+            stage.package(rootfs, source, out, manifest)
+            parsed = stage.cpio.unpack(gzip.decompress(out.read_bytes()))
+            passwd = parsed["etc/passwd"][1].decode().splitlines()
+            group = parsed["etc/group"][1].decode().splitlines()
+            self.assertIn("root:!:0:0:root:/root:/bin/false", passwd)
+            self.assertIn("ubus:!:81:81:ubus:/var/run/ubus:/bin/false", passwd)
+            self.assertIn("root:x:0:", group)
+            self.assertIn("ubus:x:81:", group)
+            self.assertEqual(parsed["etc/passwd"][0] & 0o777, 0o644)
+            self.assertEqual(parsed["etc/group"][0] & 0o777, 0o644)
+
     def test_rejects_modified_rootfs_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

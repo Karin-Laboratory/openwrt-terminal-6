@@ -1,6 +1,8 @@
 # SBAT6 procd/netifd boot-stage policy (research only)
 
-This directory is **input to the noninstallable ARM64 musl rootfs/initramfs build**, not an installable firmware profile. All four files are embedded byte-for-byte into the rootfs stage and the same Linux Image initramfs. No OEM data, radio firmware, credentials, signed image or hardware operation is involved.
+This directory is **input to the noninstallable ARM64 musl rootfs/initramfs build**, not an installable firmware profile. All six policy files are embedded byte-for-byte into the rootfs stage and the same Linux Image initramfs. No OEM data, radio firmware, credentials, signed image or hardware operation is involved.
+
+The staged `/etc/passwd` and `/etc/group` now provide a dedicated locked `ubus` service identity (UID/GID 81), alongside a locked root account. Neither account has a usable login shell or password. The pinned procd `state.c` resolves `getpwnam("ubus")`, creates/chowns `/var/run/ubus`, and requests that the ubusd service run as that account. This is an **actual initramfs/rootfs input**, not evidence that privilege dropping or service startup has executed; UID/GID compatibility with a future native OpenWrt target still needs review. No SSH or remote management is enabled.
 
 The pinned upstream procd `initd/preinit.c` executes `/bin/sh /etc/preinit`, then transitions to `/sbin/procd`. The pinned procd `inittab.c` recognizes `sysinit`, while `rcS.c` invokes executable `/etc/rc.d/S*` entries with the `boot` argument. The `S10netifd` script asks procd's ubus `service add` API to supervise the **real** `/sbin/netifd` ELF already built in #98/#99. The inittab's `/etc/init.d/rcS` string is only a conventional placeholder: this pinned procd implementation dispatches via its built-in rcS function rather than executing that string.
 
