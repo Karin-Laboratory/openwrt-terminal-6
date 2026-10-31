@@ -81,6 +81,14 @@ jobs:
             "$clk_donor/clkdbg.h" -o drivers/clk/mediatek/clkdbg.h
           test "$(git hash-object drivers/clk/mediatek/clkdbg.h)" = \
             2602ca4ced06487e5579fda2a017c7dda5461527
+          # Clock binding is a compile-time dependency of the provider,
+          # so stage it BEFORE Image (the later DTB step reuses it).
+          mkdir -p include/dt-bindings/clock
+          curl --fail --silent --show-error --location --retry 3 --max-time 90 \
+            "https://raw.githubusercontent.com/13179415360/openwrt-mt6990-lg6851f/a40df9a5afb46716dea799acea69f17480df4d82/target/linux/mediatek/files-6.18/include/dt-bindings/clock/mt6990-clk.h" \
+            -o include/dt-bindings/clock/mt6990-clk.h
+          test "$(git hash-object include/dt-bindings/clock/mt6990-clk.h)" = \
+            eea7fbe58a5d5b7357c5ddb83eff6ffb74b3801a
           cat >> drivers/clk/mediatek/Kconfig <<'EOF'
 
           config COMMON_CLK_MT6990_AIR6_RESEARCH
@@ -173,8 +181,9 @@ jobs:
           }
           fetch_checked "$donor/target/linux/mediatek/patches-6.18/969-arm64-dts-mediatek-add-mt6990-soc.patch" \
             "$tmp/mt6990-soc.patch" 4f24ec8183c5495a312ec5f1109164d7b770a770
-          fetch_checked "$donor/target/linux/mediatek/files-6.18/include/dt-bindings/clock/mt6990-clk.h" \
-            include/dt-bindings/clock/mt6990-clk.h eea7fbe58a5d5b7357c5ddb83eff6ffb74b3801a
+          # The byte-pinned clock binding was already staged before Image.
+          test "$(git hash-object include/dt-bindings/clock/mt6990-clk.h)" = \
+            eea7fbe58a5d5b7357c5ddb83eff6ffb74b3801a
           fetch_checked "$donor/target/linux/mediatek/files-6.18/include/dt-bindings/power/mt6990-power.h" \
             include/dt-bindings/power/mt6990-power.h c221b322fb437683d052ec4241a33afaecb33979
           python3 - "$tmp/mt6990-soc.patch" arch/arm64/boot/dts/mediatek/mt6990.dtsi <<'PY'
