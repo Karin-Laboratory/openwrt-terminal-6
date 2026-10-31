@@ -174,6 +174,16 @@ if [[ "${SBAT6_BUILD_UBUSD:-0}" == 1 ]]; then
     exit 1
   fi
   test -s "$tmp/ubusd"
+  # Export only to the caller's ephemeral stage, never to an upload/release.
+  if [[ -n "${SBAT6_MUSL_UBUSD_OUTPUT:-}" ]]; then
+    [[ "$SBAT6_MUSL_UBUSD_OUTPUT" == /* &&
+       ! -e "$SBAT6_MUSL_UBUSD_OUTPUT" &&
+       ! -L "$SBAT6_MUSL_UBUSD_OUTPUT" ]] || {
+      echo 'Unsafe ubusd staging output' >&2; exit 2;
+    }
+    cp -- "$tmp/ubusd" "$SBAT6_MUSL_UBUSD_OUTPUT"
+    chmod 0600 "$SBAT6_MUSL_UBUSD_OUTPUT"
+  fi
   sha256sum "$json_build/libjson-c.a" "$tmp/libblobmsg_json.a" "$tmp/libubusd.a" "$tmp/ubusd"
   wc -c "$tmp/ubusd"
   echo 'SBAT6_MUSL_UBUSD_STATIC_DAEMON_LINK_PASS'
