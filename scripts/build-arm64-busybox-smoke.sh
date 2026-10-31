@@ -10,12 +10,22 @@ fi
 for tool in git make timeout mktemp sha256sum python3 grep sed; do
   command -v "$tool" >/dev/null || { echo "Missing preinstalled tool: $tool" >&2; exit 2; }
 done
+# Explicit native mode is only valid on a GitHub-hosted AArch64 runner.
+# The original cross-compiler mode remains unchanged for local toolchains.
 prefix="${1:-aarch64-openwrt-linux-musl-}"
-if [[ ! "$prefix" =~ ^[a-z0-9_-]{6,60}-$ ]]; then
-  echo 'Compiler prefix must be a literal, non-path AArch64 tool prefix' >&2
-  exit 2
+if [[ "$prefix" == native ]]; then
+  [[ "$(uname -m)" == aarch64 ]] || {
+    echo 'Native BusyBox build requires an AArch64 host' >&2; exit 2;
+  }
+  prefix=""
+else
+  if [[ ! "$prefix" =~ ^[a-z0-9_-]{6,60}-$ ]]; then
+    echo 'Compiler prefix must be a literal, non-path AArch64 tool prefix' >&2
+    exit 2
+  fi
 fi
-command -v "${prefix}gcc" >/dev/null || { echo "Missing preinstalled ARM64 compiler" >&2; exit 2; }
+command -v "${prefix}gcc" >/dev/null || { echo 'Missing preinstalled ARM64 compiler' >&2; exit 2; }
+"${prefix}gcc" --version | head -n 1
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/sbat6-busybox-src.XXXXXXXX")"
 trap 'rm -rf -- "$tmp"' EXIT
 
