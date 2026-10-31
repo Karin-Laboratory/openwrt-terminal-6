@@ -7,3 +7,18 @@ The pinned upstream procd `initd/preinit.c` executes `/bin/sh /etc/preinit`, the
 The default `/etc/config/network` contains **loopback only**. There is no Ethernet uplink, DHCP server/client, Wi-Fi, NAT, login shell, root password or SSH configuration. This prevents an unreviewed interface from becoming remotely reachable by default. Nothing here demonstrates a working AP or runtime service; no PID1 execution has been performed.
 
 **Still missing:** proof of actual procd→ubusd→sysinit→netifd startup, netifd UCI runtime dependencies, independent SBAT6 OpenWrt target, safe SSH provisioning, Ethernet and Wi-Fi/AP integration, persistent storage, cold-boot evidence and rights/release review. The historical private 2.4/5 GHz AP success remains separate from this public-source build.
+
+## Rootless native ARM64 IPC smoke
+
+The hosted native AArch64 Image job runs `scripts/smoke-arm64-musl-ipc.py`
+after producing the real static-musl rootfs stage. The script verifies the
+archive and individual ELF identities, copies only `ubusd`, `ubus` and `uci`
+into a private temporary directory, and executes an actual `ubusd`/ `ubus`
+client/server round trip over a local AF_UNIX socket. It also executes the
+real `uci` CLI against the packaged loopback-only network configuration.
+No root privileges, real interfaces, network namespace modifications,
+flash, firmware, or installed system files are involved. Binaries are
+removed after the test. A successful smoke is evidence of **userspace IPC
+and UCI execution**, not procd PID1 transitions, netifd registration,
+Ethernet/bridge, Wi-Fi AP, Air6 boot, or release rights. A failed smoke
+blocks the PR rather than being reported as runtime PASS.
