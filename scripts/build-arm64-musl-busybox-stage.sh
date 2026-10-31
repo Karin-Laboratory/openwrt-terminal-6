@@ -35,6 +35,21 @@ test "$(git -C "$tmp/musl" rev-parse HEAD)" = \
   timeout 360s make -j2
   timeout 180s make install
 )
+# Musl intentionally does not ship Linux UAPI headers. Install them from
+# the SAME pinned upstream Linux v6.18 used by our ARM64 Image research
+# build, rather than accidentally falling back to glibc's host headers.
+timeout 600s git -c protocol.version=2 clone --quiet --depth 1 \
+  --filter=blob:none --single-branch --branch v6.18 \
+  https://github.com/torvalds/linux.git "$tmp/linux"
+test "$(git -C "$tmp/linux" rev-parse HEAD)" = \
+  7d0a66e4bb9081d75c82ec4957c50034cb0ea449 || {
+  echo 'Pinned Linux UAPI revision mismatch' >&2
+  exit 1
+}
+timeout 240s make -C "$tmp/linux" ARCH=arm64 \
+  INSTALL_HDR_PATH="$tmp/kernel-headers" headers_install
+cp -a "$tmp/kernel-headers/include/." "$tmp/musl-prefix/include/"
+test -f "$tmp/musl-prefix/include/linux/kd.h"
 muslcc="$tmp/musl-prefix/bin/musl-gcc"
 test -x "$muslcc"
 # Compiler and libc are native ARM64; no prebuilt cross SDK or donor firmware.
