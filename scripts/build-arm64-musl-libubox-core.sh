@@ -145,7 +145,7 @@ if [[ "${SBAT6_BUILD_UBUSD:-0}" == 1 ]]; then
     -I "$tmp" -I "$json_src" -I "$json_build" \
     -c "$src/blobmsg_json.c" -o "$tmp/blobmsg_json.o"
   ar rcs "$tmp/libblobmsg_json.a" "$tmp/blobmsg_json.o"
-  nm --defined-only "$tmp/libblobmsg_json.a" | grep -Eq ' [TW] blobmsg_add_json_from_file
+  nm --defined-only "$tmp/libblobmsg_json.a" | grep -Eq ' [TW] blobmsg_add_json_from_file$'
   ubusd_sources=(ubusd.c ubusd_proto.c ubusd_id.c ubusd_obj.c \
     ubusd_event.c ubusd_acl.c ubusd_monitor.c)
   mkdir "$tmp/ubusd-obj"
@@ -159,100 +159,7 @@ if [[ "${SBAT6_BUILD_UBUSD:-0}" == 1 ]]; then
   done
   ar rcs "$tmp/libubusd.a" "$tmp/ubusd-obj/"*.o
   test "$(ar t "$tmp/libubusd.a" | wc -l)" -eq "${#ubusd_sources[@]}"
-  nm --defined-only "$tmp/libubusd.a" | grep -Eq ' [TW] ubusd_acl_load
-  # Link a real ubusd daemon ELF, not a stub. Never execute or install it.
-  timeout 120s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE -static \
-    -DUBUS_UNIX_SOCKET='"/var/run/ubus/ubus.sock"' \
-    -DUBUS_MAX_MSGLEN=1048576 \
-    -I "$tmp" -I "$ubus_src" -I "$json_src" -I "$json_build" \
-    "$ubus_src/ubusd_main.c" "$tmp/libubusd.a" \
-    "$tmp/libblobmsg_json.a" "$tmp/libubox.a" \
-    "$json_build/libjson-c.a" -lm -o "$tmp/ubusd"
-  readelf -h "$tmp/ubusd" | grep -q 'Machine:.*AArch64'
-  if readelf -l "$tmp/ubusd" | grep -q 'INTERP'; then
-    echo 'Unexpected dynamic interpreter in musl-static ubusd' >&2
-    exit 1
-  fi
-  test -s "$tmp/ubusd"
-  sha256sum "$json_build/libjson-c.a" "$tmp/libblobmsg_json.a" "$tmp/libubusd.a" "$tmp/ubusd"
-  wc -c "$tmp/ubusd"
-  echo 'SBAT6_MUSL_UBUSD_STATIC_DAEMON_LINK_PASS'
-fi
-echo 'LIMIT: native musl ubusd link only; no execution, procd, netifd, OpenWrt target/rootfs, device or release.'
-
-
-  ubusd_sources=(ubusd.c ubusd_proto.c ubusd_id.c ubusd_obj.c \
-    ubusd_event.c ubusd_acl.c ubusd_monitor.c)
-  mkdir "$tmp/ubusd-obj"
-  for file in "${ubusd_sources[@]}"; do
-    test -f "$ubus_src/$file"
-    timeout 90s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE \
-      -DUBUS_UNIX_SOCKET='"/var/run/ubus/ubus.sock"' \
-      -DUBUS_MAX_MSGLEN=1048576 -Werror=implicit-function-declaration \
-      -I "$tmp" -I "$ubus_src" -I "$json_src" -I "$json_build" \
-      -c "$ubus_src/$file" -o "$tmp/ubusd-obj/${file%.c}.o"
-  done
-  ar rcs "$tmp/libubusd.a" "$tmp/ubusd-obj/"*.o
-  test "$(ar t "$tmp/libubusd.a" | wc -l)" -eq "${#ubusd_sources[@]}"
-  nm --defined-only "$tmp/libubusd.a" | grep -Eq ' [TW] ubusd_acl_load
-
-  # Link a real ubusd daemon ELF, not a stub. Never execute or install it.
-  timeout 120s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE -static \
-    -DUBUS_UNIX_SOCKET='"/var/run/ubus/ubus.sock"' \
-    -DUBUS_MAX_MSGLEN=1048576 \
-    -I "$tmp" -I "$ubus_src" -I "$json_src" -I "$json_build" \
-    "$ubus_src/ubusd_main.c" "$tmp/libubusd.a" \
-    "$tmp/libblobmsg_json.a" "$tmp/libubox.a" \
-    "$json_build/libjson-c.a" -lm -o "$tmp/ubusd"
-  readelf -h "$tmp/ubusd" | grep -q 'Machine:.*AArch64'
-  if readelf -l "$tmp/ubusd" | grep -q 'INTERP'; then
-    echo 'Unexpected dynamic interpreter in musl-static ubusd' >&2
-    exit 1
-  fi
-  test -s "$tmp/ubusd"
-  sha256sum "$json_build/libjson-c.a" "$tmp/libblobmsg_json.a" "$tmp/libubusd.a" "$tmp/ubusd"
-  wc -c "$tmp/ubusd"
-  echo 'SBAT6_MUSL_UBUSD_STATIC_DAEMON_LINK_PASS'
-fi
-echo 'LIMIT: native musl ubusd link only; no execution, procd, netifd, OpenWrt target/rootfs, device or release.'
-
-
-  # Link a real ubusd daemon ELF, not a stub. Never execute or install it.
-  timeout 120s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE -static \
-    -DUBUS_UNIX_SOCKET='"/var/run/ubus/ubus.sock"' \
-    -DUBUS_MAX_MSGLEN=1048576 \
-    -I "$tmp" -I "$ubus_src" -I "$json_src" -I "$json_build" \
-    "$ubus_src/ubusd_main.c" "$tmp/libubusd.a" \
-    "$tmp/libblobmsg_json.a" "$tmp/libubox.a" \
-    "$json_build/libjson-c.a" -lm -o "$tmp/ubusd"
-  readelf -h "$tmp/ubusd" | grep -q 'Machine:.*AArch64'
-  if readelf -l "$tmp/ubusd" | grep -q 'INTERP'; then
-    echo 'Unexpected dynamic interpreter in musl-static ubusd' >&2
-    exit 1
-  fi
-  test -s "$tmp/ubusd"
-  sha256sum "$json_build/libjson-c.a" "$tmp/libblobmsg_json.a" "$tmp/libubusd.a" "$tmp/ubusd"
-  wc -c "$tmp/ubusd"
-  echo 'SBAT6_MUSL_UBUSD_STATIC_DAEMON_LINK_PASS'
-fi
-echo 'LIMIT: native musl ubusd link only; no execution, procd, netifd, OpenWrt target/rootfs, device or release.'
-
-
-  ubusd_sources=(ubusd.c ubusd_proto.c ubusd_id.c ubusd_obj.c \
-    ubusd_event.c ubusd_acl.c ubusd_monitor.c)
-  mkdir "$tmp/ubusd-obj"
-  for file in "${ubusd_sources[@]}"; do
-    test -f "$ubus_src/$file"
-    timeout 90s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE \
-      -DUBUS_UNIX_SOCKET='"/var/run/ubus/ubus.sock"' \
-      -DUBUS_MAX_MSGLEN=1048576 -Werror=implicit-function-declaration \
-      -I "$tmp" -I "$ubus_src" -I "$json_src" -I "$json_build" \
-      -c "$ubus_src/$file" -o "$tmp/ubusd-obj/${file%.c}.o"
-  done
-  ar rcs "$tmp/libubusd.a" "$tmp/ubusd-obj/"*.o
-  test "$(ar t "$tmp/libubusd.a" | wc -l)" -eq "${#ubusd_sources[@]}"
-  nm --defined-only "$tmp/libubusd.a" | grep -Eq ' [TW] ubusd_acl_load
-
+  nm --defined-only "$tmp/libubusd.a" | grep -Eq ' [TW] ubusd_acl_load$'
   # Link a real ubusd daemon ELF, not a stub. Never execute or install it.
   timeout 120s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE -static \
     -DUBUS_UNIX_SOCKET='"/var/run/ubus/ubus.sock"' \
