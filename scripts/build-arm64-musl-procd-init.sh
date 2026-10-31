@@ -101,6 +101,17 @@ if (( $# == 9 )); then
     -Werror=implicit-function-declaration -I "$udebug_src" \
     -I "$libubox_root" -I "$ubus_src" \
     -c "$udebug_src/lib.c" -o "$tmp/udebug-ubus.o"
+  # OpenWrt procd includes <json-c/json.h>; the pinned json-c source
+  # and generated CMake headers live in separate build-only directories.
+  mkdir -p "$tmp/include/json-c"
+  for header in "$json_src"/*.h "$json_build"/*.h; do
+    test -f "$header"
+    name="$(basename "$header")"
+    if [[ ! -e "$tmp/include/json-c/$name" ]]; then
+      ln -s "$header" "$tmp/include/json-c/$name"
+    fi
+  done
+  test -f "$tmp/include/json-c/json.h"
   procd_sources=(procd.c signal.c state.c hotplug-dispatch.c inittab.c
     rcS.c ubus.c system.c sysupgrade.c service/service.c
     service/instance.c service/validate.c service/trigger.c
@@ -113,7 +124,7 @@ if (( $# == 9 )); then
     timeout 90s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE -DHAS_UDEBUG \
       -Werror=implicit-function-declaration -I "$libubox_root" \
       -I "$udebug_src" -I "$libubox_src" -I "$ubus_src" -I "$procd_src" \
-      -I "$json_src" -I "$json_build" \
+      -I "$json_src" -I "$json_build" -I "$tmp/include" \
       -c "$procd_src/$file" -o "$tmp/procd-obj/${obj%.c}.o"
   done
   test "$(find "$tmp/procd-obj" -name '*.o' | wc -l)" -eq "${#procd_sources[@]}"
