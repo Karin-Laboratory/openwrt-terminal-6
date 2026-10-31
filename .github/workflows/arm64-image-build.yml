@@ -225,8 +225,7 @@ jobs:
           # disks, host device passthrough or installable image output.
           # This is a real PID1/procd/ubus service-registration runtime check,
           # not a hardware Air6 boot or a netifd traffic test.
-          sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qemu-system-arm
+          command -v qemu-system-aarch64 || { echo 'Hosted ARM64 runner lacks QEMU system emulator' >&2; exit 1; }
           bash "$GITHUB_WORKSPACE/scripts/smoke-arm64-procd-guest.sh" \
             "$PWD/arch/arm64/boot/Image"
 
