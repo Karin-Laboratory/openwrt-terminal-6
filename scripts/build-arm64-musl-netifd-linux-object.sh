@@ -150,17 +150,17 @@ for header in "$json_src"/*.h "$json_build"/*.h; do
 done
 uc_sources=(lexer.c lib.c vm.c chunk.c vallist.c compiler.c
   source.c types.c program.c platform.c)
-for file in "\${uc_sources[@]}"; do
+for file in "${uc_sources[@]}"; do
   test -f "$uc/$file"
   timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
     -DLIB_SEARCH_PATH='"/usr/lib/ucode/*.so"' \
     -DHAVE_PARSE_END -DHAVE_ARRAY_EXT -DHAVE_JSON_UINT64 \
     -Werror=implicit-function-declaration \
     -I "$uc/include" -I "$deps/netifd-include" \
-    -c "$uc/$file" -o "$deps/ucode-obj/\${file%.c}.o"
+    -c "$uc/$file" -o "$deps/ucode-obj/${file%.c}.o"
 done
 ar rcs "$deps/libucode.a" "$deps/ucode-obj/"*.o
-test "$(ar t "$deps/libucode.a" | wc -l)" -eq "\${#uc_sources[@]}"
+test "$(ar t "$deps/libucode.a" | wc -l)" -eq "${#uc_sources[@]}"
 nm --defined-only "$deps/libucode.a" | grep -Fq ' uc_vm_init'
 echo 'SBAT6_MUSL_LIBUCODE_REAL_CORE_OBJECTS_PASS'
 daemon_sources=(main.c utils.c system.c tunnel.c handler.c interface.c
@@ -169,16 +169,16 @@ daemon_sources=(main.c utils.c system.c tunnel.c handler.c interface.c
   veth.c vlan.c alias.c macvlan.c ubus.c vlandev.c extdev.c
   bonding.c vrf.c ucode.c system-linux.c)
 mkdir "$deps/netifd-daemon-obj"
-for file in "\${daemon_sources[@]}"; do
+for file in "${daemon_sources[@]}"; do
   test -f "$netifd/$file"
   timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
     -Werror=implicit-function-declaration \
     -I "$ud" -I "$deps" -idirafter "$deps/libubox" \
     -I "$deps/ubus" -I "$deps/uci" -I "$nl/include" \
     -I "$netifd" -I "$uc/include" -I "$deps/netifd-include" \
-    -c "$netifd/$file" -o "$deps/netifd-daemon-obj/\${file%.c}.o"
+    -c "$netifd/$file" -o "$deps/netifd-daemon-obj/${file%.c}.o"
 done
-test "$(find "$deps/netifd-daemon-obj" -maxdepth 1 -name '*.o' | wc -l)" -eq "\${#daemon_sources[@]}"
+test "$(find "$deps/netifd-daemon-obj" -maxdepth 1 -name '*.o' | wc -l)" -eq "${#daemon_sources[@]}"
 timeout 180s "$cc" -static "$deps/netifd-daemon-obj/"*.o \
   -Wl,--start-group "$deps/libucode.a" "$deps/libudebug.a" \
   "$deps/libnl-tiny.a" "$deps/libuci.a" "$deps/libubus.a" \
@@ -191,7 +191,10 @@ if readelf -l "$deps/netifd-daemon" | grep -q INTERP; then
   echo 'Unexpected dynamic interpreter in netifd daemon' >&2
   exit 1
 fi
-nm --defined-only "$deps/netifd-daemon" | grep -Eq ' [TW] main
+nm --defined-only "$deps/netifd-daemon" | grep -Eq ' [TW] main "$deps/netifd-daemon"
+echo 'SBAT6_MUSL_NETIFD_REAL_DAEMON_STATIC_LINK_PASS'
+echo 'LIMIT: no daemon execution, procd service registration, rootfs AP, hardware boot or rights approval.'
+
 
 sha256sum "$deps/netifd-daemon"
 echo 'SBAT6_MUSL_NETIFD_REAL_DAEMON_STATIC_LINK_PASS'
