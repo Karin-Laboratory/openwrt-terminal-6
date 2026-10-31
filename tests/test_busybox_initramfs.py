@@ -103,8 +103,8 @@ class BusyBoxPid1CpioTests(unittest.TestCase):
             self.assertNotIn(forbidden, init)
         workflow = (ROOT / ".github/workflows/arm64-image-build.yml").read_text()
         self.assertIn("build-arm64-musl-busybox-stage.sh", workflow)
-        self.assertIn("NONINSTALLABLE_MUSL_STATIC_BUSYBOX_PID1_INITRAMFS", workflow)
-        self.assertIn("SBAT6_BUSYBOX_PID1_EMBEDDED_IMAGE_PASS", workflow)
+        self.assertIn("NONINSTALLABLE_AIR6_PROCD_STAGE_EMBEDDED_INITRAMFS", workflow)
+        self.assertIn("SBAT6_PROCD_INIT_STAGE_EMBEDDED_IMAGE_PASS", workflow)
         self.assertIn('cmp "$tmp/ramfs/initramfs.cpio.gz" usr/initramfs_inc_data', workflow)
 
 
