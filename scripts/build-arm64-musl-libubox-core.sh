@@ -239,7 +239,7 @@ if [[ "${SBAT6_BUILD_UCI:-0}" == 1 ]]; then
   done
   ar rcs "$tmp/libuci.a" "$tmp/uci-obj/"*.o
   test "$(ar t "$tmp/libuci.a" | wc -l)" -eq "${#uci_sources[@]}"
-  nm --defined-only "$tmp/libuci.a" | grep -Eq " [TW] uci_alloc_context"$"\n
+  nm --defined-only "$tmp/libuci.a" | grep -q uci_alloc_context
   timeout 120s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE -static \
     -I "$tmp" -I "$uci_src" "$uci_src/cli.c" \
     "$tmp/libuci.a" "$tmp/libubox.a" -o "$tmp/uci-cli"
