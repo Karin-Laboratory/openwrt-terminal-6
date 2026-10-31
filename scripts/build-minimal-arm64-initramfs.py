@@ -5,6 +5,7 @@ import gzip
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import shutil
 import stat
@@ -67,14 +68,22 @@ def build(output: Path) -> dict:
         raise ValueError("refuse privileged build")
     if output.exists() or output.is_symlink():
         raise ValueError("output directory must not already exist")
-    if not shutil.which("clang") or not shutil.which("ld.lld"):
-        raise ValueError("preinstalled clang and ld.lld are required")
     output.mkdir(mode=0o700, parents=False)
     elf_path = output / "init.elf"
-    cmd = ["clang", "--target=aarch64-linux-gnu", "-fuse-ld=lld", "-nostdlib",
-           "-ffreestanding", "-fno-builtin", "-fno-stack-protector", "-fno-pic",
-           "-static", "-O2", "-Wl,-e,_start", "-Wl,--build-id=none",
-           "-o", str(elf_path), str(SOURCE)]
+    common = ["-nostdlib", "-ffreestanding", "-fno-builtin",
+              "-fno-stack-protector", "-fno-pic", "-static", "-O2",
+              "-Wl,-e,_start", "-Wl,--build-id=none"]
+    if platform.machine() == "aarch64" and shutil.which("gcc"):
+        # GitHub-hosted ARM64 runner: native toolchain, no downloads or sudo.
+        compiler, linker = "gcc", "ld"
+        cmd = [compiler, "-no-pie", *common, "-o", str(elf_path), str(SOURCE)]
+    elif shutil.which("clang") and shutil.which("ld.lld"):
+        # Optional local cross-build where LLVM/LLD are already installed.
+        compiler, linker = "clang", "ld.lld"
+        cmd = [compiler, "--target=aarch64-linux-gnu", "-fuse-ld=lld",
+               *common, "-o", str(elf_path), str(SOURCE)]
+    else:
+        raise ValueError("requires native AArch64 gcc or preinstalled Clang/LLD cross-toolchain")
     subprocess.run(cmd, check=True, timeout=90)
     elf = elf_path.read_bytes()
     validate_elf(elf)
@@ -87,8 +96,8 @@ def build(output: Path) -> dict:
     manifest = {
         "scope": "UNSIGNED_NONINSTALLABLE_DIAGNOSTIC_ONLY",
         "architecture": "aarch64",
-        "compiler": subprocess.check_output(["clang", "--version"], text=True).splitlines()[0],
-        "linker": subprocess.check_output(["ld.lld", "--version"], text=True).strip(),
+        "compiler": subprocess.check_output([compiler, "--version"], text=True).splitlines()[0],
+        "linker": subprocess.check_output([linker, "--version"], text=True).splitlines()[0],
         "source_sha256": hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
         "init_elf_sha256": hashlib.sha256(elf).hexdigest(),
         "initramfs_sha256": hashlib.sha256(compressed).hexdigest(),
