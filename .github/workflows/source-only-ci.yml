@@ -127,5 +127,5 @@ jobs:
           set -euo pipefail
           test "$(uname -m)" = aarch64
           test "$(id -u)" -ne 0
-          SBAT6_BUILD_ROOTFS_SERVICES=1 SBAT6_BUILD_UBUSD=1 SBAT6_BUILD_UBUS_CORE=1 SBAT6_BUILD_LIBUBOX_CORE=1 bash scripts/build-arm64-musl-busybox-stage.sh
-          echo 'LIMIT: combined musl BusyBox/ubusd rootfs stage is nonbootable; no procd/netifd/OpenWrt target or device test.'
+          SBAT6_BUILD_ROOTFS_SERVICES=1 SBAT6_BUILD_UCI=1 SBAT6_BUILD_UBUSD=1 SBAT6_BUILD_UBUS_CORE=1 SBAT6_BUILD_LIBUBOX_CORE=1 bash scripts/build-arm64-musl-busybox-stage.sh
+          echo 'LIMIT: combined musl BusyBox/ubusd/ubus/UCI rootfs stage is nonbootable; no procd/netifd/OpenWrt target or device test.'
