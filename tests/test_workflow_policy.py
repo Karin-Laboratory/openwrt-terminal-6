@@ -27,6 +27,9 @@ class WorkflowPolicyTests(unittest.TestCase):
     def test_expected_safe_workflow(self):
         self.assertEqual(gate.check(SAFE), [])
 
+    def test_explicit_hosted_arm64_runner_is_allowed(self):
+        self.assertEqual(gate.check(SAFE.replace("ubuntu-latest", "ubuntu-24.04-arm")), [])
+
     def test_block_self_hosted_and_target_event(self):
         issues = gate.check(SAFE.replace("pull_request:", "pull_request_target:").replace(
             "ubuntu-latest", "self-hosted"
@@ -42,7 +45,7 @@ class WorkflowPolicyTests(unittest.TestCase):
 
     def test_block_dynamic_or_secondary_runner(self):
         multi = SAFE + "  another-job:\n    runs-on: vars.RUNNER\n"
-        self.assertIn("every job must use literal GitHub-hosted ubuntu-latest",
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
                       gate.check(multi))
 
     def test_block_write_all_and_unpinned_container(self):
