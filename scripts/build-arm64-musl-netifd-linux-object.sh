@@ -119,9 +119,9 @@ test "$(find "$deps/netifd-core-obj" -maxdepth 1 -name '*.o' | wc -l)" -eq "${#c
 for file in "${core_sources[@]}"; do
   test -s "$deps/netifd-core-obj/${file%.c}.o"
 done
-nm --defined-only "$deps/netifd-core-obj/bridge.o" | grep -Eq ' [TW] bridge_config_init
-nm --defined-only "$deps/netifd-core-obj/vlan.o" | grep -Eq ' [TW] vlan_config_init
-nm --defined-only "$deps/netifd-core-obj/vlandev.o" | grep -Eq ' [TW] vlandev_config_init
+nm --defined-only "$deps/netifd-core-obj/bridge.o" | grep -Fq ' bridge_config_init'
+nm --defined-only "$deps/netifd-core-obj/vlan.o" | grep -Fq ' vlan_config_init'
+nm --defined-only "$deps/netifd-core-obj/vlandev.o" | grep -Fq ' vlandev_config_init'
 echo 'SBAT6_MUSL_NETIFD_BRIDGE_VLAN_STATIC_PROTO_OBJECTS_PASS'
 sha256sum "$deps/libnl-tiny.a" "$deps/libudebug.a" "$deps/netifd-system-linux.o" "$deps/netifd-core-obj/"*.o
 echo 'SBAT6_MUSL_NETIFD_REAL_LINUX_BACKEND_OBJECT_PASS'
