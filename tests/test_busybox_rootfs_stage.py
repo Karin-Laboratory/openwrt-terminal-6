@@ -45,6 +45,20 @@ class StaticBusyboxStageTests(unittest.TestCase):
                 self.assertNotIn("init", archive.getnames())
                 self.assertNotIn("etc/passwd", archive.getnames())
 
+    def test_musl_stage_manifest_and_libc_gate(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            elf = root / "busybox"
+            elf.write_bytes(synthetic_elf())
+            record = module.package(elf, root / "musl.tar.gz",
+                                    root / "musl.json", libc="musl-static")
+            self.assertEqual(record["libc"], "musl-static")
+            self.assertEqual(record["scope"], "NONINSTALLABLE_MUSL_BUSYBOX_ROOTFS_STAGE")
+            self.assertIn("OpenWrt musl toolchain/package closure", record["not_proven"])
+            with self.assertRaisesRegex(ValueError, "unsupported libc"):
+                module.package(elf, root / "bad.tar.gz", root / "bad.json",
+                               libc="unverified")
+
     def test_reject_dynamic_interpreter(self):
         with self.assertRaisesRegex(ValueError, "dynamic interpreter"):
             module.check_static_aarch64_elf(synthetic_elf(interpreter=True))
