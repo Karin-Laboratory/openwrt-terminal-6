@@ -90,6 +90,27 @@ class BusyBoxSourceSmokeTests(unittest.TestCase):
         self.assertIn("SBAT6_MUSL_LIBUBUS_CORE_OBJECTS_AND_STATIC_LINK_PASS", src)
         self.assertIn('if [[ "${SBAT6_BUILD_UBUS_CORE:-0}" == 1 ]]', src)
 
+    def test_pinned_jsonc_and_ubusd_real_musl_static_link(self):
+        src = (ROOT / "scripts/build-arm64-musl-libubox-core.sh").read_text()
+        workflow = (ROOT / ".github/workflows/source-only-ci.yml").read_text()
+        for needle in (
+            "SBAT6_BUILD_UBUSD", "json-c/json-c.git",
+            "41a55cfcedb54d9c1874f2f0eb07b504091d7e37",
+            "libjson-c.a", "blobmsg_json.c", "libblobmsg_json.a",
+            "ubusd_proto.c", "ubusd_acl.c", "ubusd_main.c",
+            "libubusd.a", "SBAT6_MUSL_UBUSD_STATIC_DAEMON_LINK_PASS",
+            "readelf -h", "readelf -l", "-static",
+        ):
+            self.assertIn(needle, src)
+        self.assertIn("SBAT6_BUILD_UBUSD=1", workflow)
+        self.assertIn('test "$(git -C "$json_src" rev-parse HEAD)" = "$json_revision"', src)
+        self.assertIn("BUILD_SHARED_LIBS=OFF", src)
+        self.assertIn("BUILD_TESTING=OFF", src)
+        self.assertIn("EUID == 0", src)
+        for forbidden in ("sudo ", "apt install", "sysupgrade", "flashrom",
+                          "qemu-aarch64", "chroot ", "ssh root@"):
+            self.assertNotIn(forbidden, src)
+
     def test_does_not_claim_rootfs_completeness(self):
         src = SCRIPT.read_text()
         self.assertIn("not an OpenWrt rootfs or board firmware", src)
