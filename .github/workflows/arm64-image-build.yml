@@ -145,7 +145,8 @@ jobs:
             test -s "$obj" || { echo "Missing built-in object: $obj" >&2; exit 1; }
           done
           echo 'UPSTREAM_MT7531_DSA_MEDIATEK_PCS_IMAGE_OBJECTS_PASS'
-          echo 'MT6990_SGMII_PHY_PATCHED_KBUILD_OBJECT_PASS (no cold-boot or rights approval)'\n          echo 'MT6990_IFRAO_CLOCK_PROVIDER_KBUILD_OBJECT_PASS (compile only; no MMIO/probe or rights approval)'
+          echo 'MT6990_SGMII_PHY_PATCHED_KBUILD_OBJECT_PASS (no cold-boot or rights approval)'
+          echo 'MT6990_IFRAO_CLOCK_PROVIDER_KBUILD_OBJECT_PASS (compile only; no MMIO/probe or rights approval)'
           # Linux v6.18 uses __irf_start/__irf_end and __initramfs_size;
           # it does not define the obsolete __initramfs_start/end symbols.
           nm vmlinux > "$tmp/kernel-symbols.txt"
