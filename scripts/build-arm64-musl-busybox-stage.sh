@@ -84,4 +84,9 @@ PY
 else
   echo 'SBAT6_NATIVE_MUSL_STATIC_BUSYBOX_STAGE_PASS'
 fi
+# Build the actual OpenWrt libubox core with the same pinned musl toolchain
+# only in the explicit hosted userland dependency job, not the Image job.
+if [[ "${SBAT6_BUILD_LIBUBOX_CORE:-0}" == 1 ]]; then
+  bash "$(dirname "${BASH_SOURCE[0]}")/build-arm64-musl-libubox-core.sh" "$muslcc"
+fi
 echo 'LIMIT: not an OpenWrt-built musl toolchain, procd/netifd rootfs, AP or release.'
