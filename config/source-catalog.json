@@ -211,6 +211,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "scripts/smoke-arm64-musl-ipc.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "da7432cf5415dac96bb6fa8659b356fc40416a85",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "scripts/verify-air6-board-dtc.sh",
       "component": "board-dt",
       "origin": "independent-original",
