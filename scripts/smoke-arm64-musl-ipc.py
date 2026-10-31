@@ -94,9 +94,20 @@ def smoke(archive: Path, manifest: Path) -> None:
             # Real client/server protocol round-trip over AF_UNIX, not a
             # link-only or synthetic source inspection.
             command([str(root / "ubus"), "-s", endpoint, "-t", "3", "list"])
-            command([str(root / "ubus"), "-s", endpoint, "-t", "3",
-                     "send", "sbat6.local.smoke", '{"safe":true}'])
             print("SBAT6_NATIVE_MUSL_UBUSD_UBUS_LOCAL_IPC_RUNTIME_PASS")
+            # The pinned ubusd ACL deliberately denies unprivileged event
+            # publishing when no root-owned ACL grant is installed. Keep
+            # the smoke rootless and assert this default-deny behavior.
+            denied = subprocess.run(
+                [str(root / "ubus"), "-s", endpoint, "-t", "3",
+                 "send", "sbat6.local.smoke", '{"safe":true}'],
+                stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                timeout=5, check=False,
+            )
+            if denied.returncode != 6 or "Permission denied" not in denied.stderr:
+                raise RuntimeError("unexpected unprivileged ubus send ACL result: "
+                                   + str(denied.returncode) + " " + denied.stderr[-300:])
+            print("SBAT6_NATIVE_MUSL_UBUSD_DEFAULT_DENY_ACL_RUNTIME_PASS")
             # Parse only the packaged loopback UCI configuration. No writes.
             shown = command([str(root / "uci"), "-c", str(config), "show", "network"])
             if "network.loopback" not in shown or "127.0.0.1" not in shown:
