@@ -72,3 +72,20 @@ This is an **actual compiled dependency**, not a full OpenWrt package build.
 The optional JSON-C/Lua frontends, ubus, procd, netifd, wpad, SBAT6 target
 and rootfs remain missing. This compilation is not a device test or
 redistribution-rights clearance; the source rights gate remains pending.
+
+## Native musl ubusd daemon link (AP-first #21, 2026-10-31)
+
+The opt-in hosted ARM64 job now fetches exact public **json-c 0.18** commit
+`41a55cfcedb54d9c1874f2f0eb07b504091d7e37`, compiles static
+`libjson-c.a` with the same temporary musl compiler, then compiles
+`libubox/blobmsg_json.c` and all seven upstream `ubusd` core units
+from the already pinned `openwrt/ubus` revision. It links the actual
+`ubusd_main.c` into an ELF64 AArch64 static daemon, requiring
+`SBAT6_MUSL_UBUSD_STATIC_DAEMON_LINK_PASS`. No host glibc/json-c
+library is used. Artifacts are ephemeral, neither executed nor uploaded.
+
+This proves a **daemon compile/link closure only** after the hosted job
+succeeds. It does not prove the daemon starts, IPC/ACL correctness,
+OpenWrt package compatibility, a procd/netifd rootfs, MT6990 kernel ABI,
+AP boot, or redistribution rights. All upstream licenses and rights
+remain subject to separate review; no installable firmware is produced.
