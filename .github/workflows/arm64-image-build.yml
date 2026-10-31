@@ -5,6 +5,8 @@ on:
       - .github/workflows/arm64-image-build.yml
       - scripts/air6-diagnostic-init.c
       - scripts/build-minimal-arm64-initramfs.py
+      - board/mt6990-air-terminal-6.dts
+      - board/mt6990-air-terminal-6-ethernet-test.dts
   push:
     branches: [main]
     paths:
@@ -73,4 +75,67 @@ jobs:
           sha256sum arch/arm64/boot/Image "$tmp/ramfs/initramfs.cpio.gz"
           wc -c arch/arm64/boot/Image "$tmp/ramfs/initramfs.cpio.gz"
           echo 'UPSTREAM_ARM64_IMAGE_WITH_PID1_BUILD_PASS'
-          echo 'LIMIT: generic upstream kernel, no MT6990 driver/DTB, no AP or device boot claim.'
+
+          # Stage only three byte-pinned, public GPL-identified MT6990 DTS
+          # inputs already used by the source-only DTC preflight. This is
+          # ephemeral compilation, NOT a rights-approved redistributable DTB.
+          donor=https://raw.githubusercontent.com/13179415360/openwrt-mt6990-lg6851f/a40df9a5afb46716dea799acea69f17480df4d82
+          mkdir -p include/dt-bindings/{clock,power}
+          fetch_checked() {
+            local url="$1" dest="$2" expected="$3"
+            curl --fail --silent --show-error --location --retry 3 --max-time 90 \
+              "$url" -o "$dest"
+            test "$(git hash-object "$dest")" = "$expected" || {
+              echo "Pinned DTS input identity mismatch: $dest" >&2; exit 1;
+            }
+          }
+          fetch_checked "$donor/target/linux/mediatek/patches-6.18/969-arm64-dts-mediatek-add-mt6990-soc.patch" \
+            "$tmp/mt6990-soc.patch" 4f24ec8183c5495a312ec5f1109164d7b770a770
+          fetch_checked "$donor/target/linux/mediatek/files-6.18/include/dt-bindings/clock/mt6990-clk.h" \
+            include/dt-bindings/clock/mt6990-clk.h eea7fbe58a5d5b7357c5ddb83eff6ffb74b3801a
+          fetch_checked "$donor/target/linux/mediatek/files-6.18/include/dt-bindings/power/mt6990-power.h" \
+            include/dt-bindings/power/mt6990-power.h c221b322fb437683d052ec4241a33afaecb33979
+          python3 - "$tmp/mt6990-soc.patch" arch/arm64/boot/dts/mediatek/mt6990.dtsi <<'PY'
+          from pathlib import Path
+          import sys
+          lines = Path(sys.argv[1]).read_text().splitlines()
+          start = next((i for i, s in enumerate(lines) if s.startswith('@@ -0,0 +1,')), None)
+          if start is None:
+              raise SystemExit("Pinned MT6990 patch has no expected new-file hunk")
+          output = [s[1:] for s in lines[start+1:] if s.startswith('+')]
+          if len(output) < 400 or not output[0].startswith('// SPDX-License-Identifier:'):
+              raise SystemExit("Unexpected MT6990 SoC DTSI hunk")
+          Path(sys.argv[2]).write_text('\n'.join(output) + '\n')
+          PY
+          cp "$GITHUB_WORKSPACE/board/mt6990-air-terminal-6.dts" \
+            arch/arm64/boot/dts/mediatek/
+          cp "$GITHUB_WORKSPACE/board/mt6990-air-terminal-6-ethernet-test.dts" \
+            arch/arm64/boot/dts/mediatek/
+          cat >> arch/arm64/boot/dts/mediatek/Makefile <<'EOF'
+          # Air6 independent compile-only candidates; not an installable DTB.
+          dtb-$(CONFIG_ARCH_MEDIATEK) += mt6990-air-terminal-6.dtb
+          dtb-$(CONFIG_ARCH_MEDIATEK) += mt6990-air-terminal-6-ethernet-test.dtb
+          EOF
+          scripts/config --enable ARCH_MEDIATEK
+          make ARCH=arm64 olddefconfig
+          grep -qx 'CONFIG_ARCH_MEDIATEK=y' .config
+          # Both DTBs are built by the *same* upstream Linux Kbuild/dtc tree
+          # that compiled Image, not by a separate host-only dtc checkout.
+          timeout 1200s make ARCH=arm64 -j4 dtbs
+          for dtb in mt6990-air-terminal-6.dtb mt6990-air-terminal-6-ethernet-test.dtb; do
+            test -s "arch/arm64/boot/dts/mediatek/$dtb"
+            python3 - "arch/arm64/boot/dts/mediatek/$dtb" <<'PY'
+          from pathlib import Path
+          import sys
+          blob = Path(sys.argv[1]).read_bytes()
+          assert blob[:4] == bytes.fromhex('d00dfeed'), "not a DTB"
+          for needle in (b'softbank,air-terminal-6\x00', b'mediatek,mt7531\x00'):
+              assert needle in blob, f"missing compiled DT property: {needle!r}"
+          print("AIR6_KERNEL_TREE_DTB_CONTENT_PASS", sys.argv[1])
+          PY
+          done
+          sha256sum arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6*.dtb
+          wc -c arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6*.dtb
+          echo 'UPSTREAM_KERNEL_TREE_AIR6_DTBS_BUILD_PASS'
+          echo 'LIMIT: MT6990 SoC DTSI provenance/rights and matching drivers remain unverified; no dtbs_check or device boot.'
+          echo 'LIMIT: upstream generic Image and Air6 DTBs share one kernel tree; MT6990 drivers, dtbs_check, AP and device boot remain unverified.'
