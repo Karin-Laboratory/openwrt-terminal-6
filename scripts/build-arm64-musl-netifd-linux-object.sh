@@ -77,9 +77,12 @@ for file in lib.c lib-pcap.c; do
 done
 ar rcs "$deps/libudebug.a" "$deps/ud-obj/"*.o
 test "$(ar t "$deps/libudebug.a" | wc -l)" -eq 2
-nm --defined-only "$deps/libudebug.a" | grep -Eq ' [TW] udebug_netlink_msg
-# This is the first netifd C object; the full daemon still requires ucode,
-# libudebug and the remaining netifd sources before it can be linked.
+nm --defined-only "$deps/libudebug.a" | grep -Eq ' [TW] udebug_netlink_msg$'
+echo 'SBAT6_MUSL_LIBUDEBUG_REAL_OBJECTS_PASS'
+
+# Compile netifd's actual Linux backend, not a placeholder or DUMMY_MODE.
+# This is the first netifd C object; the full daemon still requires ucode
+# and the remaining netifd sources before it can be linked.
 netifd="$deps/netifd"
 git init --quiet "$netifd"
 git -C "$netifd" remote add origin https://github.com/openwrt/netifd.git
@@ -99,32 +102,5 @@ timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
 test -s "$deps/netifd-system-linux.o"
 nm --defined-only "$deps/netifd-system-linux.o" | grep -Eq ' [TW] system_init$'
 sha256sum "$deps/libnl-tiny.a" "$deps/libudebug.a" "$deps/netifd-system-linux.o"
-echo 'SBAT6_MUSL_NETIFD_REAL_LINUX_BACKEND_OBJECT_PASS'
-echo 'LIMIT: no full netifd executable, ucode closure, service execution, AP, hardware or rights approval.'
-
-echo 'SBAT6_MUSL_LIBUDEBUG_REAL_OBJECTS_PASS'
-
-# Compile netifd's actual Linux backend, not a placeholder or DUMMY_MODE.
-# This is the first netifd C object; the full daemon still requires ucode,
-# libudebug and the remaining netifd sources before it can be linked.
-netifd="$deps/netifd"
-git init --quiet "$netifd"
-git -C "$netifd" remote add origin https://github.com/openwrt/netifd.git
-netifd_rev=a1e39a458f9601100ee6bf91b0d6800688cf6a5b
-timeout 180s git -C "$netifd" -c protocol.version=2 fetch --quiet --depth 1 origin "$netifd_rev"
-test "$(git -C "$netifd" rev-parse FETCH_HEAD)" = "$netifd_rev"
-git -C "$netifd" checkout --quiet --detach FETCH_HEAD
-test "$(git -C "$netifd" rev-parse HEAD)" = "$netifd_rev"
-# Upstream generates this header from the active compiler's Linux UAPI.
-sh "$netifd/make_ethtool_modes_h.sh" "$cc" > "$deps/ethtool-modes.h"
-test -s "$deps/ethtool-modes.h"
-timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
-  -Werror=implicit-function-declaration \
-  -I "$deps" -I "$deps/libubox" -I "$deps/ubus" -I "$deps/uci" \
-  -I "$nl/include" -I "$netifd" \
-  -c "$netifd/system-linux.c" -o "$deps/netifd-system-linux.o"
-test -s "$deps/netifd-system-linux.o"
-nm --defined-only "$deps/netifd-system-linux.o" | grep -Eq ' [TW] system_init$'
-sha256sum "$deps/libnl-tiny.a" "$deps/netifd-system-linux.o"
 echo 'SBAT6_MUSL_NETIFD_REAL_LINUX_BACKEND_OBJECT_PASS'
 echo 'LIMIT: no full netifd executable, ucode closure, service execution, AP, hardware or rights approval.'
