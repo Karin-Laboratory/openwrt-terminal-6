@@ -35,7 +35,8 @@ if [[ "${SBAT6_BUILD_ROOTFS_SERVICES:-0}" == 1 ]]; then
   [[ $# -eq 0 && "${SBAT6_BUILD_LIBUBOX_CORE:-0}" == 1 &&
      "${SBAT6_BUILD_UBUS_CORE:-0}" == 1 &&
      "${SBAT6_BUILD_UBUSD:-0}" == 1 &&
-     "${SBAT6_BUILD_UCI:-0}" == 1 ]] || {
+     "${SBAT6_BUILD_UCI:-0}" == 1 &&
+     "${SBAT6_BUILD_PROCD_INIT:-0}" == 1 ]] || {
     echo 'Combined stage requires musl BusyBox and pinned ubusd' >&2; exit 2;
   }
   mkdir "$tmp/service-inputs"
@@ -43,6 +44,7 @@ if [[ "${SBAT6_BUILD_ROOTFS_SERVICES:-0}" == 1 ]]; then
   export SBAT6_MUSL_UBUSD_OUTPUT="$tmp/service-inputs/ubusd"
   export SBAT6_MUSL_UBUS_CLI_OUTPUT="$tmp/service-inputs/ubus"
   export SBAT6_MUSL_UCI_CLI_OUTPUT="$tmp/service-inputs/uci"
+  export SBAT6_MUSL_PROCD_INIT_OUTPUT="$tmp/service-inputs/init"
 fi
 
 # Public upstream musl 1.2.5 mirror. The tag is NOT a floating branch:
@@ -109,7 +111,7 @@ if [[ "${SBAT6_BUILD_ROOTFS_SERVICES:-0}" == 1 ]]; then
   # BusyBox + ubusd + ubus/UCI CLIs, no /init, procd, network config or credentials.
   python3 - "$SBAT6_MUSL_BUSYBOX_OUTPUT" "$SBAT6_MUSL_UBUSD_OUTPUT" \
     "$SBAT6_MUSL_UBUS_CLI_OUTPUT" "$SBAT6_MUSL_UCI_CLI_OUTPUT" \
-    "$tmp/sbat6-services-rootfs.tar.gz" "$tmp/sbat6-services-manifest.json" <<'PY'
+    "$SBAT6_MUSL_PROCD_INIT_OUTPUT" "$tmp/sbat6-services-rootfs.tar.gz" "$tmp/sbat6-services-manifest.json" <<'PY'
 import gzip
 import hashlib
 import io
@@ -138,8 +140,8 @@ def read_static_aarch64(filename):
             raise ValueError("PT_INTERP is not permitted in musl-static stage")
     return data
 
-busybox, ubusd, ubus_cli, uci_cli = [read_static_aarch64(arg) for arg in sys.argv[1:5]]
-archive_path, manifest_path = map(Path, sys.argv[5:7])
+busybox, ubusd, ubus_cli, uci_cli, procd_init = [read_static_aarch64(arg) for arg in sys.argv[1:6]]
+archive_path, manifest_path = map(Path, sys.argv[6:8])
 if any(p.exists() or p.is_symlink() for p in (archive_path, manifest_path)):
     raise ValueError("output already exists")
 buffer = io.BytesIO()
@@ -157,22 +159,23 @@ with tarfile.open(fileobj=buffer, mode="w", format=tarfile.GNU_FORMAT) as tar:
     add("bin/busybox", tarfile.REGTYPE, 0o755, busybox)
     add("bin/ubus", tarfile.REGTYPE, 0o755, ubus_cli)
     add("sbin/uci", tarfile.REGTYPE, 0o755, uci_cli)
+    add("sbin/init", tarfile.REGTYPE, 0o755, procd_init)
     add("bin/sh", tarfile.SYMTYPE, 0o777, linkname="busybox")
     add("sbin/ubusd", tarfile.REGTYPE, 0o755, ubusd)
 compressed = gzip.compress(buffer.getvalue(), compresslevel=9, mtime=0)
 with tarfile.open(fileobj=io.BytesIO(gzip.decompress(compressed)), mode="r:") as tar:
     expected = {"bin", "sbin", "etc", "dev", "proc", "sys", "tmp",
-                "var", "var/run", "bin/busybox", "bin/ubus", "bin/sh", "sbin/ubusd", "sbin/uci"}
+                "var", "var/run", "bin/busybox", "bin/ubus", "bin/sh", "sbin/ubusd", "sbin/uci", "sbin/init"}
     if set(tar.getnames()) != expected:
         raise ValueError("unexpected rootfs stage member")
     if tar.getmember("bin/sh").linkname != "busybox":
         raise ValueError("unexpected shell link")
     for name, original in (("bin/busybox", busybox), ("bin/ubus", ubus_cli),
-                           ("sbin/ubusd", ubusd), ("sbin/uci", uci_cli)):
+                           ("sbin/ubusd", ubusd), ("sbin/uci", uci_cli), ("sbin/init", procd_init)):
         if tar.extractfile(name).read() != original:
             raise ValueError("rootfs archive byte mismatch")
 manifest = {
-    "scope": "NONINSTALLABLE_SBAT6_MUSL_BUSYBOX_UBUSD_UBUS_UCI_ROOTFS_STAGE",
+    "scope": "NONINSTALLABLE_SBAT6_MUSL_BUSYBOX_UBUSD_UBUS_UCI_PROCD_INIT_ROOTFS_STAGE",
     "architecture": "aarch64",
     "libc": "native-musl-static-1.2.5",
     "busybox_version": "1.36.1",
@@ -180,25 +183,27 @@ manifest = {
     "libubox_commit": "da2d205a5cf3e877c45a2eec488218cbaf452e7d",
     "json_c_commit": "41a55cfcedb54d9c1874f2f0eb07b504091d7e37",
     "uci_commit": "66127cd76c5d0bd46d5a90302cc6110f53a4e2f8",
+    "procd_commit": "5aef7c33b01455157c1373a14e2a3fa47d024c6c",
     "files_sha256": {
         "bin/busybox": hashlib.sha256(busybox).hexdigest(),
         "bin/ubus": hashlib.sha256(ubus_cli).hexdigest(),
         "sbin/ubusd": hashlib.sha256(ubusd).hexdigest(),
-        "sbin/uci": hashlib.sha256(uci_cli).hexdigest()
+        "sbin/uci": hashlib.sha256(uci_cli).hexdigest(),
+        "sbin/init": hashlib.sha256(procd_init).hexdigest()
     },
     "archive_sha256": hashlib.sha256(compressed).hexdigest(),
     "archive_bytes": len(compressed),
     "rights_review": "pending",
-    "not_proven": ["bootable PID1/procd", "netifd", "SSH", "wpad",
+    "not_proven": ["bootable PID1/procd service runtime", "netifd", "SSH", "wpad",
                    "SBAT6 OpenWrt target", "hardware AP", "distribution rights"]
 }
 archive_path.write_bytes(compressed)
 manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\n")
-print("SBAT6_MUSL_BUSYBOX_UBUSD_UBUS_UCI_ROOTFS_STAGE_PASS",
+print("SBAT6_MUSL_BUSYBOX_UBUSD_UBUS_UCI_PROCD_INIT_ROOTFS_STAGE_PASS",
       "bytes=", len(compressed), "sha256=", manifest["archive_sha256"])
 PY
   test -s "$tmp/sbat6-services-rootfs.tar.gz"
   test -s "$tmp/sbat6-services-manifest.json"
   sha256sum "$tmp/sbat6-services-rootfs.tar.gz"
 fi
-echo 'LIMIT: noninstallable BusyBox/ubusd/ubus/UCI rootfs stage only; no OpenWrt target, procd/netifd, AP or release.'
+echo 'LIMIT: procd /sbin/init compiled and staged but not bootable; no /etc/preinit, /sbin/procd service runtime, netifd, AP or release.'
