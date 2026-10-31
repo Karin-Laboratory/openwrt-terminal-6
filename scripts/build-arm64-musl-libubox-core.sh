@@ -265,7 +265,17 @@ fi
 # Isolate the upstream init target in its own build-only helper. The core
 # library checker must remain free of upgrade/deployment implementation.
 if [[ "${SBAT6_BUILD_PROCD_INIT:-0}" == 1 ]]; then
-  bash "$(dirname "${BASH_SOURCE[0]}")/build-arm64-musl-procd-init.sh" \
-    "$compiler" "$tmp/libubox.a" "$ubus_src"
+  if [[ "${SBAT6_BUILD_PROCD_SERVICE:-0}" == 1 ]]; then
+    [[ "${SBAT6_BUILD_UBUSD:-0}" == 1 && "${SBAT6_BUILD_UCI:-0}" == 1 ]] || {
+      echo 'procd service requires real ubus, JSON-C and UCI libraries' >&2; exit 2;
+    }
+    bash "$(dirname "${BASH_SOURCE[0]}")/build-arm64-musl-procd-init.sh" \
+      "$compiler" "$tmp/libubox.a" "$ubus_src" "$tmp/libubus.a" \
+      "$tmp/libuci.a" "$tmp/libblobmsg_json.a" "$json_build/libjson-c.a" \
+      "$json_src" "$json_build"
+  else
+    bash "$(dirname "${BASH_SOURCE[0]}")/build-arm64-musl-procd-init.sh" \
+      "$compiler" "$tmp/libubox.a" "$ubus_src"
+  fi
 fi
-echo 'LIMIT: procd init linked but not executed; no bootable OpenWrt target, procd service runtime, netifd, device or release.'
+echo 'LIMIT: procd binaries linked but not executed; no bootable OpenWrt target, netifd, device or release.'
