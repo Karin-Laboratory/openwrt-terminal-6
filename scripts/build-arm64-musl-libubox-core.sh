@@ -184,8 +184,34 @@ if [[ "${SBAT6_BUILD_UBUSD:-0}" == 1 ]]; then
     cp -- "$tmp/ubusd" "$SBAT6_MUSL_UBUSD_OUTPUT"
     chmod 0600 "$SBAT6_MUSL_UBUSD_OUTPUT"
   fi
+  # The real upstream ubus CLI is the counterpart to ubusd. Build it with
+  # the same pinned musl, libubus, libubox, blobmsg_json and json-c objects,
+  # rather than relying on a host executable or a shell stub.
+  timeout 120s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE -static \
+    -DUBUS_UNIX_SOCKET='"/var/run/ubus/ubus.sock"' \
+    -DUBUS_MAX_MSGLEN=1048576 -Werror=implicit-function-declaration \
+    -I "$tmp" -I "$ubus_src" -I "$json_src" -I "$json_build" \
+    "$ubus_src/cli.c" "$tmp/libubus.a" "$tmp/libblobmsg_json.a" \
+    "$tmp/libubox.a" "$json_build/libjson-c.a" -lm -o "$tmp/ubus"
+  readelf -h "$tmp/ubus" | grep -q 'Machine:.*AArch64'
+  if readelf -l "$tmp/ubus" | grep -q 'INTERP'; then
+    echo 'Unexpected dynamic interpreter in musl-static ubus CLI' >&2
+    exit 1
+  fi
+  test -s "$tmp/ubus"
+  if [[ -n "${SBAT6_MUSL_UBUS_CLI_OUTPUT:-}" ]]; then
+    [[ "$SBAT6_MUSL_UBUS_CLI_OUTPUT" == /* &&
+       ! -e "$SBAT6_MUSL_UBUS_CLI_OUTPUT" &&
+       ! -L "$SBAT6_MUSL_UBUS_CLI_OUTPUT" ]] || {
+      echo 'Unsafe ubus CLI staging output' >&2; exit 2;
+    }
+    cp -- "$tmp/ubus" "$SBAT6_MUSL_UBUS_CLI_OUTPUT"
+    chmod 0600 "$SBAT6_MUSL_UBUS_CLI_OUTPUT"
+  fi
+  sha256sum "$tmp/ubus"
+  echo 'SBAT6_MUSL_UBUS_CLI_STATIC_LINK_PASS'
   sha256sum "$json_build/libjson-c.a" "$tmp/libblobmsg_json.a" "$tmp/libubusd.a" "$tmp/ubusd"
   wc -c "$tmp/ubusd"
   echo 'SBAT6_MUSL_UBUSD_STATIC_DAEMON_LINK_PASS'
 fi
-echo 'LIMIT: native musl ubusd link only; no execution, procd, netifd, OpenWrt target/rootfs, device or release.'
+echo 'LIMIT: native musl ubus CLI/ubusd link only; no execution, procd, netifd, OpenWrt target, device or release.'
