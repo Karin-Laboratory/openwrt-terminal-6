@@ -128,4 +128,4 @@ jobs:
           test "$(uname -m)" = aarch64
           test "$(id -u)" -ne 0
           SBAT6_BUILD_NETIFD_LINUX_OBJECT=1 SBAT6_BUILD_ROOTFS_SERVICES=1 SBAT6_BUILD_PROCD_SERVICE=1 SBAT6_BUILD_PROCD_INIT=1 SBAT6_BUILD_UCI=1 SBAT6_BUILD_UBUSD=1 SBAT6_BUILD_UBUS_CORE=1 SBAT6_BUILD_LIBUBOX_CORE=1 bash scripts/build-arm64-musl-busybox-stage.sh
-          echo 'LIMIT: netifd Linux backend object and libnl-tiny compiled separately; no full netifd ELF, service execution, bootable OpenWrt target or device test.'
+          echo 'LIMIT: real netifd ELF plus procd boot policy are staged, but not executed; no external network/AP, independent OpenWrt target or device test.'

@@ -111,12 +111,13 @@ if [[ "${SBAT6_BUILD_LIBUBOX_CORE:-0}" == 1 ]]; then
   bash "$(dirname "${BASH_SOURCE[0]}")/build-arm64-musl-libubox-core.sh" "$muslcc"
 fi
 if [[ "${SBAT6_BUILD_ROOTFS_SERVICES:-0}" == 1 ]]; then
-  # Deterministic noninstallable rootfs stage with the actual pinned
-  # procd init and procd service manager; not bootable or device-ready.
+  # Deterministic noninstallable rootfs stage with pinned procd/netifd and
+  # a loopback-only first-boot policy. No external interface is configured.
+  policy_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/config/sbat6-stage"
   python3 - "$SBAT6_MUSL_BUSYBOX_OUTPUT" "$SBAT6_MUSL_UBUSD_OUTPUT" \
     "$SBAT6_MUSL_UBUS_CLI_OUTPUT" "$SBAT6_MUSL_UCI_CLI_OUTPUT" \
     "$SBAT6_MUSL_PROCD_INIT_OUTPUT" "$SBAT6_MUSL_PROCD_SERVICE_OUTPUT" \
-    "$SBAT6_MUSL_NETIFD_OUTPUT" "$tmp/sbat6-services-rootfs.tar.gz" "$tmp/sbat6-services-manifest.json" <<'PY'
+    "$SBAT6_MUSL_NETIFD_OUTPUT" "$tmp/sbat6-services-rootfs.tar.gz" "$tmp/sbat6-services-manifest.json" "$policy_dir" <<'PY'
 import gzip
 import hashlib
 import io
@@ -147,6 +148,14 @@ def read_static_aarch64(filename):
 
 busybox, ubusd, ubus_cli, uci_cli, procd_init, procd_service, netifd = [read_static_aarch64(arg) for arg in sys.argv[1:8]]
 archive_path, manifest_path = map(Path, sys.argv[8:10])
+policy_root = Path(sys.argv[10])
+policy_names = ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network")
+policy_data = {}
+for name in policy_names:
+    path = policy_root / name
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 4096:
+        raise ValueError("missing or unsafe SBAT6 boot policy: " + name)
+    policy_data[name] = path.read_bytes()
 if any(p.exists() or p.is_symlink() for p in (archive_path, manifest_path)):
     raise ValueError("output already exists")
 buffer = io.BytesIO()
@@ -159,7 +168,7 @@ with tarfile.open(fileobj=buffer, mode="w", format=tarfile.GNU_FORMAT) as tar:
         info.linkname = linkname
         info.size = len(data) if kind == tarfile.REGTYPE else 0
         tar.addfile(info, io.BytesIO(data) if kind == tarfile.REGTYPE else None)
-    for directory in ("bin", "sbin", "etc", "dev", "proc", "sys", "tmp", "var", "var/run"):
+    for directory in ("bin", "sbin", "etc", "etc/rc.d", "etc/config", "dev", "proc", "sys", "tmp", "var", "var/run"):
         add(directory, tarfile.DIRTYPE, 0o755)
     add("bin/busybox", tarfile.REGTYPE, 0o755, busybox)
     add("bin/ubus", tarfile.REGTYPE, 0o755, ubus_cli)
@@ -167,12 +176,14 @@ with tarfile.open(fileobj=buffer, mode="w", format=tarfile.GNU_FORMAT) as tar:
     add("sbin/init", tarfile.REGTYPE, 0o755, procd_init)
     add("sbin/procd", tarfile.REGTYPE, 0o755, procd_service)
     add("sbin/netifd", tarfile.REGTYPE, 0o755, netifd)
+    for name, payload in policy_data.items():
+        add(name, tarfile.REGTYPE, 0o755 if name in ("etc/preinit", "etc/rc.d/S10netifd") else 0o644, payload)
     add("bin/sh", tarfile.SYMTYPE, 0o777, linkname="busybox")
     add("sbin/ubusd", tarfile.REGTYPE, 0o755, ubusd)
 compressed = gzip.compress(buffer.getvalue(), compresslevel=9, mtime=0)
 with tarfile.open(fileobj=io.BytesIO(gzip.decompress(compressed)), mode="r:") as tar:
-    expected = {"bin", "sbin", "etc", "dev", "proc", "sys", "tmp",
-                "var", "var/run", "bin/busybox", "bin/ubus", "bin/sh", "sbin/ubusd", "sbin/uci", "sbin/init", "sbin/procd", "sbin/netifd"}
+    expected = {"bin", "sbin", "etc", "etc/rc.d", "etc/config", "dev", "proc", "sys", "tmp",
+                "var", "var/run", "bin/busybox", "bin/ubus", "bin/sh", "sbin/ubusd", "sbin/uci", "sbin/init", "sbin/procd", "sbin/netifd"} | set(policy_names)
     if set(tar.getnames()) != expected:
         raise ValueError("unexpected rootfs stage member")
     if tar.getmember("bin/sh").linkname != "busybox":
@@ -183,6 +194,9 @@ with tarfile.open(fileobj=io.BytesIO(gzip.decompress(compressed)), mode="r:") as
                            ("sbin/netifd", netifd)):
         if tar.extractfile(name).read() != original:
             raise ValueError("rootfs archive byte mismatch")
+    for name, original in policy_data.items():
+        if tar.extractfile(name).read() != original:
+            raise ValueError("rootfs boot policy byte mismatch")
 manifest = {
     "scope": "NONINSTALLABLE_SBAT6_MUSL_BUSYBOX_UBUSD_UBUS_UCI_PROCD_NETIFD_ROOTFS_STAGE",
     "architecture": "aarch64",
@@ -204,12 +218,13 @@ manifest = {
         "sbin/uci": hashlib.sha256(uci_cli).hexdigest(),
         "sbin/init": hashlib.sha256(procd_init).hexdigest(),
         "sbin/procd": hashlib.sha256(procd_service).hexdigest(),
-        "sbin/netifd": hashlib.sha256(netifd).hexdigest()
+        "sbin/netifd": hashlib.sha256(netifd).hexdigest(),
+        **{name: hashlib.sha256(data).hexdigest() for name, data in policy_data.items()}
     },
     "archive_sha256": hashlib.sha256(compressed).hexdigest(),
     "archive_bytes": len(compressed),
     "rights_review": "pending",
-    "not_proven": ["bootable PID1/procd service runtime", "netifd runtime/bridge", "SSH", "wpad",
+    "not_proven": ["PID1/procd service runtime", "netifd runtime/bridge", "SSH", "wpad",
                    "SBAT6 OpenWrt target", "hardware AP", "distribution rights"]
 }
 archive_path.write_bytes(compressed)
@@ -240,4 +255,4 @@ PY
     chmod 0600 "$SBAT6_MUSL_SERVICES_ROOTFS_OUTPUT" "$SBAT6_MUSL_SERVICES_MANIFEST_OUTPUT"
   fi
 fi
-echo 'LIMIT: procd/netifd compiled and staged but not executed; no /etc/preinit, service startup, AP or release.'
+echo 'LIMIT: procd preinit/inittab/netifd service policy staged, but no runtime execution, external network/AP, SSH or release.'

@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+# Loopback only. Never configure uplink, DHCP server, NAT, radio or credentials.
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
