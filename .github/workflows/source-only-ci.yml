@@ -94,3 +94,4 @@ jobs:
           python3 scripts/build-minimal-arm64-initramfs.py "$tmp/staging"
           test -s "$tmp/staging/initramfs.cpio.gz"
           test -s "$tmp/staging/manifest.json"
+
