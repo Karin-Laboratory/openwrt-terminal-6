@@ -112,3 +112,20 @@ jobs:
           test "$(id -u)" -ne 0
           bash scripts/build-arm64-busybox-smoke.sh native-static-stage
           echo 'SBAT6_STATIC_BUSYBOX_HOSTED_BUILD_PASS (glibc-static stage, not OpenWrt/musl/firmware)'
+
+  arm64-musl-native:
+    name: Build pinned musl libc and static ARM64 BusyBox stage (noninstallable)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Compile ephemeral musl 1.2.5 and native static BusyBox
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = aarch64
+          test "$(id -u)" -ne 0
+          bash scripts/build-arm64-musl-busybox-stage.sh
+          echo 'LIMIT: native musl compiler is not an OpenWrt SDK; no installable rootfs or device test.'
