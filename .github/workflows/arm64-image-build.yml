@@ -12,6 +12,7 @@ on:
       - scripts/package-arm64-busybox-initramfs.py
       - scripts/package-arm64-busybox-rootfs.py
       - scripts/package-arm64-procd-stage-initramfs.py
+      - scripts/smoke-arm64-musl-ipc.py
       - 'config/sbat6-stage/**'
       - board/mt6990-air-terminal-6.dts
       - board/mt6990-air-terminal-6-ethernet-test.dts
@@ -29,6 +30,7 @@ on:
       - scripts/package-arm64-busybox-initramfs.py
       - scripts/package-arm64-busybox-rootfs.py
       - scripts/package-arm64-procd-stage-initramfs.py
+      - scripts/smoke-arm64-musl-ipc.py
       - 'config/sbat6-stage/**'
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
   workflow_dispatch:
@@ -83,6 +85,11 @@ jobs:
           PY
           test -s "$tmp/ramfs/initramfs.cpio.gz"
           test -s "$tmp/ramfs/manifest.json"
+          # Real, non-root ARM64 execution of the pinned static IPC binaries.
+          # The only endpoint is a private AF_UNIX socket; UCI reads the
+          # packaged loopback config. No procd, netifd or host networking.
+          python3 "$GITHUB_WORKSPACE/scripts/smoke-arm64-musl-ipc.py" \
+            "$tmp/ramfs/services.tar.gz" "$tmp/ramfs/services.json"
           # Official upstream GPL Linux, not the vendor MT6990 kernel or Air6 firmware.
           timeout 600s git -c protocol.version=2 clone --quiet --depth 1 \
             --filter=blob:none --single-branch --branch v6.18 \
