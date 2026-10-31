@@ -261,4 +261,11 @@ if [[ "${SBAT6_BUILD_UCI:-0}" == 1 ]]; then
   sha256sum "$tmp/libuci.a" "$tmp/uci-cli"
   echo 'SBAT6_MUSL_UCI_STATIC_CLI_LINK_PASS'
 fi
-echo 'LIMIT: native musl ubus/ubusd/UCI compilation only; no execution, procd, netifd, OpenWrt target, device or release.'
+
+# Isolate the upstream init target in its own build-only helper. The core
+# library checker must remain free of upgrade/deployment implementation.
+if [[ "${SBAT6_BUILD_PROCD_INIT:-0}" == 1 ]]; then
+  bash "$(dirname "${BASH_SOURCE[0]}")/build-arm64-musl-procd-init.sh" \
+    "$compiler" "$tmp/libubox.a" "$ubus_src"
+fi
+echo 'LIMIT: procd init linked but not executed; no bootable OpenWrt target, procd service runtime, netifd, device or release.'
