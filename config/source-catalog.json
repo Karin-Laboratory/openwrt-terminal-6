@@ -359,7 +359,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "001b09c796f788a8e75017e85a2dfb6a7dab68ec",
+      "git_blob_sha1": "81a938a50017eb433123d206ac2c0a829602117f",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -513,6 +513,24 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "b8864f7987a0ea6d6abbe29bcff5f8712fd7ffbd",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/package-arm64-busybox-initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "2c7b6e8def23a21070fb133ad4eb60b1e89259db",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_busybox_initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "f3f550788fc7ce5d5684d54072e56a44581b68c6",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
