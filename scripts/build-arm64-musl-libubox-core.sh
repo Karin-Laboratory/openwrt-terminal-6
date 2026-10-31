@@ -67,4 +67,52 @@ if readelf -l "$tmp/link-smoke" | grep -q 'INTERP'; then
 fi
 sha256sum "$tmp/libubox.a" "$tmp/link-smoke"
 echo 'SBAT6_MUSL_LIBUBOX_CORE_OBJECTS_AND_STATIC_LINK_PASS'
-echo 'LIMIT: libubox core only; no JSON-C, ubus, procd, netifd, OpenWrt target/rootfs, device or release.'
+
+# Opt-in actual OpenWrt ubus client library build against the same musl ABI.
+# No system ubus, JSON-C, host libc, installed service or execution.
+if [[ "${SBAT6_BUILD_UBUS_CORE:-0}" == 1 ]]; then
+  ubus_src="$tmp/ubus"
+  git init --quiet "$ubus_src"
+  git -C "$ubus_src" remote add origin https://github.com/openwrt/ubus.git
+  ubus_revision=db20eff5535fe3126c05dc0edc029caf0e82fe10
+  timeout 180s git -C "$ubus_src" -c protocol.version=2 fetch --quiet --depth 1 origin "$ubus_revision"
+  test "$(git -C "$ubus_src" rev-parse FETCH_HEAD)" = "$ubus_revision"
+  git -C "$ubus_src" checkout --quiet --detach FETCH_HEAD
+  test "$(git -C "$ubus_src" rev-parse HEAD)" = "$ubus_revision"
+  ubus_sources=(libubus.c libubus-io.c libubus-obj.c
+    libubus-sub.c libubus-req.c libubus-acl.c)
+  mkdir "$tmp/ubus-obj"
+  for file in "${ubus_sources[@]}"; do
+    test -f "$ubus_src/$file"
+    timeout 90s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE \
+      -DUBUS_UNIX_SOCKET='"/var/run/ubus/ubus.sock"' \
+      -DUBUS_MAX_MSGLEN=1048576 -Werror=implicit-function-declaration \
+      -I "$tmp" -I "$ubus_src" \
+      -c "$ubus_src/$file" -o "$tmp/ubus-obj/${file%.c}.o"
+  done
+  ar rcs "$tmp/libubus.a" "$tmp/ubus-obj/"*.o
+  test "$(ar t "$tmp/libubus.a" | wc -l)" -eq "${#ubus_sources[@]}"
+  nm --defined-only "$tmp/libubus.a" > "$tmp/ubus-symbols.txt"
+  grep -Eq ' [TW] ubus_connect$' "$tmp/ubus-symbols.txt"
+  grep -Eq ' [TW] ubus_free$' "$tmp/ubus-symbols.txt"
+  cat > "$tmp/ubus-link-smoke.c" <<'EOF'
+#include "libubus.h"
+int main(void) {
+    struct ubus_context *ctx = ubus_connect(NULL);
+    if (ctx) ubus_free(ctx);
+    return 0;
+}
+EOF
+  # Static AArch64 link only; never run or install the executable.
+  timeout 90s "$compiler" -static -I "$tmp" -I "$ubus_src" \
+    "$tmp/ubus-link-smoke.c" "$tmp/libubus.a" "$tmp/libubox.a" \
+    -o "$tmp/ubus-link-smoke"
+  readelf -h "$tmp/ubus-link-smoke" | grep -q 'Machine:.*AArch64'
+  if readelf -l "$tmp/ubus-link-smoke" | grep -q 'INTERP'; then
+    echo 'Unexpected dynamic interpreter in musl-static ubus smoke' >&2
+    exit 1
+  fi
+  sha256sum "$tmp/libubus.a" "$tmp/ubus-link-smoke"
+  echo 'SBAT6_MUSL_LIBUBUS_CORE_OBJECTS_AND_STATIC_LINK_PASS'
+fi
+echo 'LIMIT: libubox/optional libubus client only; no JSON-C, ubusd, procd, netifd, OpenWrt target/rootfs, device or release.'

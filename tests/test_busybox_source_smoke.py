@@ -81,6 +81,14 @@ class BusyBoxSourceSmokeTests(unittest.TestCase):
             self.assertNotIn(forbidden, src)
         workflow = (ROOT / ".github/workflows/source-only-ci.yml").read_text()
         self.assertIn("SBAT6_BUILD_LIBUBOX_CORE=1", workflow)
+        self.assertIn("SBAT6_BUILD_UBUS_CORE=1", workflow)
+        self.assertIn("openwrt/ubus.git", src)
+        self.assertIn("db20eff5535fe3126c05dc0edc029caf0e82fe10", src)
+        self.assertIn("libubus-acl.c", src)
+        self.assertIn("libubus.a", src)
+        self.assertIn("ubus-link-smoke.c", src)
+        self.assertIn("SBAT6_MUSL_LIBUBUS_CORE_OBJECTS_AND_STATIC_LINK_PASS", src)
+        self.assertIn('if [[ "${SBAT6_BUILD_UBUS_CORE:-0}" == 1 ]]', src)
 
     def test_does_not_claim_rootfs_completeness(self):
         src = SCRIPT.read_text()
