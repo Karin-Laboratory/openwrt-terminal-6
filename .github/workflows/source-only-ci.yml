@@ -66,6 +66,15 @@ jobs:
         run: python3 tools/build/verify_feeds_lock.py config/feeds.lock
       - name: Validate pinned noninstallable Air6 userland selection
         run: python3 tools/build/check_air6_userspace_source.py
+      - name: Build ephemeral AArch64 PID1 initramfs (not a firmware image)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          python3 scripts/build-minimal-arm64-initramfs.py "$tmp/staging"
+          test -s "$tmp/staging/initramfs.cpio.gz"
+          test -s "$tmp/staging/manifest.json"
       - name: Verify pinned source-only build contract
         run: python3 tools/build/verify_source_catalog.py
       - name: Verify public CI trust policy
