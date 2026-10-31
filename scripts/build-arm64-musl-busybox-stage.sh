@@ -189,6 +189,7 @@ manifest = {
     "json_c_commit": "41a55cfcedb54d9c1874f2f0eb07b504091d7e37",
     "uci_commit": "66127cd76c5d0bd46d5a90302cc6110f53a4e2f8",
     "procd_commit": "5aef7c33b01455157c1373a14e2a3fa47d024c6c",
+    "udebug_commit": "6726e98ad69402e79b6d0b305012ace857ca0786",
     "files_sha256": {
         "bin/busybox": hashlib.sha256(busybox).hexdigest(),
         "bin/ubus": hashlib.sha256(ubus_cli).hexdigest(),
