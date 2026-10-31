@@ -128,7 +128,6 @@ echo 'SBAT6_MUSL_NETIFD_BRIDGE_VLAN_STATIC_PROTO_OBJECTS_PASS'
 sha256sum "$deps/libnl-tiny.a" "$deps/libudebug.a" "$deps/netifd-system-linux.o" "$deps/netifd-core-obj/"*.o
 echo 'SBAT6_MUSL_NETIFD_REAL_LINUX_BACKEND_OBJECT_PASS'
 # Build real upstream ucode core and every netifd CMake source into a static daemon.
-set -x
 # This is noninstallable: no execution, signing, hardware or firmware.
 uc="$deps/ucode"
 git init --quiet "$uc"
