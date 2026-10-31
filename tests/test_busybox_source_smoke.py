@@ -64,6 +64,23 @@ class BusyBoxSourceSmokeTests(unittest.TestCase):
         self.assertIn("EUID == 0", musl)
         self.assertNotIn("sudo ", musl)
         self.assertNotIn("make install DESTDIR=/", musl)
+        self.assertIn("SBAT6_BUILD_LIBUBOX_CORE", musl)
+        self.assertIn("build-arm64-musl-libubox-core.sh", musl)
+
+    def test_pinned_musl_libubox_core_build_is_real_and_noninstallable(self):
+        src = (ROOT / "scripts/build-arm64-musl-libubox-core.sh").read_text()
+        self.assertIn("openwrt/libubox.git", src)
+        self.assertIn("da2d205a5cf3e877c45a2eec488218cbaf452e7d", src)
+        self.assertIn("uloop.c", src)
+        self.assertIn("udebug-remote.c", src)
+        self.assertIn("libubox.a", src)
+        self.assertIn("link-smoke.c", src)
+        self.assertIn("SBAT6_MUSL_LIBUBOX_CORE_OBJECTS_AND_STATIC_LINK_PASS", src)
+        self.assertIn("EUID == 0", src)
+        for forbidden in ("sudo ", "apt install", "sysupgrade", "flashrom", "chroot ", "qemu-aarch64"):
+            self.assertNotIn(forbidden, src)
+        workflow = (ROOT / ".github/workflows/source-only-ci.yml").read_text()
+        self.assertIn("SBAT6_BUILD_LIBUBOX_CORE=1", workflow)
 
     def test_does_not_claim_rootfs_completeness(self):
         src = SCRIPT.read_text()
