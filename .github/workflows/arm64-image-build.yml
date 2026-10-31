@@ -69,6 +69,28 @@ jobs:
           cat >> drivers/phy/mediatek/Makefile <<'EOF'
           obj-$(CONFIG_PHY_MTK_MT6990_SGMII) += phy-mtk-mt6990-sgmii.o
           EOF
+          # MT6990 TOPCK/PLL/mux provider: actual built-in compilation,
+          # using only pinned public GPL-labelled donor source, ephemerally.
+          # No provider MMIO/clock runtime or board boot is claimed.
+          clk_donor=https://raw.githubusercontent.com/13179415360/openwrt-mt6990-lg6851f/a40df9a5afb46716dea799acea69f17480df4d82/target/linux/mediatek/files-6.18/drivers/clk/mediatek
+          curl --fail --silent --show-error --location --retry 3 --max-time 90 \
+            "$clk_donor/clk-mt6990.c" -o drivers/clk/mediatek/clk-mt6990.c
+          test "$(git hash-object drivers/clk/mediatek/clk-mt6990.c)" = \
+            db78aae0f50750ecf69d42b1178bdd56e41bd629
+          curl --fail --silent --show-error --location --retry 3 --max-time 90 \
+            "$clk_donor/clkdbg.h" -o drivers/clk/mediatek/clkdbg.h
+          test "$(git hash-object drivers/clk/mediatek/clkdbg.h)" = \
+            2602ca4ced06487e5579fda2a017c7dda5461527
+          cat >> drivers/clk/mediatek/Kconfig <<'EOF'
+
+          config COMMON_CLK_MT6990_AIR6_RESEARCH
+            bool "MT6990 top clock provider (Air6 compile-only research)"
+            depends on ARCH_MEDIATEK && OF
+            select COMMON_CLK_MEDIATEK
+          EOF
+          cat >> drivers/clk/mediatek/Makefile <<'EOF'
+          obj-$(CONFIG_COMMON_CLK_MT6990_AIR6_RESEARCH) += clk-mt6990.o
+          EOF
           make ARCH=arm64 defconfig
           scripts/config --enable BLK_DEV_INITRD \
             --set-str INITRAMFS_SOURCE "$tmp/ramfs/initramfs.cpio.gz"
@@ -80,7 +102,8 @@ jobs:
           # while BRIDGE/HSR are modules. Resolve all tristate prerequisites.
           scripts/config --enable IPV6 --enable BRIDGE --disable HSR
           scripts/config --enable ARCH_MEDIATEK --enable MFD_SYSCON \
-            --enable GENERIC_PHY --enable PHY_MTK_MT6990_SGMII
+            --enable GENERIC_PHY --enable PHY_MTK_MT6990_SGMII \
+            --enable COMMON_CLK_MT6990_AIR6_RESEARCH
           scripts/config --enable NET_DSA \
             --enable NET_DSA_MT7530 --enable NET_DSA_MT7530_MDIO \
             --disable NET_DSA_MT7530_MMIO \
@@ -88,7 +111,8 @@ jobs:
           make ARCH=arm64 olddefconfig
           for option in NET_DSA NET_DSA_MT7530 NET_DSA_MT7530_MDIO \
                         NET_VENDOR_MEDIATEK NET_MEDIATEK_SOC PCS_MTK_LYNXI \
-                        MFD_SYSCON GENERIC_PHY PHY_MTK_MT6990_SGMII; do
+                        MFD_SYSCON GENERIC_PHY PHY_MTK_MT6990_SGMII \
+                        COMMON_CLK_MT6990_AIR6_RESEARCH; do
             grep -qx "CONFIG_${option}=y" .config || {
               echo "Required upstream Ethernet component disabled: $option" >&2
               exit 1
@@ -108,11 +132,12 @@ jobs:
                      drivers/net/pcs/pcs-mtk-lynxi.o \
                      drivers/net/ethernet/mediatek/mtk_eth_soc.o \
                      drivers/net/ethernet/mediatek/mtk_eth_path.o \
-                     drivers/phy/mediatek/phy-mtk-mt6990-sgmii.o; do
+                     drivers/phy/mediatek/phy-mtk-mt6990-sgmii.o \
+                     drivers/clk/mediatek/clk-mt6990.o; do
             test -s "$obj" || { echo "Missing built-in object: $obj" >&2; exit 1; }
           done
           echo 'UPSTREAM_MT7531_DSA_MEDIATEK_PCS_IMAGE_OBJECTS_PASS'
-          echo 'MT6990_SGMII_PHY_PATCHED_KBUILD_OBJECT_PASS (no cold-boot or rights approval)'
+          echo 'MT6990_SGMII_PHY_PATCHED_KBUILD_OBJECT_PASS (no cold-boot or rights approval)'\n          echo 'MT6990_TOP_CLOCK_PROVIDER_KBUILD_OBJECT_PASS (compile only; no MMIO/probe or rights approval)'
           # Linux v6.18 uses __irf_start/__irf_end and __initramfs_size;
           # it does not define the obsolete __initramfs_start/end symbols.
           nm vmlinux > "$tmp/kernel-symbols.txt"
