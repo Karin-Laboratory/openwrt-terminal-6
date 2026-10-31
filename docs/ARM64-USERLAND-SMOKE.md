@@ -34,7 +34,9 @@ A separate **noninstallable** native AArch64 build job now exercises
 [`scripts/build-arm64-musl-busybox-stage.sh`](../scripts/build-arm64-musl-busybox-stage.sh).
 It obtains public musl 1.2.5 from `ifduyue/musl` at exact commit
 `0784374d561435f7c787a555aeab8ede699ed298`, builds a temporary
-musl toolchain wrapper without root privileges, then compiles the same
+musl toolchain wrapper without root privileges. It installs **Linux v6.18**
+UAPI headers from exact upstream commit `7d0a66e4bb9081d75c82ec4957c50034cb0ea449`
+into that temporary musl prefix, without using glibc host headers, then compiles the same
 pinned BusyBox 1.36.1 with `CC=<temporary>/bin/musl-gcc` and
 `CONFIG_STATIC=y`. The result is inspected as ELF64 AArch64 without
 `PT_INTERP` and packaged into an ephemeral, deterministic tar.gz stage
