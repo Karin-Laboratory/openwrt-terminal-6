@@ -214,4 +214,52 @@ if [[ "${SBAT6_BUILD_UBUSD:-0}" == 1 ]]; then
   wc -c "$tmp/ubusd"
   echo 'SBAT6_MUSL_UBUSD_STATIC_DAEMON_LINK_PASS'
 fi
-echo 'LIMIT: native musl ubus CLI/ubusd link only; no execution, procd, netifd, OpenWrt target, device or release.'
+# Actual upstream UCI library and CLI are needed for persistent OpenWrt AP
+# configuration. Keep the exact OpenWrt package revision and the same musl
+# compiler/ABI as ubusd. Do not run the CLI or modify host /etc/config.
+if [[ "${SBAT6_BUILD_UCI:-0}" == 1 ]]; then
+  uci_src="$tmp/uci"
+  git init --quiet "$uci_src"
+  git -C "$uci_src" remote add origin https://github.com/openwrt/uci.git
+  uci_revision=66127cd76c5d0bd46d5a90302cc6110f53a4e2f8
+  timeout 180s git -C "$uci_src" -c protocol.version=2 fetch --quiet --depth 1 origin "$uci_revision"
+  test "$(git -C "$uci_src" rev-parse FETCH_HEAD)" = "$uci_revision"
+  git -C "$uci_src" checkout --quiet --detach FETCH_HEAD
+  test "$(git -C "$uci_src" rev-parse HEAD)" = "$uci_revision"
+  # This is CMake's disabled-default uci_config.h, generated in ephemeral
+  # upstream source checkout; never committed as a modified upstream file.
+  printf '#undef UCI_DEBUG\n#undef UCI_DEBUG_TYPECAST\n' > "$uci_src/uci_config.h"
+  uci_sources=(libuci.c file.c util.c delta.c parse.c blob.c)
+  mkdir "$tmp/uci-obj"
+  for file in "${uci_sources[@]}"; do
+    test -f "$uci_src/$file"
+    timeout 90s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE \
+      -Werror=implicit-function-declaration -I "$tmp" -I "$uci_src" \
+      -c "$uci_src/$file" -o "$tmp/uci-obj/${file%.c}.o"
+  done
+  ar rcs "$tmp/libuci.a" "$tmp/uci-obj/"*.o
+  test "$(ar t "$tmp/libuci.a" | wc -l)" -eq "${#uci_sources[@]}"
+  nm --defined-only "$tmp/libuci.a" | grep -Eq ' [TW] uci_alloc_context
+
+  timeout 120s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE -static \
+    -I "$tmp" -I "$uci_src" "$uci_src/cli.c" \
+    "$tmp/libuci.a" "$tmp/libubox.a" -o "$tmp/uci-cli"
+  readelf -h "$tmp/uci-cli" | grep -q 'Machine:.*AArch64'
+  if readelf -l "$tmp/uci-cli" | grep -q 'INTERP'; then
+    echo 'Unexpected dynamic interpreter in musl-static UCI CLI' >&2
+    exit 1
+  fi
+  test -s "$tmp/uci-cli"
+  if [[ -n "${SBAT6_MUSL_UCI_CLI_OUTPUT:-}" ]]; then
+    [[ "$SBAT6_MUSL_UCI_CLI_OUTPUT" == /* &&
+       ! -e "$SBAT6_MUSL_UCI_CLI_OUTPUT" &&
+       ! -L "$SBAT6_MUSL_UCI_CLI_OUTPUT" ]] || {
+      echo 'Unsafe UCI CLI staging output' >&2; exit 2;
+    }
+    cp -- "$tmp/uci-cli" "$SBAT6_MUSL_UCI_CLI_OUTPUT"
+    chmod 0600 "$SBAT6_MUSL_UCI_CLI_OUTPUT"
+  fi
+  sha256sum "$tmp/libuci.a" "$tmp/uci-cli"
+  echo 'SBAT6_MUSL_UCI_STATIC_CLI_LINK_PASS'
+fi
+echo 'LIMIT: native musl ubus/ubusd/UCI compilation only; no execution, procd, netifd, OpenWrt target, device or release.'
