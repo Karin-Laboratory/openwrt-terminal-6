@@ -127,4 +127,73 @@ nm --defined-only "$deps/netifd-core-obj/vlandev.o" | grep -Fq ' vlandev_config_
 echo 'SBAT6_MUSL_NETIFD_BRIDGE_VLAN_STATIC_PROTO_OBJECTS_PASS'
 sha256sum "$deps/libnl-tiny.a" "$deps/libudebug.a" "$deps/netifd-system-linux.o" "$deps/netifd-core-obj/"*.o
 echo 'SBAT6_MUSL_NETIFD_REAL_LINUX_BACKEND_OBJECT_PASS'
-echo 'LIMIT: no full netifd executable, ucode closure, service execution, AP, hardware or rights approval.'
+# Build real upstream ucode core and every netifd CMake source into a static daemon.
+# This is noninstallable: no execution, signing, hardware or firmware.
+uc="$deps/ucode"
+git init --quiet "$uc"
+git -C "$uc" remote add origin https://github.com/ucode-lang/ucode.git
+uc_rev=dfc64d41fd720163ac21d9feb9cb224d1a80fd75
+timeout 180s git -C "$uc" -c protocol.version=2 fetch --quiet --depth 1 origin "$uc_rev"
+test "$(git -C "$uc" rev-parse FETCH_HEAD)" = "$uc_rev"
+git -C "$uc" checkout --quiet --detach FETCH_HEAD
+test "$(git -C "$uc" rev-parse HEAD)" = "$uc_rev"
+json_src="$deps/json-c"
+json_build="$deps/json-c-build"
+test -s "$json_build/libjson-c.a"
+mkdir -p "$deps/netifd-include/json-c" "$deps/ucode-obj"
+for header in "$json_src"/*.h "$json_build"/*.h; do
+  test -f "$header"
+  name="$(basename "$header")"
+  if [[ ! -e "$deps/netifd-include/json-c/$name" ]]; then
+    ln -s "$header" "$deps/netifd-include/json-c/$name"
+  fi
+done
+uc_sources=(lexer.c lib.c vm.c chunk.c vallist.c compiler.c
+  source.c types.c program.c platform.c)
+for file in "\${uc_sources[@]}"; do
+  test -f "$uc/$file"
+  timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
+    -DLIB_SEARCH_PATH='"/usr/lib/ucode/*.so"' \
+    -DHAVE_PARSE_END -DHAVE_ARRAY_EXT -DHAVE_JSON_UINT64 \
+    -Werror=implicit-function-declaration \
+    -I "$uc/include" -I "$deps/netifd-include" \
+    -c "$uc/$file" -o "$deps/ucode-obj/\${file%.c}.o"
+done
+ar rcs "$deps/libucode.a" "$deps/ucode-obj/"*.o
+test "$(ar t "$deps/libucode.a" | wc -l)" -eq "\${#uc_sources[@]}"
+nm --defined-only "$deps/libucode.a" | grep -Fq ' uc_vm_init'
+echo 'SBAT6_MUSL_LIBUCODE_REAL_CORE_OBJECTS_PASS'
+daemon_sources=(main.c utils.c system.c tunnel.c handler.c interface.c
+  interface-ip.c interface-event.c iprule.c proto.c proto-static.c
+  proto-shell.c proto-ext.c proto-ucode.c config.c device.c bridge.c
+  veth.c vlan.c alias.c macvlan.c ubus.c vlandev.c extdev.c
+  bonding.c vrf.c ucode.c system-linux.c)
+mkdir "$deps/netifd-daemon-obj"
+for file in "\${daemon_sources[@]}"; do
+  test -f "$netifd/$file"
+  timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
+    -Werror=implicit-function-declaration \
+    -I "$ud" -I "$deps" -idirafter "$deps/libubox" \
+    -I "$deps/ubus" -I "$deps/uci" -I "$nl/include" \
+    -I "$netifd" -I "$uc/include" -I "$deps/netifd-include" \
+    -c "$netifd/$file" -o "$deps/netifd-daemon-obj/\${file%.c}.o"
+done
+test "$(find "$deps/netifd-daemon-obj" -maxdepth 1 -name '*.o' | wc -l)" -eq "\${#daemon_sources[@]}"
+timeout 180s "$cc" -static "$deps/netifd-daemon-obj/"*.o \
+  -Wl,--start-group "$deps/libucode.a" "$deps/libudebug.a" \
+  "$deps/libnl-tiny.a" "$deps/libuci.a" "$deps/libubus.a" \
+  "$deps/libblobmsg_json.a" "$deps/libubox.a" \
+  "$json_build/libjson-c.a" -Wl,--end-group -lm -ldl \
+  -o "$deps/netifd-daemon"
+test -s "$deps/netifd-daemon"
+readelf -h "$deps/netifd-daemon" | grep -q 'Machine:.*AArch64'
+if readelf -l "$deps/netifd-daemon" | grep -q INTERP; then
+  echo 'Unexpected dynamic interpreter in netifd daemon' >&2
+  exit 1
+fi
+nm --defined-only "$deps/netifd-daemon" | grep -Eq ' [TW] main
+
+sha256sum "$deps/netifd-daemon"
+echo 'SBAT6_MUSL_NETIFD_REAL_DAEMON_STATIC_LINK_PASS'
+echo 'LIMIT: no daemon execution, procd service registration, rootfs AP, hardware boot or rights approval.'
+
