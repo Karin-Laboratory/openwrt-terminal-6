@@ -359,7 +359,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "5258f0830f6816eb067aaccaa2e47be59e274beb",
+      "git_blob_sha1": "fe2ffd68c3a1eca26ed8d82daf70bdbfcd88c933",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -495,6 +495,24 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "3735e0d39c72b11bb618f837cdea34e75d7e6ef5",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/package-arm64-busybox-rootfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "f75389867409807b84437bef413ed1f69d048263",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_busybox_rootfs_stage.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b8864f7987a0ea6d6abbe29bcff5f8712fd7ffbd",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
