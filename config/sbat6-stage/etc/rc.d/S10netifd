@@ -1,0 +1,5 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Research-only procd service registration; no uplink/AP configuration.
+[ "${1:-}" = boot ] || exit 0
+exec /bin/ubus -t 5 call service add '{"name":"netifd","instances":{"netifd":{"command":["/sbin/netifd"],"respawn":["3600","5","5"]}}}'
