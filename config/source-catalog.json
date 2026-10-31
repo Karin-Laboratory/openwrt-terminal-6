@@ -452,6 +452,24 @@
       "git_blob_sha1": "3cc1c75bf769882c674806709801e20b7276c9c7",
       "rights_review": "pending",
       "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/verify_feed_git_objects.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "6ca8d8f23b82fc7ea9fadf3f92eca66536a4ad19",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_feed_git_objects.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3735e0d39c72b11bb618f837cdea34e75d7e6ef5",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
     }
   ],
   "missing_dependencies": [
