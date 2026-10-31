@@ -17,3 +17,29 @@ The public hosted CI job `arm64-image-with-initramfs` builds a **real Linux ARM6
 **Precise boundary:** This is an upstream **generic** ARM64 Image with an embedded PID1, **not an MT6990/Air6-capable kernel**. No donor/vendor MT6990 drivers, unresolved-rights SoC DTSI, device-specific DTB, wireless firmware or proprietary files are used in this Image build. Existing independent Air6 DT syntax checks are separate and do not make the kernel/DTB pair compatible. No runtime boot test is performed. Successful compilation alone does not establish rights clearance for distribution.
 
 **Next integration gate (#20):** identify a lawful and version-matched MT6990 kernel driver + clock/reset/genpd + SoC DTSI baseline, then compile the Air6 DTB with the **same** kernel tree/config and validate `dtbs_check`. Only after that can the integrated unsigned Image/DTB/initramfs be evaluated as a board-targeted candidate. Keep #74/#20/#21/#4 open.
+
+
+## Static BusyBox PID1 in the same Image build (2026-10-31, PR pending)
+
+The existing native AArch64 BusyBox 1.36.1 **glibc-static** source build can now
+construct a deterministic Linux `newc` gzip initramfs using
+`scripts/package-arm64-busybox-initramfs.py`. Its `/init` is a tiny shell
+script interpreted by the included static `/bin/busybox` through
+`/bin/sh`. It writes a diagnostic banner to `/dev/console` and sleeps;
+there is **no interactive login, networking, password, persistent setting,
+SSH or AP service**. The packager validates the AArch64 ELF has no
+`PT_INTERP`, round-trips all cpio entries and checks their exact payloads.
+
+The hosted `.github/workflows/arm64-image-build.yml` job now embeds this
+BusyBox PID1 archive in the **same** Linux v6.18 ARM64 `Image` build as the
+upstream Ethernet/DSA/PCS components, the MT6990 analog PHY and IFRAO clock
+object, and the base/opt-in Air6 candidate DTBs. It checks byte equality
+with `usr/initramfs_inc_data` and `usr/initramfs_data.o`. This is a
+**material kernel/userspace compile integration**, not an OpenWrt musl rootfs,
+procd/netifd/wpad build, completed MT6990 NETSYS/clock/reset/genpd
+integration, validated hardware boot, rights approval or installable image.
+
+The earlier freestanding C diagnostic PID1 builder and its separate
+source-only CI test remain available for comparison. The original static
+BusyBox tar rootfs-stage job also remains independent. All generated
+binaries are ephemeral and discarded, never uploaded or distributed.

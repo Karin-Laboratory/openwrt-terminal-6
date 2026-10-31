@@ -13,12 +13,26 @@ done
 # Explicit native mode is only valid on a GitHub-hosted AArch64 runner.
 # The original cross-compiler mode remains unchanged for local toolchains.
 rootfs_stage=false
+initramfs_stage=false
+static_build=false
 prefix="${1:-aarch64-openwrt-linux-musl-}"
 if [[ "$prefix" == native-static-stage ]]; then
   [[ "$(uname -m)" == aarch64 ]] || {
     echo 'Static BusyBox stage requires an AArch64 host' >&2; exit 2;
   }
   rootfs_stage=true
+  static_build=true
+  prefix=""
+elif [[ "$prefix" == native-static-initramfs ]]; then
+  [[ "$(uname -m)" == aarch64 ]] || {
+    echo 'Static BusyBox initramfs requires an AArch64 host' >&2; exit 2;
+  }
+  [[ $# -eq 3 ]] || {
+    echo 'usage: build-arm64-busybox-smoke.sh native-static-initramfs NEW_CPIO_GZ NEW_MANIFEST' >&2
+    exit 2
+  }
+  initramfs_stage=true
+  static_build=true
   prefix=""
 elif [[ "$prefix" == native ]]; then
   [[ "$(uname -m)" == aarch64 ]] || {
@@ -51,7 +65,7 @@ timeout 120s make -C "$tmp/busybox" ARCH=arm64 CROSS_COMPILE="$prefix" defconfig
 grep -q '^CONFIG_TC=y$' "$tmp/busybox/.config"
 sed -i 's/^CONFIG_TC=y$/# CONFIG_TC is not set/' "$tmp/busybox/.config"
 grep -q '^# CONFIG_TC is not set$' "$tmp/busybox/.config"
-if [[ "$rootfs_stage" == true ]]; then
+if [[ "$static_build" == true ]]; then
   # Stage is deliberately libc-static on the hosted runner, not OpenWrt musl.
   grep -q '^# CONFIG_STATIC is not set$' "$tmp/busybox/.config"
   sed -i 's/^# CONFIG_STATIC is not set$/CONFIG_STATIC=y/' "$tmp/busybox/.config"
@@ -84,5 +98,11 @@ if [[ "$rootfs_stage" == true ]]; then
     "$tmp/busybox/busybox" "$tmp/rootfs-stage.tar.gz" "$tmp/rootfs-stage.json"
   test -s "$tmp/rootfs-stage.tar.gz"
   test -s "$tmp/rootfs-stage.json"
+fi
+if [[ "$initramfs_stage" == true ]]; then
+  python3 "$(dirname "${BASH_SOURCE[0]}")/package-arm64-busybox-initramfs.py" \
+    "$tmp/busybox/busybox" "$2" "$3"
+  test -s "$2"
+  test -s "$3"
 fi
 echo 'LIMIT: not an OpenWrt rootfs or board firmware; no output is released.'
