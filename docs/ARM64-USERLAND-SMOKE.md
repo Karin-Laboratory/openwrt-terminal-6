@@ -56,3 +56,19 @@ rights reviews remain separate from a CI compile PASS.
 **Next:** build a pinned OpenWrt musl toolchain/package closure in an
 isolated SBAT6-specific profile, then generate a noninstallable rootfs
 with procd/netifd before considering any boot or release step.
+
+## Pinned OpenWrt libubox core build (AP-first #21, 2026-10-31)
+
+The GitHub-hosted native ARM64 musl job now optionally compiles all 18
+upstream `libubox` core C translation units from the exact public OpenWrt
+commit `da2d205a5cf3e877c45a2eec488218cbaf452e7d` using the same
+musl 1.2.5 compiler and Linux v6.18 UAPI headers as the BusyBox stage.
+It archives real AArch64 objects to `libubox.a` and links a **non-executed**
+static musl AArch64 event-loop smoke ELF. The job requires the explicit
+`SBAT6_MUSL_LIBUBOX_CORE_OBJECTS_AND_STATIC_LINK_PASS` marker. Outputs are
+temporary and never uploaded.
+
+This is an **actual compiled dependency**, not a full OpenWrt package build.
+The optional JSON-C/Lua frontends, ubus, procd, netifd, wpad, SBAT6 target
+and rootfs remain missing. This compilation is not a device test or
+redistribution-rights clearance; the source rights gate remains pending.
