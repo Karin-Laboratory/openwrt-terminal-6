@@ -50,6 +50,9 @@ jobs:
           # Compile upstream GPL Ethernet pieces needed by the observed
           # MAC1 -> MT7531 MDIO switch path into this exact Image.
           # These are upstream generic drivers, NOT MT6990-specific support.
+          # arm64 defconfig has BRIDGE=m and HSR=m; these cap NET_DSA at m.
+          # An Image-only build needs built-in DSA, not unbuilt modules.
+          scripts/config --enable BRIDGE --disable HSR
           scripts/config --enable NET_DSA \
             --enable NET_DSA_MT7530 --enable NET_DSA_MT7530_MDIO \
             --disable NET_DSA_MT7530_MMIO \
