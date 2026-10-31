@@ -23,10 +23,10 @@ cpio = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cpio)
 
 BINARIES = ("bin/busybox", "bin/ubus", "sbin/ubusd",
-            "sbin/uci", "sbin/init", "sbin/procd")
+            "sbin/uci", "sbin/init", "sbin/procd", "sbin/netifd")
 DIRS = ("bin", "sbin", "etc", "dev", "proc", "sys", "tmp", "var", "var/run")
 EXPECTED = set(BINARIES) | set(DIRS) | {"bin/sh"}
-SOURCE_SCOPE = "NONINSTALLABLE_SBAT6_MUSL_BUSYBOX_UBUSD_UBUS_UCI_PROCD_INIT_SERVICE_ROOTFS_STAGE"
+SOURCE_SCOPE = "NONINSTALLABLE_SBAT6_MUSL_BUSYBOX_UBUSD_UBUS_UCI_PROCD_NETIFD_ROOTFS_STAGE"
 
 
 def package(rootfs: Path, source_manifest: Path, output: Path, manifest_out: Path) -> dict:
@@ -94,7 +94,7 @@ def package(rootfs: Path, source_manifest: Path, output: Path, manifest_out: Pat
         "initramfs_bytes": len(compressed),
         "init": "symlink-to-real-upstream-procd-init-ELF",
         "rights_review": "pending",
-        "not_proven": ["procd PID1 runtime", "preinit/service startup", "netifd",
+        "not_proven": ["procd PID1 runtime", "preinit/service startup", "netifd runtime/bridge",
                        "Wi-Fi AP", "Air6 boot", "release rights"],
     }
     output.write_bytes(compressed)
@@ -108,7 +108,7 @@ if __name__ == "__main__":
             raise ValueError("usage: package-arm64-procd-stage-initramfs.py ROOTFS_TAR_GZ ROOTFS_MANIFEST NEW_CPIO_GZ NEW_MANIFEST")
         result = package(*(Path(p) for p in sys.argv[1:]))
         print("SBAT6_PROCD_STAGE_CPIO_WITH_REAL_PID1_PASS", json.dumps(result, sort_keys=True))
-        print("LIMIT: no preinit or services, no verified PID1 execution, netifd, AP or hardware boot")
+        print("LIMIT: no preinit or services, no verified PID1/netifd execution, AP or hardware boot")
     except (OSError, ValueError, tarfile.TarError) as exc:
         print("SBAT6_PROCD_STAGE_CPIO_FAIL", str(exc), file=sys.stderr)
         sys.exit(1)
