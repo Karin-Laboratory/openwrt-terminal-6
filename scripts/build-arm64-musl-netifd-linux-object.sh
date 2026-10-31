@@ -109,8 +109,13 @@ core_sources=(bridge.c vlan.c vlandev.c proto-static.c)
 mkdir "$deps/netifd-core-obj"
 for file in "${core_sources[@]}"; do
   test -f "$netifd/$file"
+  # The pinned bridge.c uses assert() without including <assert.h>.
+  # Force the standard declaration into this compile-only TU; do not
+  # modify the pinned upstream source or disable implicit-decl checking.
+  extra_headers=()
+  if [[ "$file" == bridge.c ]]; then extra_headers=(-include assert.h); fi
   timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
-    -Werror=implicit-function-declaration \
+    -Werror=implicit-function-declaration "${extra_headers[@]}" \
     -I "$ud" -I "$deps" -I "$deps/libubox" -I "$deps/ubus" -I "$deps/uci" \
     -I "$nl/include" -I "$netifd" \
     -c "$netifd/$file" -o "$deps/netifd-core-obj/${file%.c}.o"
