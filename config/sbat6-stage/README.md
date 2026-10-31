@@ -14,7 +14,7 @@ The hosted native AArch64 Image job runs `scripts/smoke-arm64-musl-ipc.py`
 after producing the real static-musl rootfs stage. The script verifies the
 archive and individual ELF identities, copies only `ubusd`, `ubus` and `uci`
 into a private temporary directory, and executes an actual `ubusd`/ `ubus`
-client/server round trip over a local AF_UNIX socket. It also executes the
+client/server lookup round trip over a local AF_UNIX socket and confirms\nthat unprivileged event publishing is denied by ubusd's default ACL. It also executes the
 real `uci` CLI against the packaged loopback-only network configuration.
 No root privileges, real interfaces, network namespace modifications,
 flash, firmware, or installed system files are involved. Binaries are
