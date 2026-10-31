@@ -111,6 +111,27 @@ class BusyBoxSourceSmokeTests(unittest.TestCase):
                           "qemu-aarch64", "chroot ", "ssh root@"):
             self.assertNotIn(forbidden, src)
 
+    def test_procd_service_compiles_upstream_sources_and_stages_real_elf(self):
+        procd = (ROOT / "scripts/build-arm64-musl-procd-init.sh").read_text()
+        stage = (ROOT / "scripts/build-arm64-musl-busybox-stage.sh").read_text()
+        ci = (ROOT / ".github/workflows/source-only-ci.yml").read_text()
+        for token in ("5aef7c33b01455157c1373a14e2a3fa47d024c6c",
+                      "6726e98ad69402e79b6d0b305012ace857ca0786",
+                      "udebug-ubus.o", "procd.c", "service/instance.c", "service/trigger.c",
+                      "plug/hotplug.c", "json_script.c", "udebug.c",
+                      "libubus_archive", "libuci_archive",
+                      "SBAT6_MUSL_PROCD_SERVICE_STATIC_LINK_PASS",
+                      "readelf -h", "readelf -l", "-static"):
+            self.assertIn(token, procd)
+        self.assertIn('SBAT6_BUILD_PROCD_SERVICE=1', ci)
+        self.assertIn('SBAT6_MUSL_PROCD_SERVICE_OUTPUT', stage)
+        self.assertIn('add("sbin/procd", tarfile.REGTYPE, 0o755, procd_service)', stage)
+        self.assertIn('"sbin/procd": hashlib.sha256(procd_service).hexdigest()', stage)
+        self.assertIn("SBAT6_MUSL_PROCD_SERVICE_ROOTFS_STAGE_PASS", stage)
+        for forbidden in ("sudo ", "apt install", "sysupgrade -n", "flashrom",
+                          "qemu-aarch64", "chroot ", "ssh root@", "dd if="):
+            self.assertNotIn(forbidden, procd)
+
     def test_does_not_claim_rootfs_completeness(self):
         src = SCRIPT.read_text()
         self.assertIn("not an OpenWrt rootfs or board firmware", src)
