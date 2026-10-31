@@ -28,6 +28,8 @@ test "$(git -C "$src" rev-parse FETCH_HEAD)" = "$revision"
 git -C "$src" checkout --quiet --detach FETCH_HEAD
 test "$(git -C "$src" rev-parse HEAD)" = "$revision"
 
+# Do not put the source root on the angle-include path: its custom assert.h
+# includes the system assert.h, and -I src would cause self-shadowing.
 # Same core source list as upstream libubox CMakeLists.txt, without optional
 # JSON-C/Lua frontends. Build all 18 objects, not a placeholder or host libc.
 sources=(avl.c avl-cmp.c blob.c blobmsg.c uloop.c usock.c ustream.c
@@ -37,7 +39,7 @@ mkdir "$tmp/obj"
 for file in "${sources[@]}"; do
   test -f "$src/$file"
   timeout 90s "$compiler" -Os -std=gnu99 -D_GNU_SOURCE \
-    -Werror=implicit-function-declaration -I "$tmp" -I "$src" \
+    -Werror=implicit-function-declaration -I "$tmp" \
     -c "$src/$file" -o "$tmp/obj/${file%.c}.o"
 done
 ar rcs "$tmp/libubox.a" "$tmp/obj/"*.o
@@ -55,7 +57,7 @@ int main(void) {
     return 0;
 }
 EOF
-timeout 90s "$compiler" -static -I "$tmp" -I "$src" \
+timeout 90s "$compiler" -static -I "$tmp" \
   "$tmp/link-smoke.c" "$tmp/libubox.a" -o "$tmp/link-smoke"
 readelf -h "$tmp/link-smoke" | grep -q 'Machine:.*AArch64'
 if readelf -l "$tmp/link-smoke" | grep -q 'INTERP'; then
