@@ -359,7 +359,16 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "81a938a50017eb433123d206ac2c0a829602117f",
+      "git_blob_sha1": "a405a19bbdf6b6936cf8a0510149abe11b4661a4",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/build-arm64-musl-busybox-stage.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "bbbc0f91a8bd500621a43b83beefafe4db3f1cc6",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -368,7 +377,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "a6f7083e7b0b5f46646a59a91ce5618cd54409cc",
+      "git_blob_sha1": "bad5163443cbfe804dfff7ef0bab55eb54dbb6f3",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -503,7 +512,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "f75389867409807b84437bef413ed1f69d048263",
+      "git_blob_sha1": "671921e3e3e572301e47c203563f88caf90ec6cb",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -512,7 +521,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "b8864f7987a0ea6d6abbe29bcff5f8712fd7ffbd",
+      "git_blob_sha1": "92494caf6a17a48e52eeb636fa34bfb19b72b7b0",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
