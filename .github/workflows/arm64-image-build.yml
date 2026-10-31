@@ -12,6 +12,7 @@ on:
       - scripts/package-arm64-busybox-initramfs.py
       - scripts/package-arm64-busybox-rootfs.py
       - scripts/package-arm64-procd-stage-initramfs.py
+      - 'config/sbat6-stage/**'
       - board/mt6990-air-terminal-6.dts
       - board/mt6990-air-terminal-6-ethernet-test.dts
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
@@ -28,6 +29,7 @@ on:
       - scripts/package-arm64-busybox-initramfs.py
       - scripts/package-arm64-busybox-rootfs.py
       - scripts/package-arm64-procd-stage-initramfs.py
+      - 'config/sbat6-stage/**'
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
   workflow_dispatch:
 permissions:
