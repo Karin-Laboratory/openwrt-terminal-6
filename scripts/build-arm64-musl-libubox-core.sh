@@ -42,8 +42,53 @@ for file in "${sources[@]}"; do
 done
 ar rcs "$tmp/libubox.a" "$tmp/obj/"*.o
 test "$(ar t "$tmp/libubox.a" | wc -l)" -eq "${#sources[@]}"
-nm --defined-only "$tmp/libubox.a" | grep -Eq ' [TW] uloop_init$'
-nm --defined-only "$tmp/libubox.a" | grep -Eq ' [TW] blobmsg_add_string$'
+nm --defined-only "$tmp/libubox.a" > "$tmp/symbols.txt"
+grep -Eq ' [TW] uloop_init
+
+# Link an actual musl-static AArch64 ELF against the newly compiled archive.
+# Never execute it. This proves libc and the event-loop link closure only.
+cat > "$tmp/link-smoke.c" <<'EOF'
+#include <libubox/uloop.h>
+int main(void) {
+    if (uloop_init() != 0) return 1;
+    uloop_done();
+    return 0;
+}
+EOF
+timeout 90s "$compiler" -static -I "$tmp" -I "$src" \
+  "$tmp/link-smoke.c" "$tmp/libubox.a" -o "$tmp/link-smoke"
+readelf -h "$tmp/link-smoke" | grep -q 'Machine:.*AArch64'
+if readelf -l "$tmp/link-smoke" | grep -q 'INTERP'; then
+  echo 'Unexpected dynamic interpreter in musl-static smoke' >&2
+  exit 1
+fi
+sha256sum "$tmp/libubox.a" "$tmp/link-smoke"
+echo 'SBAT6_MUSL_LIBUBOX_CORE_OBJECTS_AND_STATIC_LINK_PASS'
+echo 'LIMIT: libubox core only; no JSON-C, ubus, procd, netifd, OpenWrt target/rootfs, device or release.'
+ "$tmp/symbols.txt"
+grep -Eq ' [TW] blobmsg_add_string_buffer
+
+# Link an actual musl-static AArch64 ELF against the newly compiled archive.
+# Never execute it. This proves libc and the event-loop link closure only.
+cat > "$tmp/link-smoke.c" <<'EOF'
+#include <libubox/uloop.h>
+int main(void) {
+    if (uloop_init() != 0) return 1;
+    uloop_done();
+    return 0;
+}
+EOF
+timeout 90s "$compiler" -static -I "$tmp" -I "$src" \
+  "$tmp/link-smoke.c" "$tmp/libubox.a" -o "$tmp/link-smoke"
+readelf -h "$tmp/link-smoke" | grep -q 'Machine:.*AArch64'
+if readelf -l "$tmp/link-smoke" | grep -q 'INTERP'; then
+  echo 'Unexpected dynamic interpreter in musl-static smoke' >&2
+  exit 1
+fi
+sha256sum "$tmp/libubox.a" "$tmp/link-smoke"
+echo 'SBAT6_MUSL_LIBUBOX_CORE_OBJECTS_AND_STATIC_LINK_PASS'
+echo 'LIMIT: libubox core only; no JSON-C, ubus, procd, netifd, OpenWrt target/rootfs, device or release.'
+ "$tmp/symbols.txt"
 
 # Link an actual musl-static AArch64 ELF against the newly compiled archive.
 # Never execute it. This proves libc and the event-loop link closure only.
