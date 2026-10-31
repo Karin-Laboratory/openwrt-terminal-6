@@ -27,3 +27,32 @@ For a real OpenWrt rootfs, separately freeze the OpenWrt revision, all [feeds](.
 [Run #40498318443](https://github.com/Karin-Laboratory/archive-openwrt-terminal-6-v2/actions/runs/40498318443) completed **SUCCESS** on the already connected isolated archived-v2 runner, using exact source and test blobs byte-matched to this new repo. The completed log confirmed five static tests, the genuine BusyBox 1.36.1 AArch64 cross-compile, `BUSYBOX_ARM64_ELF_HEADER_PASS`, and `CLEAN_SOURCE_PINNED_ARM64_BUSYBOX_PASS`. The temporary ELF had **1,053,400 bytes** and SHA-256 `edac38e43eb54dbaa0ef95a213834d32379c71bcdfccb2b69230ecf91d391e87`. The runner discarded it without executing, installing, uploading or signing it.
 
 The initial unmodified `defconfig` smoke failed compiling legacy BusyBox `networking/tc.c` against current Linux headers; disabling only `CONFIG_TC` resolved this one cross-build compatibility issue. This is an isolated smoke profile, not a tested OpenWrt BusyBox package configuration.
+
+## Pinned native musl stage experiment (AP-first #74 / #21)
+
+A separate **noninstallable** native AArch64 build job now exercises
+[`scripts/build-arm64-musl-busybox-stage.sh`](../scripts/build-arm64-musl-busybox-stage.sh).
+It obtains public musl 1.2.5 from `ifduyue/musl` at exact commit
+`0784374d561435f7c787a555aeab8ede699ed298`, builds a temporary
+musl toolchain wrapper without root privileges. It installs **Linux v6.18**
+UAPI headers from exact upstream commit `7d0a66e4bb9081d75c82ec4957c50034cb0ea449`
+into that temporary musl prefix, without using glibc host headers, then compiles the same
+pinned BusyBox 1.36.1 with `CC=<temporary>/bin/musl-gcc` and
+`CONFIG_STATIC=y`. The result is inspected as ELF64 AArch64 without
+`PT_INTERP` and packaged into an ephemeral, deterministic tar.gz stage
+with a `libc=musl-static` manifest. The original glibc-static path remains
+available and distinct.
+
+**Evidence gate:** claim `SBAT6_NATIVE_MUSL_STATIC_BUSYBOX_STAGE_PASS` only
+after the hosted `arm64-musl-native` job actually completes successfully.
+No binary is uploaded, installed, executed or distributed; the output is
+deleted on job exit. The GitHub-hosted native musl wrapper is **not**
+OpenWrt's pinned musl cross-toolchain or its package build infrastructure.
+This stage still lacks a distinct SBAT6 OpenWrt target, procd, ubus, uci,
+netifd, SSH, wpad, Wi-Fi firmware, package closure, ABI and hardware AP
+acceptance. Musl and BusyBox source redistribution obligations and
+rights reviews remain separate from a CI compile PASS.
+
+**Next:** build a pinned OpenWrt musl toolchain/package closure in an
+isolated SBAT6-specific profile, then generate a noninstallable rootfs
+with procd/netifd before considering any boot or release step.

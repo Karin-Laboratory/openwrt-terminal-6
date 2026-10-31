@@ -44,6 +44,24 @@ class BusyBoxSourceSmokeTests(unittest.TestCase):
         self.assertEqual(src.count("BUSYBOX_ARM64_ELF_HEADER_PASS"), 1)
         self.assertNotIn("CONFIG_TC=ytimeout", src)
 
+    def test_native_musl_mode_uses_explicit_compiler_and_pinned_libc(self):
+        src = SCRIPT.read_text()
+        self.assertIn("native-musl-static-stage", src)
+        self.assertIn("SBAT6_MUSL_CC", src)
+        self.assertIn('cc_override=("CC=$compiler")', src)
+        self.assertIn("musl-static", src)
+        musl = (ROOT / "scripts/build-arm64-musl-busybox-stage.sh").read_text()
+        self.assertIn("ifduyue/musl.git", musl)
+        self.assertIn("0784374d561435f7c787a555aeab8ede699ed298", musl)
+        self.assertIn("native-musl-static-stage", musl)
+        self.assertIn("7d0a66e4bb9081d75c82ec4957c50034cb0ea449", musl)
+        self.assertIn("headers_install", musl)
+        self.assertIn('INSTALL_HDR_PATH="$tmp/kernel-headers"', musl)
+        self.assertIn("SBAT6_NATIVE_MUSL_STATIC_BUSYBOX_STAGE_PASS", musl)
+        self.assertIn("EUID == 0", musl)
+        self.assertNotIn("sudo ", musl)
+        self.assertNotIn("make install DESTDIR=/", musl)
+
     def test_does_not_claim_rootfs_completeness(self):
         src = SCRIPT.read_text()
         self.assertIn("not an OpenWrt rootfs or board firmware", src)

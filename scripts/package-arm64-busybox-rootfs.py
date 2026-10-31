@@ -33,7 +33,10 @@ def check_static_aarch64_elf(blob: bytes) -> None:
     # This is an ELF structure check, not proof of runtime or static dependencies.
 
 
-def package(binary: Path, archive: Path, manifest: Path) -> dict:
+def package(binary: Path, archive: Path, manifest: Path,
+            libc: str = "host-glibc-static") -> dict:
+    if libc not in ("host-glibc-static", "musl-static"):
+        raise ValueError("unsupported libc identity")
     for output in (archive, manifest):
         if output.exists() or output.is_symlink():
             raise ValueError("output must not already exist")
@@ -68,7 +71,10 @@ def package(binary: Path, archive: Path, manifest: Path) -> dict:
         if hashlib.sha256(tar.extractfile("bin/busybox").read()).digest() != hashlib.sha256(payload).digest():
             raise ValueError("BusyBox archive roundtrip mismatch")
     record = {
-        "scope": "NONINSTALLABLE_STATIC_BUSYBOX_ROOTFS_STAGE",
+        "scope": ("NONINSTALLABLE_MUSL_BUSYBOX_ROOTFS_STAGE"
+                  if libc == "musl-static"
+                  else "NONINSTALLABLE_STATIC_BUSYBOX_ROOTFS_STAGE"),
+        "libc": libc,
         "architecture": "aarch64",
         "busybox_version": "1.36.1",
         "busybox_commit": "1a64f6a20aaf6ea4dbba68bbfa8cc1ab7e5c57c4",
@@ -76,7 +82,9 @@ def package(binary: Path, archive: Path, manifest: Path) -> dict:
         "archive_sha256": hashlib.sha256(compressed).hexdigest(),
         "archive_bytes": len(compressed),
         "rights_review": "pending",
-        "not_proven": ["musl/OpenWrt toolchain", "SBAT6 target", "init/PID1",
+        "not_proven": [("OpenWrt musl toolchain/package closure"
+                        if libc == "musl-static" else "musl/OpenWrt toolchain"),
+                       "SBAT6 target", "init/PID1",
                        "procd/netifd/wpad", "kernel ABI", "Air6 boot/AP",
                        "source redistribution rights"],
     }
@@ -87,9 +95,10 @@ def package(binary: Path, archive: Path, manifest: Path) -> dict:
 
 if __name__ == "__main__":
     try:
-        if len(sys.argv) != 4:
-            raise ValueError("usage: package-arm64-busybox-rootfs.py ELF NEW_TAR_GZ NEW_MANIFEST")
-        result = package(*(Path(arg) for arg in sys.argv[1:]))
+        if len(sys.argv) not in (4, 5):
+            raise ValueError("usage: package-arm64-busybox-rootfs.py ELF NEW_TAR_GZ NEW_MANIFEST [host-glibc-static|musl-static]")
+        result = package(*(Path(arg) for arg in sys.argv[1:4]),
+                         libc=sys.argv[4] if len(sys.argv) == 5 else "host-glibc-static")
         print("SBAT6_STATIC_BUSYBOX_ROOTFS_STAGE_PASS", json.dumps(result, sort_keys=True))
         print("LIMIT: not OpenWrt, no PID1, no device use, no redistribution clearance")
     except (OSError, ValueError, tarfile.TarError) as exc:

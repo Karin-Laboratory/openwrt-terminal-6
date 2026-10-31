@@ -15,6 +15,7 @@ done
 rootfs_stage=false
 initramfs_stage=false
 static_build=false
+musl_stage=false
 prefix="${1:-aarch64-openwrt-linux-musl-}"
 if [[ "$prefix" == native-static-stage ]]; then
   [[ "$(uname -m)" == aarch64 ]] || {
@@ -34,6 +35,14 @@ elif [[ "$prefix" == native-static-initramfs ]]; then
   initramfs_stage=true
   static_build=true
   prefix=""
+elif [[ "$prefix" == native-musl-static-stage ]]; then
+  [[ "$(uname -m)" == aarch64 ]] || {
+    echo 'musl BusyBox stage requires an AArch64 host' >&2; exit 2;
+  }
+  rootfs_stage=true
+  static_build=true
+  musl_stage=true
+  prefix=""
 elif [[ "$prefix" == native ]]; then
   [[ "$(uname -m)" == aarch64 ]] || {
     echo 'Native BusyBox build requires an AArch64 host' >&2; exit 2;
@@ -45,8 +54,17 @@ else
     exit 2
   fi
 fi
-command -v "${prefix}gcc" >/dev/null || { echo 'Missing preinstalled ARM64 compiler' >&2; exit 2; }
-"${prefix}gcc" --version | head -n 1
+compiler="${prefix}gcc"
+cc_override=()
+if [[ "$musl_stage" == true ]]; then
+  compiler="${SBAT6_MUSL_CC:-}"
+  [[ "$compiler" == /* && -x "$compiler" ]] || {
+    echo 'SBAT6_MUSL_CC must point to a built, executable musl-gcc wrapper' >&2; exit 2;
+  }
+  cc_override=("CC=$compiler")
+fi
+command -v "$compiler" >/dev/null || { echo 'Missing ARM64 compiler' >&2; exit 2; }
+"$compiler" --version | head -n 1
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/sbat6-busybox-src.XXXXXXXX")"
 trap 'rm -rf -- "$tmp"' EXIT
 
@@ -58,7 +76,7 @@ test "$(git -C "$tmp/busybox" rev-parse HEAD)" = \
 test "$(git -C "$tmp/busybox" hash-object Makefile)" = \
   fa8cb761443388730372eaf260e7ca1a0235bc43
 
-timeout 120s make -C "$tmp/busybox" ARCH=arm64 CROSS_COMPILE="$prefix" defconfig
+timeout 120s make -C "$tmp/busybox" ARCH=arm64 CROSS_COMPILE="$prefix" "${cc_override[@]}" defconfig
 # This is a limited cross-toolchain smoke, not a device rootfs profile.
 # BusyBox 1.36.1's optional tc/CBQ applet needs older Linux UAPI types.
 # Disable only that legacy applet, without patching host kernel headers.
@@ -72,7 +90,7 @@ if [[ "$static_build" == true ]]; then
   grep -qx 'CONFIG_STATIC=y' "$tmp/busybox/.config"
 fi
 
-timeout 450s make -C "$tmp/busybox" ARCH=arm64 CROSS_COMPILE="$prefix" -j2 busybox
+timeout 450s make -C "$tmp/busybox" ARCH=arm64 CROSS_COMPILE="$prefix" "${cc_override[@]}" -j2 busybox
 test -s "$tmp/busybox/busybox"
 
 # Read only the ELF header; never execute the cross-compiled binary.
@@ -94,8 +112,10 @@ bytes="$(wc -c < "$tmp/busybox/busybox")"
 echo "BusyBox 1.36.1 ARM64 ELF size_bytes=$bytes sha256=$digest"
 echo 'ARM64_BUSYBOX_SOURCE_COMPILE_PASS'
 if [[ "$rootfs_stage" == true ]]; then
+  libc_label=host-glibc-static
+  if [[ "$musl_stage" == true ]]; then libc_label=musl-static; fi
   python3 "$(dirname "${BASH_SOURCE[0]}")/package-arm64-busybox-rootfs.py" \
-    "$tmp/busybox/busybox" "$tmp/rootfs-stage.tar.gz" "$tmp/rootfs-stage.json"
+    "$tmp/busybox/busybox" "$tmp/rootfs-stage.tar.gz" "$tmp/rootfs-stage.json" "$libc_label"
   test -s "$tmp/rootfs-stage.tar.gz"
   test -s "$tmp/rootfs-stage.json"
 fi
