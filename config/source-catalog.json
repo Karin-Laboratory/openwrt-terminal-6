@@ -4,173 +4,38 @@
   "warning": "Git blob SHA-1 is a content identity, not a release signature or independent license clearance.",
   "inputs": [
     {
-      "path": "scripts/air6-diagnostic-init.c",
-      "component": "openwrt-userland",
+      "path": "board/mt6990-air-terminal-6-ethernet-test.dts",
+      "component": "board-dt",
       "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "ff14f983c5d473bf924ac750ca07a4e0925e6373",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "80a97fda52e315b4c733c4655afeade181f88522",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
     {
-      "path": "scripts/build-minimal-arm64-initramfs.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "d712e94bc2ac75cc652226bfe0a331c2501c2b6a",
+      "path": "board/mt6990-air-terminal-6-sgmii1-experimental.dtso",
+      "component": "board-dt",
+      "origin": "research-board-overlay",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "957e2135a68ccd7d835548198d9e47677f866f71",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
     {
-      "path": "tests/test_minimal_arm64_initramfs.py",
-      "component": "openwrt-userland",
+      "path": "board/mt6990-air-terminal-6.dts",
+      "component": "board-dt",
       "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "1610a3046ea922dcb227b1b3085d7984657b96f6",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "541b9b5380882409b2a11741ee0ed06a68e727ad",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
     {
-      "path": "patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch",
+      "path": "examples/fe-recovery/Makefile",
       "component": "ethernet",
-      "origin": "linux-v6.18-derived",
-      "license": "GPL-2.0-only",
-      "git_blob_sha1": "3fc960a3ea7e5580fae46a463d95e619e8a0ecdf",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "patches/rfc/0002-mediatek-serialize-reset-requeue.patch",
-      "component": "ethernet",
-      "origin": "linux-v6.18-derived",
-      "license": "GPL-2.0-only",
-      "git_blob_sha1": "5514a6868ae03acca08c49a4b92c42da88c4ce5a",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "patches/mt6990/0001-preserve-initial-med-dma.patch",
-      "component": "modem-ethernet",
-      "origin": "modified-gpl-parent-derived",
-      "license": "GPL-2.0-only",
-      "git_blob_sha1": "1e2bd82ed3576982c5a91d04e084a249c31fb103",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "scripts/research/sba6d_stage10_clean_patch.py",
-      "component": "modem-ethernet",
-      "origin": "research-transformer",
-      "license": "GPL-2.0-only",
-      "git_blob_sha1": "85fb48c726939319394569ed933131c1fba305ba",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/boot/slot_observation.py",
-      "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "c6393bd5c4b09becdff5a16c0d68dbfb85c0db3f",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/boot/ab_fallback_hypotheses.py",
-      "component": "ab-recovery",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "671813ada11159aa32f84956992cea356e37bb9e",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/modem/transport_model.py",
-      "component": "modem",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "00025bfe857cd4cc7b3bbaada3a8c0e78d460253",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_sba6d_stage10_clean_patch.py",
-      "component": "modem-ethernet",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "b511dd4f175d4e05ecce2217747c4972dcbf2e03",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_stage10_mmio_model.py",
-      "component": "modem-ethernet",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "e8e15d869f3ee822991c94957dc64cac45bb057a",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_publication_gate.py",
-      "component": "kernel",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "b76f662a19fee98dea9d728eadc46414c37ee733",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_publication_history.py",
-      "component": "kernel",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "808e75bc1607705a7c297d944d7c8078413e24bf",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_workflow_policy.py",
-      "component": "kernel",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "c0a90d8b58ab54ee3c268779d38360cb6b1afe1f",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_slot_observation.py",
-      "component": "ab-recovery",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "de9efbda4770ddf42cd062f0279a902a171007ae",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_ab_fallback_hypotheses.py",
-      "component": "ab-recovery",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "43c39c08c8433ad18cc5846f1c4684ead37f3c8c",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_source_catalog.py",
-      "component": "kernel",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "623bb8df51d7dedb4f6d71edfb042af625992691",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_build_input_integrity.py",
-      "component": "signing",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "a5591edba8b60ad2a85ef997017e3d65c51b9bae",
+      "git_blob_sha1": "e365ac4843f8ef5ccdd6f315ce0537306c9a2cfd",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -193,11 +58,47 @@
       "contains_flashable_payload": false
     },
     {
-      "path": "examples/fe-recovery/Makefile",
+      "path": "patches/mt6990/0001-preserve-initial-med-dma.patch",
+      "component": "modem-ethernet",
+      "origin": "modified-gpl-parent-derived",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "1e2bd82ed3576982c5a91d04e084a249c31fb103",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch",
       "component": "ethernet",
+      "origin": "modified-gpl-parent-derived",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "031a2d4837b7166000afcc868d05b8282e9fa5db",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch",
+      "component": "ethernet",
+      "origin": "linux-v6.18-derived",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "3fc960a3ea7e5580fae46a463d95e619e8a0ecdf",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "patches/rfc/0002-mediatek-serialize-reset-requeue.patch",
+      "component": "ethernet",
+      "origin": "linux-v6.18-derived",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "5514a6868ae03acca08c49a4b92c42da88c4ce5a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/air6-diagnostic-init.c",
+      "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "e365ac4843f8ef5ccdd6f315ce0537306c9a2cfd",
+      "git_blob_sha1": "ff14f983c5d473bf924ac750ca07a4e0925e6373",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -207,6 +108,393 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "e459ced4912701cbe8498222bd478c83818e87c8",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/build-arm64-busybox-smoke.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "8f90c873c917fa5b3a1edde9d3c08199cceb2147",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/build-arm64-musl-busybox-stage.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1156d86698e1d0e8d4a10adcdbeba09dd5f2489e",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/build-arm64-musl-libubox-core.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "956355756746bebd0442819a40929b563ecbc146",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/build-minimal-arm64-initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "d712e94bc2ac75cc652226bfe0a331c2501c2b6a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/fetch-pinned-openwrt-donor.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "17cc1148c0162f1895fc70a52049f19a78881746",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/package-arm64-busybox-initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "c031b12dbcea5d2d68adbb675a6af89f941d9599",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/package-arm64-busybox-rootfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "671921e3e3e572301e47c203563f88caf90ec6cb",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/research/sba6d_stage10_clean_patch.py",
+      "component": "modem-ethernet",
+      "origin": "research-transformer",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "85fb48c726939319394569ed933131c1fba305ba",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/verify-air6-board-dtc.sh",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "8cbc6bcac5c8defdcdaff30d5c63cca85381dbea",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/verify-disabled-sgmii-dtc.sh",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "f885261f7fa941e51c74a0cc0b3ac43fea92724b",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_ab_fallback_hypotheses.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "43c39c08c8433ad18cc5846f1c4684ead37f3c8c",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_board_source.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "9389f4e45355839956039fa1585819e4d102bfc2",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_compiled_scope.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3cc1c75bf769882c674806709801e20b7276c9c7",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_ethernet_variant.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "d4b6b3abaecb947e3409db2fc2b25809a2a441fb",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_source_scope.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "0026cad5818731e41f2e38ce6f519aadf560a6fd",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_userspace_source.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "f0ebc9889ae3bcff8a244373f1f8728c22bc7fb4",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_build_input_integrity.py",
+      "component": "signing",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "a5591edba8b60ad2a85ef997017e3d65c51b9bae",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_busybox_initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "db26ff1e235a5300d96320962e7263d0b3147088",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_busybox_rootfs_stage.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "92494caf6a17a48e52eeb636fa34bfb19b72b7b0",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_busybox_source_smoke.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "5ca08da17e0886b034620aa3aecaa621315586b6",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_feed_git_objects.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3735e0d39c72b11bb618f837cdea34e75d7e6ef5",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_feeds_lock.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "7363a6887d6f96db400bb48dd8178d792933a3de",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_minimal_arm64_initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1610a3046ea922dcb227b1b3085d7984657b96f6",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_pinned_donor_source.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "8e7655fba8bb573e64b8ed12d51e23bd34d56acd",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_pinned_sgmii_dtc.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "85645c537522a72e07539d82fdcd916bb8638368",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_publication_gate.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b76f662a19fee98dea9d728eadc46414c37ee733",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_publication_history.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "808e75bc1607705a7c297d944d7c8078413e24bf",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_sba6d_stage10_clean_patch.py",
+      "component": "modem-ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b511dd4f175d4e05ecce2217747c4972dcbf2e03",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_sgmii_overlay.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1eb8a45facd6fa527c9125fdb69061008229d4e2",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_slot_observation.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "de9efbda4770ddf42cd062f0279a902a171007ae",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_source_catalog.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "623bb8df51d7dedb4f6d71edfb042af625992691",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_stage10_mmio_model.py",
+      "component": "modem-ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "e8e15d869f3ee822991c94957dc64cac45bb057a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_workflow_policy.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "c0a90d8b58ab54ee3c268779d38360cb6b1afe1f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/board/check_air6_compiled_scope.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "e14de13e3bc6f68a5539d41087dafa27144cf6f7",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/board/check_air6_scope.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "2334c420f46415e14212a11c36e53d488d511bb7",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/board/verify_sgmii_overlay.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3d57b66afd025b211d13c54f2260d4bef032a163",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/ab_fallback_hypotheses.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "671813ada11159aa32f84956992cea356e37bb9e",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/slot_observation.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "c6393bd5c4b09becdff5a16c0d68dbfb85c0db3f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/verify_build_inputs.py",
+      "component": "signing",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "093175bb5cc1f3d959329ea18ec48d41c2635f15",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/check_air6_userspace_source.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "a3225a2d3500b3c581c53d551f4d0dabca4f52bf",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/verify_feed_git_objects.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "6ca8d8f23b82fc7ea9fadf3f92eca66536a4ad19",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/verify_feeds_lock.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "2ea166f1d870d96c0fb87fc55cc0e7ab981e5119",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/verify_source_catalog.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "0ecd1dfbc7b37132c632b1ad9043cc1925b7962a",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -229,29 +517,20 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/modem/transport_model.py",
+      "component": "modem",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "00025bfe857cd4cc7b3bbaada3a8c0e78d460253",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/modem/verify_stage10_provenance.py",
       "component": "modem-ethernet",
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "80cec57e94d5d6fddde244329374e20d69778540",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/boot/verify_build_inputs.py",
-      "component": "signing",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "093175bb5cc1f3d959329ea18ec48d41c2635f15",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/build/verify_source_catalog.py",
-      "component": "kernel",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "0ecd1dfbc7b37132c632b1ad9043cc1925b7962a",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -270,276 +549,6 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "f975fb796f2a0165c398d3dd7a2b55a961c5f672",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "board/mt6990-air-terminal-6-sgmii1-experimental.dtso",
-      "component": "board-dt",
-      "origin": "research-board-overlay",
-      "license": "GPL-2.0-only",
-      "git_blob_sha1": "957e2135a68ccd7d835548198d9e47677f866f71",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/board/verify_sgmii_overlay.py",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "3d57b66afd025b211d13c54f2260d4bef032a163",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_sgmii_overlay.py",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "1eb8a45facd6fa527c9125fdb69061008229d4e2",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "scripts/fetch-pinned-openwrt-donor.sh",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "17cc1148c0162f1895fc70a52049f19a78881746",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_pinned_donor_source.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "8e7655fba8bb573e64b8ed12d51e23bd34d56acd",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "scripts/verify-disabled-sgmii-dtc.sh",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "f885261f7fa941e51c74a0cc0b3ac43fea92724b",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_pinned_sgmii_dtc.py",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "85645c537522a72e07539d82fdcd916bb8638368",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/build/verify_feeds_lock.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "2ea166f1d870d96c0fb87fc55cc0e7ab981e5119",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_feeds_lock.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "7363a6887d6f96db400bb48dd8178d792933a3de",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "scripts/build-arm64-busybox-smoke.sh",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "8f90c873c917fa5b3a1edde9d3c08199cceb2147",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "scripts/build-arm64-musl-busybox-stage.sh",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "9e37df34a2bcd95b4601a6423d2bcd71798237c4",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_busybox_source_smoke.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "a166499c3b71754000c7119602f895e10e75a848",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "board/mt6990-air-terminal-6.dts",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "GPL-2.0-only",
-      "git_blob_sha1": "541b9b5380882409b2a11741ee0ed06a68e727ad",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "scripts/verify-air6-board-dtc.sh",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "8cbc6bcac5c8defdcdaff30d5c63cca85381dbea",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_air6_board_source.py",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "9389f4e45355839956039fa1585819e4d102bfc2",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "board/mt6990-air-terminal-6-ethernet-test.dts",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "GPL-2.0-only",
-      "git_blob_sha1": "80a97fda52e315b4c733c4655afeade181f88522",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch",
-      "component": "ethernet",
-      "origin": "modified-gpl-parent-derived",
-      "license": "GPL-2.0-only",
-      "git_blob_sha1": "031a2d4837b7166000afcc868d05b8282e9fa5db",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_air6_ethernet_variant.py",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "d4b6b3abaecb947e3409db2fc2b25809a2a441fb",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/board/check_air6_scope.py",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "2334c420f46415e14212a11c36e53d488d511bb7",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_air6_source_scope.py",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "0026cad5818731e41f2e38ce6f519aadf560a6fd",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/build/check_air6_userspace_source.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "a3225a2d3500b3c581c53d551f4d0dabca4f52bf",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_air6_userspace_source.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "f0ebc9889ae3bcff8a244373f1f8728c22bc7fb4",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/board/check_air6_compiled_scope.py",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "e14de13e3bc6f68a5539d41087dafa27144cf6f7",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_air6_compiled_scope.py",
-      "component": "board-dt",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "3cc1c75bf769882c674806709801e20b7276c9c7",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tools/build/verify_feed_git_objects.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "6ca8d8f23b82fc7ea9fadf3f92eca66536a4ad19",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_feed_git_objects.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "3735e0d39c72b11bb618f837cdea34e75d7e6ef5",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "scripts/package-arm64-busybox-rootfs.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "671921e3e3e572301e47c203563f88caf90ec6cb",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_busybox_rootfs_stage.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "92494caf6a17a48e52eeb636fa34bfb19b72b7b0",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "scripts/package-arm64-busybox-initramfs.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "c031b12dbcea5d2d68adbb675a6af89f941d9599",
-      "rights_review": "pending",
-      "contains_flashable_payload": false
-    },
-    {
-      "path": "tests/test_busybox_initramfs.py",
-      "component": "openwrt-userland",
-      "origin": "independent-original",
-      "license": "MIT",
-      "git_blob_sha1": "db26ff1e235a5300d96320962e7263d0b3147088",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
