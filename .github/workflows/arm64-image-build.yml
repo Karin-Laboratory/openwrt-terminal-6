@@ -225,9 +225,27 @@ jobs:
           # disks, host device passthrough or installable image output.
           # This is a real PID1/procd/ubus service-registration runtime check,
           # not a hardware Air6 boot or a netifd traffic test.
-          command -v qemu-system-aarch64 || { echo 'Hosted ARM64 runner lacks QEMU system emulator' >&2; exit 1; }
-          bash "$GITHUB_WORKSPACE/scripts/smoke-arm64-procd-guest.sh" \
-            "$PWD/arch/arm64/boot/Image"
+          # GitHub-hosted ARM64 images do not ship qemu-system-aarch64.
+          # Provision it ONLY inside an ephemeral, non-privileged Docker
+          # build from a digest-pinned official Ubuntu multiarch base.
+          # The Ubuntu package index is signed; no host sudo/apt, no home
+          # runner, no private registry or device access. Guest execution
+          # has no container network, no capabilities and read-only mounts.
+          command -v docker >/dev/null
+          cat > "$tmp/Dockerfile.qemu" <<'EOF'
+          FROM ubuntu@sha256:80dd3c3b9c6cecb9f1667e9290b3bc61b78c2678c02cbdae5f0fea92cc6734ab
+          RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-arm bash coreutils grep && rm -rf /var/lib/apt/lists/*
+          USER 1001:1001
+          EOF
+          docker build --pull --file "$tmp/Dockerfile.qemu" --tag sbat6-qemu-guest:ci "$tmp"
+          docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 128 --memory 2g --cpus 2 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --user "$(id -u):$(id -g)" \
+            --mount "type=bind,src=$PWD/arch/arm64/boot/Image,dst=/Image,readonly" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/scripts/smoke-arm64-procd-guest.sh,dst=/smoke.sh,readonly" \
+            sbat6-qemu-guest:ci bash /smoke.sh /Image
 
           # Stage only three byte-pinned, public GPL-identified MT6990 DTS
           # inputs already used by the source-only DTC preflight. This is
