@@ -220,6 +220,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "scripts/smoke-arm64-procd-guest.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "0e1aa1dc4d7d88c46aed3277a403c52e08432385",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "scripts/verify-air6-board-dtc.sh",
       "component": "board-dt",
       "origin": "independent-original",
