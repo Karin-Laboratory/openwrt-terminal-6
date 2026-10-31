@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: MIT
 """Embed the real pinned musl procd rootfs *stage* as an unsigned kernel initramfs.
 
-Build-only research input. No preinit/service config, hardware boot, install,
-signing, network configuration, or public firmware distribution is authorized.
+Build-only research input with loopback-only preinit/inittab/netifd service policy.
+No hardware boot, install, signing, external network or distribution is authorized.
 """
 import gzip
 import hashlib
@@ -24,8 +24,10 @@ spec.loader.exec_module(cpio)
 
 BINARIES = ("bin/busybox", "bin/ubus", "sbin/ubusd",
             "sbin/uci", "sbin/init", "sbin/procd", "sbin/netifd")
-DIRS = ("bin", "sbin", "etc", "dev", "proc", "sys", "tmp", "var", "var/run")
-EXPECTED = set(BINARIES) | set(DIRS) | {"bin/sh"}
+DIRS = ("bin", "sbin", "etc", "etc/rc.d", "etc/config", "dev", "proc", "sys", "tmp", "var", "var/run")
+POLICY = ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network")
+POLICY_EXEC = ("etc/preinit", "etc/rc.d/S10netifd")
+EXPECTED = set(BINARIES) | set(DIRS) | set(POLICY) | {"bin/sh"}
 SOURCE_SCOPE = "NONINSTALLABLE_SBAT6_MUSL_BUSYBOX_UBUSD_UBUS_UCI_PROCD_NETIFD_ROOTFS_STAGE"
 
 
@@ -62,8 +64,20 @@ def package(rootfs: Path, source_manifest: Path, output: Path, manifest_out: Pat
             if source.get("files_sha256", {}).get(name) != hashlib.sha256(payload).hexdigest():
                 raise ValueError("ELF identity mismatch: " + name)
             payloads[name] = payload
+        for name in POLICY:
+            member = by_name[name]
+            expected_mode = 0o755 if name in POLICY_EXEC else 0o644
+            if not member.isfile() or member.mode != expected_mode:
+                raise ValueError("invalid boot policy mode/type: " + name)
+            payload = archive.extractfile(member).read()
+            if (source.get("files_sha256", {}).get(name) != hashlib.sha256(payload).hexdigest()
+                    or not payload or len(payload) > 4096 or b"\x00" in payload):
+                raise ValueError("boot policy identity mismatch: " + name)
+            payloads[name] = payload
     records = [(name, stat.S_IFDIR | 0o755, b"", 0, 0) for name in DIRS]
     records.extend((name, stat.S_IFREG | 0o755, payloads[name], 0, 0) for name in BINARIES)
+    records.extend((name, stat.S_IFREG | (0o755 if name in POLICY_EXEC else 0o644),
+                    payloads[name], 0, 0) for name in POLICY)
     records.extend((
         ("bin/sh", stat.S_IFLNK | 0o777, b"busybox", 0, 0),
         ("init", stat.S_IFLNK | 0o777, b"sbin/init", 0, 0),
@@ -94,7 +108,7 @@ def package(rootfs: Path, source_manifest: Path, output: Path, manifest_out: Pat
         "initramfs_bytes": len(compressed),
         "init": "symlink-to-real-upstream-procd-init-ELF",
         "rights_review": "pending",
-        "not_proven": ["procd PID1 runtime", "preinit/service startup", "netifd runtime/bridge",
+        "not_proven": ["procd PID1 runtime", "preinit/service startup runtime", "netifd runtime/bridge",
                        "Wi-Fi AP", "Air6 boot", "release rights"],
     }
     output.write_bytes(compressed)
@@ -108,7 +122,7 @@ if __name__ == "__main__":
             raise ValueError("usage: package-arm64-procd-stage-initramfs.py ROOTFS_TAR_GZ ROOTFS_MANIFEST NEW_CPIO_GZ NEW_MANIFEST")
         result = package(*(Path(p) for p in sys.argv[1:]))
         print("SBAT6_PROCD_STAGE_CPIO_WITH_REAL_PID1_PASS", json.dumps(result, sort_keys=True))
-        print("LIMIT: no preinit or services, no verified PID1/netifd execution, AP or hardware boot")
+        print("LIMIT: boot policy staged only; no verified PID1/netifd execution, AP or hardware boot")
     except (OSError, ValueError, tarfile.TarError) as exc:
         print("SBAT6_PROCD_STAGE_CPIO_FAIL", str(exc), file=sys.stderr)
         sys.exit(1)
