@@ -174,7 +174,7 @@ for file in "${daemon_sources[@]}"; do
   test -f "$netifd/$file"
   timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
     -Werror=implicit-function-declaration \
-    -I "$ud" -I "$deps" -idirafter "$deps/libubox" \
+    -I "$(dirname "$(dirname "$cc")")/include" -I "$ud" -I "$deps" -idirafter "$deps/libubox" \
     -I "$deps/ubus" -I "$deps/uci" -I "$nl/include" \
     -I "$netifd" -I "$uc/include" -I "$deps/netifd-include" \
     -c "$netifd/$file" -o "$deps/netifd-daemon-obj/${file%.c}.o"
