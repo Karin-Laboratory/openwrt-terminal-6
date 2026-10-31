@@ -130,6 +130,10 @@ jobs:
           export KBUILD_BUILD_USER=air6-source-only KBUILD_BUILD_HOST=github-hosted
           export KBUILD_BUILD_TIMESTAMP="Thu Jan  1 00:00:00 UTC 1970"
           export SOURCE_DATE_EPOCH=0
+          # Fail quickly on vendor/upstream API mismatch, before the full
+          # ARM64 Image compilation. Still require the final built-in Image.
+          timeout 300s make ARCH=arm64 -j2 drivers/clk/mediatek/clk-mt6990.o
+          test -s drivers/clk/mediatek/clk-mt6990.o
           timeout 2700s make ARCH=arm64 -j4 Image
           test -s arch/arm64/boot/Image
           test -s usr/initramfs_data.o
