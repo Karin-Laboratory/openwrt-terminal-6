@@ -138,4 +138,4 @@ jobs:
           wc -c arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6*.dtb
           echo 'UPSTREAM_KERNEL_TREE_AIR6_DTBS_BUILD_PASS'
           echo 'LIMIT: MT6990 SoC DTSI provenance/rights and matching drivers remain unverified; no dtbs_check or device boot.'
-          echo 'LIMIT: generic upstream kernel, no MT6990 driver/DTB, no AP or device boot claim.'
+          echo 'LIMIT: upstream generic Image and Air6 DTBs share one kernel tree; MT6990 drivers, dtbs_check, AP and device boot remain unverified.'
