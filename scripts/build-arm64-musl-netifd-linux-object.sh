@@ -142,6 +142,8 @@ json_src="$deps/json-c"
 json_build="$deps/json-c-build"
 test -s "$json_build/libjson-c.a"
 mkdir -p "$deps/netifd-include/json-c" "$deps/ucode-obj"
+# Expose only ucode API headers, never its bundled older linux/ UAPI.
+ln -s "$uc/include/ucode" "$deps/netifd-include/ucode"
 for header in "$json_src"/*.h "$json_build"/*.h; do
   test -f "$header"
   name="$(basename "$header")"
@@ -176,7 +178,7 @@ for file in "${daemon_sources[@]}"; do
     -Werror=implicit-function-declaration \
     -I "$(dirname "$(dirname "$cc")")/include" -I "$ud" -I "$deps" -idirafter "$deps/libubox" \
     -I "$deps/ubus" -I "$deps/uci" -I "$nl/include" \
-    -I "$netifd" -I "$uc/include" -I "$deps/netifd-include" \
+    -I "$netifd" -I "$deps/netifd-include" \
     -c "$netifd/$file" -o "$deps/netifd-daemon-obj/${file%.c}.o"
 done
 test "$(find "$deps/netifd-daemon-obj" -maxdepth 1 -name '*.o' | wc -l)" -eq "${#daemon_sources[@]}"
