@@ -1,4 +1,4 @@
-name: ARM64 Image with static BusyBox PID1 (unsigned research build)
+name: ARM64 Image with musl-static BusyBox PID1 (unsigned research build)
 on:
   pull_request:
     paths:
@@ -6,6 +6,7 @@ on:
       - scripts/air6-diagnostic-init.c
       - scripts/build-minimal-arm64-initramfs.py
       - scripts/build-arm64-busybox-smoke.sh
+      - scripts/build-arm64-musl-busybox-stage.sh
       - scripts/package-arm64-busybox-initramfs.py
       - scripts/package-arm64-busybox-rootfs.py
       - board/mt6990-air-terminal-6.dts
@@ -18,6 +19,7 @@ on:
       - scripts/air6-diagnostic-init.c
       - scripts/build-minimal-arm64-initramfs.py
       - scripts/build-arm64-busybox-smoke.sh
+      - scripts/build-arm64-musl-busybox-stage.sh
       - scripts/package-arm64-busybox-initramfs.py
       - scripts/package-arm64-busybox-rootfs.py
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
@@ -30,14 +32,14 @@ concurrency:
   cancel-in-progress: true
 jobs:
   arm64-image-with-initramfs:
-    name: Build unsigned ARM64 Image with static BusyBox diagnostic PID1
+    name: Build unsigned ARM64 Image with musl-static BusyBox diagnostic PID1
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-      - name: Compile pinned Linux v6.18 Image with embedded static AArch64 BusyBox PID1 archive
+      - name: Compile pinned Linux v6.18 Image with embedded musl-static AArch64 BusyBox PID1
         shell: bash
         run: |
           set -euo pipefail
@@ -46,10 +48,18 @@ jobs:
           trap 'rm -rf -- "$tmp"' EXIT
           # Build an actual BusyBox shell PID1 and deterministic newc archive.
           # No device/login/network/firmware configuration, upload or release.
-          # This is glibc-static, NOT OpenWrt musl/procd/rootfs.
+          # Native musl-static, NOT OpenWrt's toolchain/procd/rootfs.
           mkdir -p "$tmp/ramfs"
-          bash scripts/build-arm64-busybox-smoke.sh native-static-initramfs \
+          bash scripts/build-arm64-musl-busybox-stage.sh \
             "$tmp/ramfs/initramfs.cpio.gz" "$tmp/ramfs/manifest.json"
+          python3 - "$tmp/ramfs/manifest.json" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as stream:
+              manifest = json.load(stream)
+          assert manifest["libc"] == "musl-static"
+          assert manifest["scope"] == "NONINSTALLABLE_MUSL_STATIC_BUSYBOX_PID1_INITRAMFS"
+          assert manifest["rights_review"] == "pending"
+          PY
           test -s "$tmp/ramfs/initramfs.cpio.gz"
           test -s "$tmp/ramfs/manifest.json"
           # Official upstream GPL Linux, not the vendor MT6990 kernel or Air6 firmware.
@@ -179,7 +189,7 @@ jobs:
           sha256sum arch/arm64/boot/Image "$tmp/ramfs/initramfs.cpio.gz"
           wc -c arch/arm64/boot/Image "$tmp/ramfs/initramfs.cpio.gz"
           echo 'UPSTREAM_ARM64_IMAGE_WITH_PID1_BUILD_PASS'
-          echo 'SBAT6_BUSYBOX_PID1_EMBEDDED_IMAGE_PASS (glibc-static, no OpenWrt/musl/boot)'
+          echo 'SBAT6_BUSYBOX_PID1_EMBEDDED_IMAGE_PASS (native musl-static, no OpenWrt toolchain/boot)'
 
           # Stage only three byte-pinned, public GPL-identified MT6990 DTS
           # inputs already used by the source-only DTC preflight. This is
@@ -244,4 +254,4 @@ jobs:
           wc -c arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6*.dtb
           echo 'UPSTREAM_KERNEL_TREE_AIR6_DTBS_BUILD_PASS'
           echo 'LIMIT: MT6990 SoC DTSI provenance/rights and matching drivers remain unverified; no dtbs_check or device boot.'
-          echo 'LIMIT: Image contains static BusyBox PID1, not OpenWrt musl/procd/netifd/wpad or a verified Air6 AP firmware.'
+          echo 'LIMIT: Image contains native musl-static BusyBox PID1, not OpenWrt-built musl/procd/netifd/wpad or a verified Air6 AP firmware.'

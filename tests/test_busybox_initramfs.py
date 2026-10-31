@@ -53,6 +53,22 @@ class BusyBoxPid1CpioTests(unittest.TestCase):
             self.assertEqual(first["rights_review"], "pending")
             self.assertEqual(first["libc"], "host-glibc-static-not-openwrt-musl")
 
+    def test_musl_pid1_archive_has_explicit_libc_identity(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            binary = root / "busybox"
+            binary.write_bytes(fake_elf())
+            record = module.package(binary, root / "musl.cpio.gz", root / "musl.json",
+                                    libc="musl-static")
+            self.assertEqual(record["libc"], "musl-static")
+            self.assertEqual(record["scope"], "NONINSTALLABLE_MUSL_STATIC_BUSYBOX_PID1_INITRAMFS")
+            self.assertIn("OpenWrt toolchain/rootfs/procd/netifd", record["not_proven"])
+            with self.assertRaisesRegex(ValueError, "unsupported libc"):
+                module.package(binary, root / "bad.cpio.gz", root / "bad.json",
+                               libc="unknown")
+            entries = module.unpack(gzip.decompress((root / "musl.cpio.gz").read_bytes()))
+            self.assertEqual(entries["bin/busybox"][1], binary.read_bytes())
+
     def test_fail_closed_wrong_elf_or_existing_output(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)
@@ -86,7 +102,8 @@ class BusyBoxPid1CpioTests(unittest.TestCase):
                           b"mtd", b"flash", b"sysupgrade", b"reboot"):
             self.assertNotIn(forbidden, init)
         workflow = (ROOT / ".github/workflows/arm64-image-build.yml").read_text()
-        self.assertIn("native-static-initramfs", workflow)
+        self.assertIn("build-arm64-musl-busybox-stage.sh", workflow)
+        self.assertIn("NONINSTALLABLE_MUSL_STATIC_BUSYBOX_PID1_INITRAMFS", workflow)
         self.assertIn("SBAT6_BUSYBOX_PID1_EMBEDDED_IMAGE_PASS", workflow)
         self.assertIn('cmp "$tmp/ramfs/initramfs.cpio.gz" usr/initramfs_inc_data', workflow)
 

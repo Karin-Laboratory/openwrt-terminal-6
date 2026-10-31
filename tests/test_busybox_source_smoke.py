@@ -47,6 +47,7 @@ class BusyBoxSourceSmokeTests(unittest.TestCase):
     def test_native_musl_mode_uses_explicit_compiler_and_pinned_libc(self):
         src = SCRIPT.read_text()
         self.assertIn("native-musl-static-stage", src)
+        self.assertIn("native-musl-static-initramfs", src)
         self.assertIn("SBAT6_MUSL_CC", src)
         self.assertIn('cc_override=("CC=$compiler")', src)
         self.assertIn("musl-static", src)
@@ -54,6 +55,8 @@ class BusyBoxSourceSmokeTests(unittest.TestCase):
         self.assertIn("ifduyue/musl.git", musl)
         self.assertIn("0784374d561435f7c787a555aeab8ede699ed298", musl)
         self.assertIn("native-musl-static-stage", musl)
+        self.assertIn("native-musl-static-initramfs", musl)
+        self.assertIn("SBAT6_NATIVE_MUSL_STATIC_PID1_INITRAMFS_PASS", musl)
         self.assertIn("7d0a66e4bb9081d75c82ec4957c50034cb0ea449", musl)
         self.assertIn("headers_install", musl)
         self.assertIn('INSTALL_HDR_PATH="$tmp/kernel-headers"', musl)

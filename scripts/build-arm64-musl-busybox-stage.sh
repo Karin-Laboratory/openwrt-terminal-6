@@ -15,6 +15,18 @@ fi
 for tool in git make gcc timeout mktemp sha256sum python3; do
   command -v "$tool" >/dev/null || { echo "Missing build tool: $tool" >&2; exit 2; }
 done
+if (( $# != 0 && $# != 2 )); then
+  echo 'usage: build-arm64-musl-busybox-stage.sh [NEW_CPIO_GZ NEW_MANIFEST]' >&2
+  exit 2
+fi
+if (( $# == 2 )); then
+  [[ "$1" != "$2" && ! -e "$1" && ! -L "$1" && ! -e "$2" && ! -L "$2" ]] || {
+    echo 'Initramfs outputs must be distinct and absent' >&2; exit 2;
+  }
+  stage_mode=native-musl-static-initramfs
+else
+  stage_mode=native-musl-static-stage
+fi
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/sbat6-musl.XXXXXXXX")"
 trap 'rm -rf -- "$tmp"' EXIT
 
@@ -57,6 +69,19 @@ test -x "$muslcc"
 # static linkage, deterministic archive and noninstallable manifest.
 SBAT6_MUSL_CC="$muslcc" \
   bash "$(dirname "${BASH_SOURCE[0]}")/build-arm64-busybox-smoke.sh" \
-  native-musl-static-stage
-echo 'SBAT6_NATIVE_MUSL_STATIC_BUSYBOX_STAGE_PASS'
+  "$stage_mode" "$@"
+if (( $# == 2 )); then
+  test -s "$1" && test -s "$2"
+  python3 - "$2" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    manifest = json.load(stream)
+assert manifest["libc"] == "musl-static"
+assert manifest["scope"] == "NONINSTALLABLE_MUSL_STATIC_BUSYBOX_PID1_INITRAMFS"
+assert manifest["rights_review"] == "pending"
+print("SBAT6_NATIVE_MUSL_STATIC_PID1_INITRAMFS_PASS")
+PY
+else
+  echo 'SBAT6_NATIVE_MUSL_STATIC_BUSYBOX_STAGE_PASS'
+fi
 echo 'LIMIT: not an OpenWrt-built musl toolchain, procd/netifd rootfs, AP or release.'

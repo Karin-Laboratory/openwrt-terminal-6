@@ -68,7 +68,10 @@ def unpack(raw: bytes) -> dict:
     raise ValueError("missing newc trailer")
 
 
-def package(binary: Path, archive: Path, manifest: Path) -> dict:
+def package(binary: Path, archive: Path, manifest: Path,
+            libc: str = "host-glibc-static-not-openwrt-musl") -> dict:
+    if libc not in ("host-glibc-static-not-openwrt-musl", "musl-static"):
+        raise ValueError("unsupported libc identity")
     if binary.is_symlink() or not binary.is_file():
         raise ValueError("BusyBox input must be a regular file")
     if archive == manifest or archive.exists() or archive.is_symlink() or \
@@ -100,9 +103,10 @@ def package(binary: Path, archive: Path, manifest: Path) -> dict:
     if unpack(gzip.decompress(compressed)) != check:
         raise ValueError("gzip round-trip failed")
     record = {
-        "scope": "NONINSTALLABLE_STATIC_BUSYBOX_PID1_INITRAMFS",
+        "scope": ("NONINSTALLABLE_MUSL_STATIC_BUSYBOX_PID1_INITRAMFS"
+                  if libc == "musl-static" else "NONINSTALLABLE_STATIC_BUSYBOX_PID1_INITRAMFS"),
         "architecture": "aarch64",
-        "libc": "host-glibc-static-not-openwrt-musl",
+        "libc": libc,
         "busybox_version": "1.36.1",
         "busybox_commit": "1a64f6a20aaf6ea4dbba68bbfa8cc1ab7e5c57c4",
         "busybox_sha256": hashlib.sha256(payload).hexdigest(),
@@ -110,7 +114,9 @@ def package(binary: Path, archive: Path, manifest: Path) -> dict:
         "initramfs_sha256": hashlib.sha256(compressed).hexdigest(),
         "initramfs_bytes": len(compressed),
         "rights_review": "pending",
-        "not_proven": ["OpenWrt musl/rootfs/procd/netifd", "SBAT6 kernel ABI",
+        "not_proven": [("OpenWrt toolchain/rootfs/procd/netifd"
+                        if libc == "musl-static" else "OpenWrt musl/rootfs/procd/netifd"),
+                       "SBAT6 kernel ABI",
                        "hardware boot", "Ethernet/Wi-Fi AP", "redistribution rights"],
     }
     archive.write_bytes(compressed)
@@ -120,11 +126,12 @@ def package(binary: Path, archive: Path, manifest: Path) -> dict:
 
 if __name__ == "__main__":
     try:
-        if len(sys.argv) != 4:
-            raise ValueError("usage: package-arm64-busybox-initramfs.py BUSYBOX NEW_CPIO_GZ NEW_MANIFEST")
-        result = package(*(Path(arg) for arg in sys.argv[1:]))
+        if len(sys.argv) not in (4, 5):
+            raise ValueError("usage: package-arm64-busybox-initramfs.py BUSYBOX NEW_CPIO_GZ NEW_MANIFEST [libc]")
+        result = package(*(Path(arg) for arg in sys.argv[1:4]),
+                         libc=sys.argv[4] if len(sys.argv) == 5 else "host-glibc-static-not-openwrt-musl")
         print("SBAT6_STATIC_BUSYBOX_PID1_INITRAMFS_PASS", json.dumps(result, sort_keys=True))
-        print("LIMIT: compile-only; no musl, AP, device boot, binary distribution or rights clearance")
+        print("LIMIT: compile-only; not OpenWrt toolchain/procd/AP, device boot, distribution or rights clearance")
     except (OSError, ValueError) as exc:
         print("SBAT6_STATIC_BUSYBOX_PID1_INITRAMFS_FAIL", str(exc), file=sys.stderr)
         sys.exit(1)
