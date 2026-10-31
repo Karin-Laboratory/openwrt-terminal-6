@@ -76,6 +76,8 @@ jobs:
           assert manifest["rights_review"] == "pending"
           assert manifest["init"] == "symlink-to-real-upstream-procd-init-ELF"
           assert "sbin/netifd" in manifest["files_sha256"]
+          for policy in ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network"):
+              assert policy in manifest["files_sha256"]
           PY
           test -s "$tmp/ramfs/initramfs.cpio.gz"
           test -s "$tmp/ramfs/manifest.json"
@@ -207,7 +209,7 @@ jobs:
           wc -c arch/arm64/boot/Image "$tmp/ramfs/initramfs.cpio.gz"
           echo 'UPSTREAM_ARM64_IMAGE_WITH_PID1_BUILD_PASS'
           echo 'SBAT6_PROCD_INIT_STAGE_EMBEDDED_IMAGE_PASS (native musl-static, no procd runtime/boot)'
-          echo 'SBAT6_PROCD_NETIFD_STAGE_EMBEDDED_IMAGE_PASS (native musl-static, no daemon runtime/boot)'
+          echo 'SBAT6_PROCD_NETIFD_BOOT_POLICY_EMBEDDED_IMAGE_PASS (loopback-only policy, no runtime/boot)'
 
           # Stage only three byte-pinned, public GPL-identified MT6990 DTS
           # inputs already used by the source-only DTC preflight. This is
@@ -272,4 +274,4 @@ jobs:
           wc -c arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6*.dtb
           echo 'UPSTREAM_KERNEL_TREE_AIR6_DTBS_BUILD_PASS'
           echo 'LIMIT: MT6990 SoC DTSI provenance/rights and matching drivers remain unverified; no dtbs_check or device boot.'
-          echo 'LIMIT: Image contains pinned native musl-static procd init/service stage; no /etc/preinit, netifd runtime, wpad, OpenWrt toolchain, boot or AP evidence.'
+          echo 'LIMIT: Image contains procd preinit/inittab/netifd registration policy; no verified runtime, external network, wpad, SSH, boot or AP evidence.'
