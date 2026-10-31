@@ -101,6 +101,30 @@ timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
   -c "$netifd/system-linux.c" -o "$deps/netifd-system-linux.o"
 test -s "$deps/netifd-system-linux.o"
 nm --defined-only "$deps/netifd-system-linux.o" | grep -Eq ' [TW] system_init$'
-sha256sum "$deps/libnl-tiny.a" "$deps/libudebug.a" "$deps/netifd-system-linux.o"
+# Compile real upstream netifd bridge/VLAN and static protocol objects with
+# the exact same native AArch64 musl ABI as system-linux.c. These are part of
+# the upstream netifd CMake SOURCES, not an emulated or DUMMY_MODE backend.
+# This does not link the daemon or authorize execution/installation.
+core_sources=(bridge.c vlan.c vlandev.c proto-static.c)
+mkdir "$deps/netifd-core-obj"
+for file in "${core_sources[@]}"; do
+  test -f "$netifd/$file"
+  # libubox/assert.h shadows the C standard header under -I; keep
+  # system headers ahead of the libubox fallback include directory.
+  timeout 180s "$cc" -Os -std=gnu99 -D_GNU_SOURCE \
+    -Werror=implicit-function-declaration \
+    -I "$ud" -I "$deps" -idirafter "$deps/libubox" -I "$deps/ubus" -I "$deps/uci" \
+    -I "$nl/include" -I "$netifd" \
+    -c "$netifd/$file" -o "$deps/netifd-core-obj/${file%.c}.o"
+done
+test "$(find "$deps/netifd-core-obj" -maxdepth 1 -name '*.o' | wc -l)" -eq "${#core_sources[@]}"
+for file in "${core_sources[@]}"; do
+  test -s "$deps/netifd-core-obj/${file%.c}.o"
+done
+nm --defined-only "$deps/netifd-core-obj/bridge.o" | grep -Fq ' bridge_config_init'
+nm --defined-only "$deps/netifd-core-obj/vlan.o" | grep -Fq ' vlan_config_init'
+nm --defined-only "$deps/netifd-core-obj/vlandev.o" | grep -Fq ' vlandev_config_init'
+echo 'SBAT6_MUSL_NETIFD_BRIDGE_VLAN_STATIC_PROTO_OBJECTS_PASS'
+sha256sum "$deps/libnl-tiny.a" "$deps/libudebug.a" "$deps/netifd-system-linux.o" "$deps/netifd-core-obj/"*.o
 echo 'SBAT6_MUSL_NETIFD_REAL_LINUX_BACKEND_OBJECT_PASS'
 echo 'LIMIT: no full netifd executable, ucode closure, service execution, AP, hardware or rights approval.'
