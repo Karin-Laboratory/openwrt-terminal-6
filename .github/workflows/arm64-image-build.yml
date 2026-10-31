@@ -14,6 +14,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# Avoid wasting hosted ARM64 minutes on superseded PR revisions.
+concurrency:
+  group: arm64-image-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   arm64-image-with-initramfs:
     name: Build unsigned upstream ARM64 Image with diagnostic PID1
