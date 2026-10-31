@@ -125,7 +125,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "594fea4a42e683a81c7960e5d256bc9de498d0fe",
+      "git_blob_sha1": "73bc47cc204e5dc6f775d8304652c36a4b49bb05",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -180,6 +180,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "671921e3e3e572301e47c203563f88caf90ec6cb",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/package-arm64-procd-stage-initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "2735a81ffa94ada0014c3af6461a2d89de18dd8b",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -342,6 +351,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "85645c537522a72e07539d82fdcd916bb8638368",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_procd_image_stage.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "8b8149de6c219113073bbdd198c25e86cfd6e9f1",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
