@@ -34,8 +34,11 @@ PROHIBITED = [
 def check(text: str):
     violations = [category for category, pattern in PROHIBITED if pattern.search(text)]
     runners = re.findall(r"(?m)^[ \t]*runs-on:[ \t]*([^\n#]+)", text)
-    if not runners or any(value.strip() != "ubuntu-latest" for value in runners):
-        violations.append("every job must use literal GitHub-hosted ubuntu-latest")
+    # Both are public GitHub-hosted runners; never accept a variable,
+    # private label, expression or generic self-hosted runner.
+    allowed_hosted = {"ubuntu-latest", "ubuntu-24.04-arm"}
+    if not runners or any(value.strip() not in allowed_hosted for value in runners):
+        violations.append("every job must use an approved literal GitHub-hosted runner")
     if re.search(r"(?m)^[ \t]*permissions:[ \t]*(?:write-all|write)[ \t]*$", text):
         violations.append("write-all permission is forbidden")
     if re.search(r"(?m)^[ \t]*[a-z][a-z-]*:[ \t]*write[ \t]*$", text):
