@@ -41,6 +41,7 @@ ar rcs "$deps/libnl-tiny.a" "$deps/nl-obj/"*.o
 test "$(ar t "$deps/libnl-tiny.a" | wc -l)" -eq "${#nl_sources[@]}"
 nm --defined-only "$deps/libnl-tiny.a" | grep -Eq ' [TW] nl_socket_alloc$'
 cat > "$deps/nl-link-smoke.c" <<'EOF'
+#include <linux/types.h>
 #include <netlink/socket.h>
 int main(void) {
   struct nl_sock *sock = nl_socket_alloc();
@@ -48,7 +49,7 @@ int main(void) {
   return 0;
 }
 EOF
-timeout 90s "$cc" -static -I "$nl/include" \
+timeout 90s "$cc" -static -D_GNU_SOURCE -I "$nl/include" \
   "$deps/nl-link-smoke.c" "$deps/libnl-tiny.a" -o "$deps/nl-link-smoke"
 readelf -h "$deps/nl-link-smoke" | grep -q 'Machine:.*AArch64'
 if readelf -l "$deps/nl-link-smoke" | grep -q INTERP; then
