@@ -43,3 +43,16 @@ The earlier freestanding C diagnostic PID1 builder and its separate
 source-only CI test remain available for comparison. The original static
 BusyBox tar rootfs-stage job also remains independent. All generated
 binaries are ephemeral and discarded, never uploaded or distributed.
+
+## Native musl-static PID1 integrated into Image (AP-first #74/#21)
+
+The hosted ARM64 Image workflow now compiles pinned musl 1.2.5, Linux v6.18
+UAPI and BusyBox 1.36.1 to produce a real static AArch64 `/init` archive.
+It checks the `libc=musl-static` manifest and embeds identical archive bytes
+in the same upstream Linux v6.18 Image as the existing Ethernet/PHY/PCS/IFRAO
+objects and candidate Air6 DTBs. The previous glibc-static builder remains
+available separately. All build outputs are ephemeral and not uploaded.
+
+This is NOT an OpenWrt-built toolchain, independent SBAT6 target, procd/netifd
+rootfs, matching NETSYS/TOPCK/genpd integration, boot-tested AP or release.
+Rights review remains pending; hosted CI must pass before claiming success.

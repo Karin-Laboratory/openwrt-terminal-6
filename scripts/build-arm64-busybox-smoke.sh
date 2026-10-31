@@ -35,6 +35,18 @@ elif [[ "$prefix" == native-static-initramfs ]]; then
   initramfs_stage=true
   static_build=true
   prefix=""
+elif [[ "$prefix" == native-musl-static-initramfs ]]; then
+  [[ "$(uname -m)" == aarch64 ]] || {
+    echo 'musl BusyBox PID1 initramfs requires an AArch64 host' >&2; exit 2;
+  }
+  [[ $# -eq 3 ]] || {
+    echo 'usage: build-arm64-busybox-smoke.sh native-musl-static-initramfs NEW_CPIO_GZ NEW_MANIFEST' >&2
+    exit 2
+  }
+  initramfs_stage=true
+  static_build=true
+  musl_stage=true
+  prefix=""
 elif [[ "$prefix" == native-musl-static-stage ]]; then
   [[ "$(uname -m)" == aarch64 ]] || {
     echo 'musl BusyBox stage requires an AArch64 host' >&2; exit 2;
@@ -121,7 +133,7 @@ if [[ "$rootfs_stage" == true ]]; then
 fi
 if [[ "$initramfs_stage" == true ]]; then
   python3 "$(dirname "${BASH_SOURCE[0]}")/package-arm64-busybox-initramfs.py" \
-    "$tmp/busybox/busybox" "$2" "$3"
+    "$tmp/busybox/busybox" "$2" "$3" "$([[ "$musl_stage" == true ]] && echo musl-static || echo host-glibc-static-not-openwrt-musl)"
   test -s "$2"
   test -s "$3"
 fi
