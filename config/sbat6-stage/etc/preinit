@@ -1,0 +1,4 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Minimal procd handoff only. No flash, network or device provisioning.
+exit 0
