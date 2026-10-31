@@ -32,6 +32,8 @@ def fake_aarch64_elf():
 class ProcdImageStageTests(unittest.TestCase):
     def make_source(self, root: Path):
         data = fake_aarch64_elf()
+        policies = {name: (ROOT / "config/sbat6-stage" / name).read_bytes()
+                    for name in stage.POLICY}
         buf = io.BytesIO()
         with tarfile.open(fileobj=buf, mode="w", format=tarfile.GNU_FORMAT) as tar:
             for name in stage.DIRS:
@@ -44,6 +46,11 @@ class ProcdImageStageTests(unittest.TestCase):
                 info.mode = 0o755
                 info.size = len(data)
                 tar.addfile(info, io.BytesIO(data))
+            for name, payload in policies.items():
+                info = tarfile.TarInfo(name)
+                info.mode = 0o755 if name in stage.POLICY_EXEC else 0o644
+                info.size = len(payload)
+                tar.addfile(info, io.BytesIO(payload))
             info = tarfile.TarInfo("bin/sh")
             info.type = tarfile.SYMTYPE
             info.linkname = "busybox"
@@ -57,8 +64,11 @@ class ProcdImageStageTests(unittest.TestCase):
             "libc": "native-musl-static-1.2.5", "rights_review": "pending",
             "archive_sha256": hashlib.sha256(payload).hexdigest(),
             "archive_bytes": len(payload),
-            "files_sha256": {name: hashlib.sha256(data).hexdigest()
-                             for name in stage.BINARIES},
+            "files_sha256": {
+                **{name: hashlib.sha256(data).hexdigest() for name in stage.BINARIES},
+                **{name: hashlib.sha256(payload).hexdigest()
+                   for name, payload in policies.items()},
+            },
         }))
         return rootfs, manifest
 
@@ -72,6 +82,9 @@ class ProcdImageStageTests(unittest.TestCase):
             self.assertEqual(parsed["init"][1], b"sbin/init")
             self.assertEqual(parsed["dev/console"][2:], (5, 1))
             self.assertEqual(set(stage.BINARIES).issubset(parsed), True)
+            for name in stage.POLICY:
+                self.assertEqual(parsed[name][1],
+                                 (ROOT / "config/sbat6-stage" / name).read_bytes())
             self.assertEqual(result["scope"],
                              "NONINSTALLABLE_AIR6_PROCD_STAGE_EMBEDDED_INITRAMFS")
             self.assertEqual(result["initramfs_sha256"],
@@ -83,6 +96,16 @@ class ProcdImageStageTests(unittest.TestCase):
             rootfs, source = self.make_source(root)
             rootfs.write_bytes(rootfs.read_bytes() + b"bad")
             with self.assertRaisesRegex(ValueError, "identity mismatch"):
+                stage.package(rootfs, source, root / "out", root / "manifest")
+
+    def test_rejects_policy_identity_mismatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rootfs, source = self.make_source(root)
+            manifest = json.loads(source.read_text())
+            manifest["files_sha256"]["etc/preinit"] = "0" * 64
+            source.write_text(json.dumps(manifest))
+            with self.assertRaisesRegex(ValueError, "boot policy identity mismatch"):
                 stage.package(rootfs, source, root / "out", root / "manifest")
 
     def test_no_existing_output_overwrite(self):
