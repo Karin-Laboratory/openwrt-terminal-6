@@ -4,6 +4,33 @@
   "warning": "Git blob SHA-1 is a content identity, not a release signature or independent license clearance.",
   "inputs": [
     {
+      "path": "scripts/air6-diagnostic-init.c",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "ff14f983c5d473bf924ac750ca07a4e0925e6373",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/build-minimal-arm64-initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "aad3851c1645811576b957daba52d09bab0f9ea2",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_minimal_arm64_initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1610a3046ea922dcb227b1b3085d7984657b96f6",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch",
       "component": "ethernet",
       "origin": "linux-v6.18-derived",
