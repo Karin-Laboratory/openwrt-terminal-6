@@ -149,7 +149,7 @@ def read_static_aarch64(filename):
 busybox, ubusd, ubus_cli, uci_cli, procd_init, procd_service, netifd = [read_static_aarch64(arg) for arg in sys.argv[1:8]]
 archive_path, manifest_path = map(Path, sys.argv[8:10])
 policy_root = Path(sys.argv[10])
-policy_names = ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network")
+policy_names = ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network", "etc/passwd", "etc/group")
 policy_data = {}
 for name in policy_names:
     path = policy_root / name
