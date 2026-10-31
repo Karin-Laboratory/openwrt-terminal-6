@@ -7,12 +7,14 @@ on:
       - scripts/build-minimal-arm64-initramfs.py
       - board/mt6990-air-terminal-6.dts
       - board/mt6990-air-terminal-6-ethernet-test.dts
+      - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
   push:
     branches: [main]
     paths:
       - .github/workflows/arm64-image-build.yml
       - scripts/air6-diagnostic-init.c
       - scripts/build-minimal-arm64-initramfs.py
+      - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
   workflow_dispatch:
 permissions:
   contents: read
@@ -44,6 +46,29 @@ jobs:
           test "$(git -C "$tmp/linux" rev-parse HEAD)" = \
             7d0a66e4bb9081d75c82ec4957c50034cb0ea449
           cd "$tmp/linux"
+          # Compile the exact public GPL-labelled MT6990 SGMII analog PHY
+          # source, with the existing no-TOP-cycle delta, in the SAME
+          # Linux v6.18 Kbuild tree as Image/PCS/DSA and the Air6 DTBs.
+          # Transient build input only: rights review is pending, no binary
+          # upload, distribution, signing, or hardware operation.
+          phy_url=https://raw.githubusercontent.com/13179415360/openwrt-mt6990-lg6851f/a40df9a5afb46716dea799acea69f17480df4d82/target/linux/mediatek/files-6.18/drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c
+          curl --fail --silent --show-error --location --retry 3 --max-time 90 \
+            "$phy_url" -o drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c
+          test "$(git hash-object drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c)" = \
+            598f9c8d0a905bf6e293157d2fd475fef54bfacd
+          git apply --check "$GITHUB_WORKSPACE/patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch"
+          git apply "$GITHUB_WORKSPACE/patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch"
+          ! grep -q 'mt6990_sgmii_top_cycle' drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c
+          cat >> drivers/phy/mediatek/Kconfig <<'EOF'
+
+          config PHY_MTK_MT6990_SGMII
+            bool "MT6990 SGMII analog PHY (Air6 compile-only research)"
+            depends on OF && ARCH_MEDIATEK && MFD_SYSCON
+            select GENERIC_PHY
+          EOF
+          cat >> drivers/phy/mediatek/Makefile <<'EOF'
+          obj-$(CONFIG_PHY_MTK_MT6990_SGMII) += phy-mtk-mt6990-sgmii.o
+          EOF
           make ARCH=arm64 defconfig
           scripts/config --enable BLK_DEV_INITRD \
             --set-str INITRAMFS_SOURCE "$tmp/ramfs/initramfs.cpio.gz"
@@ -54,13 +79,16 @@ jobs:
           # depends on (IPV6=y or IPV6=n), and NET_DSA cannot be built-in
           # while BRIDGE/HSR are modules. Resolve all tristate prerequisites.
           scripts/config --enable IPV6 --enable BRIDGE --disable HSR
+          scripts/config --enable ARCH_MEDIATEK --enable MFD_SYSCON \
+            --enable GENERIC_PHY --enable PHY_MTK_MT6990_SGMII
           scripts/config --enable NET_DSA \
             --enable NET_DSA_MT7530 --enable NET_DSA_MT7530_MDIO \
             --disable NET_DSA_MT7530_MMIO \
             --enable NET_VENDOR_MEDIATEK --enable NET_MEDIATEK_SOC
           make ARCH=arm64 olddefconfig
           for option in NET_DSA NET_DSA_MT7530 NET_DSA_MT7530_MDIO \
-                        NET_VENDOR_MEDIATEK NET_MEDIATEK_SOC PCS_MTK_LYNXI; do
+                        NET_VENDOR_MEDIATEK NET_MEDIATEK_SOC PCS_MTK_LYNXI \
+                        MFD_SYSCON GENERIC_PHY PHY_MTK_MT6990_SGMII; do
             grep -qx "CONFIG_${option}=y" .config || {
               echo "Required upstream Ethernet component disabled: $option" >&2
               exit 1
@@ -79,10 +107,12 @@ jobs:
                      drivers/net/dsa/mt7530-mdio.o \
                      drivers/net/pcs/pcs-mtk-lynxi.o \
                      drivers/net/ethernet/mediatek/mtk_eth_soc.o \
-                     drivers/net/ethernet/mediatek/mtk_eth_path.o; do
+                     drivers/net/ethernet/mediatek/mtk_eth_path.o \
+                     drivers/phy/mediatek/phy-mtk-mt6990-sgmii.o; do
             test -s "$obj" || { echo "Missing built-in object: $obj" >&2; exit 1; }
           done
           echo 'UPSTREAM_MT7531_DSA_MEDIATEK_PCS_IMAGE_OBJECTS_PASS'
+          echo 'MT6990_SGMII_PHY_PATCHED_KBUILD_OBJECT_PASS (no cold-boot or rights approval)'
           # Linux v6.18 uses __irf_start/__irf_end and __initramfs_size;
           # it does not define the obsolete __initramfs_start/end symbols.
           nm vmlinux > "$tmp/kernel-symbols.txt"
