@@ -29,6 +29,18 @@ else
 fi
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/sbat6-musl.XXXXXXXX")"
 trap 'rm -rf -- "$tmp"' EXIT
+# Opt-in combined rootfs *stage*: both binaries must be built with this
+# exact native musl toolchain. It is deliberately not a bootable target.
+if [[ "${SBAT6_BUILD_ROOTFS_SERVICES:-0}" == 1 ]]; then
+  [[ $# -eq 0 && "${SBAT6_BUILD_LIBUBOX_CORE:-0}" == 1 &&
+     "${SBAT6_BUILD_UBUS_CORE:-0}" == 1 &&
+     "${SBAT6_BUILD_UBUSD:-0}" == 1 ]] || {
+    echo 'Combined stage requires musl BusyBox and pinned ubusd' >&2; exit 2;
+  }
+  mkdir "$tmp/service-inputs"
+  export SBAT6_MUSL_BUSYBOX_OUTPUT="$tmp/service-inputs/busybox"
+  export SBAT6_MUSL_UBUSD_OUTPUT="$tmp/service-inputs/ubusd"
+fi
 
 # Public upstream musl 1.2.5 mirror. The tag is NOT a floating branch:
 # refuse a changed target, and never execute arbitrary donor build scripts.
@@ -89,4 +101,94 @@ fi
 if [[ "${SBAT6_BUILD_LIBUBOX_CORE:-0}" == 1 ]]; then
   bash "$(dirname "${BASH_SOURCE[0]}")/build-arm64-musl-libubox-core.sh" "$muslcc"
 fi
-echo 'LIMIT: not an OpenWrt-built musl toolchain, procd/netifd rootfs, AP or release.'
+if [[ "${SBAT6_BUILD_ROOTFS_SERVICES:-0}" == 1 ]]; then
+  # Deterministic noninstallable rootfs archive: actual compiled musl
+  # BusyBox + ubusd together, no /init, procd, network config or credentials.
+  python3 - "$SBAT6_MUSL_BUSYBOX_OUTPUT" "$SBAT6_MUSL_UBUSD_OUTPUT" \
+    "$tmp/sbat6-services-rootfs.tar.gz" "$tmp/sbat6-services-manifest.json" <<'PY'
+import gzip
+import hashlib
+import io
+import json
+from pathlib import Path
+import struct
+import sys
+import tarfile
+
+def read_static_aarch64(filename):
+    path = Path(filename)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("binary must be a regular file")
+    data = path.read_bytes()
+    if len(data) < 64 or data[:6] != b"\x7fELF\x02\x01":
+        raise ValueError("expected little-endian ELF64")
+    elf_type, machine = struct.unpack_from("<HH", data, 16)
+    phoff = struct.unpack_from("<Q", data, 32)[0]
+    phentsize, phnum = struct.unpack_from("<HH", data, 54)
+    if elf_type not in (2, 3) or machine != 183 or phentsize != 56 or not phnum:
+        raise ValueError("expected AArch64 executable with program headers")
+    if phoff < 64 or phoff + phentsize * phnum > len(data):
+        raise ValueError("invalid ELF program headers")
+    for index in range(phnum):
+        if struct.unpack_from("<I", data, phoff + index * phentsize)[0] == 3:
+            raise ValueError("PT_INTERP is not permitted in musl-static stage")
+    return data
+
+busybox, ubusd = [read_static_aarch64(arg) for arg in sys.argv[1:3]]
+archive_path, manifest_path = map(Path, sys.argv[3:5])
+if any(p.exists() or p.is_symlink() for p in (archive_path, manifest_path)):
+    raise ValueError("output already exists")
+buffer = io.BytesIO()
+with tarfile.open(fileobj=buffer, mode="w", format=tarfile.GNU_FORMAT) as tar:
+    def add(name, kind, mode, data=b"", linkname=""):
+        info = tarfile.TarInfo(name)
+        info.type, info.mode = kind, mode
+        info.uid = info.gid = info.mtime = 0
+        info.uname = info.gname = ""
+        info.linkname = linkname
+        info.size = len(data) if kind == tarfile.REGTYPE else 0
+        tar.addfile(info, io.BytesIO(data) if kind == tarfile.REGTYPE else None)
+    for directory in ("bin", "sbin", "etc", "dev", "proc", "sys", "tmp", "var", "var/run"):
+        add(directory, tarfile.DIRTYPE, 0o755)
+    add("bin/busybox", tarfile.REGTYPE, 0o755, busybox)
+    add("bin/sh", tarfile.SYMTYPE, 0o777, linkname="busybox")
+    add("sbin/ubusd", tarfile.REGTYPE, 0o755, ubusd)
+compressed = gzip.compress(buffer.getvalue(), compresslevel=9, mtime=0)
+with tarfile.open(fileobj=io.BytesIO(gzip.decompress(compressed)), mode="r:") as tar:
+    expected = {"bin", "sbin", "etc", "dev", "proc", "sys", "tmp",
+                "var", "var/run", "bin/busybox", "bin/sh", "sbin/ubusd"}
+    if set(tar.getnames()) != expected:
+        raise ValueError("unexpected rootfs stage member")
+    if tar.getmember("bin/sh").linkname != "busybox":
+        raise ValueError("unexpected shell link")
+    for name, original in (("bin/busybox", busybox), ("sbin/ubusd", ubusd)):
+        if tar.extractfile(name).read() != original:
+            raise ValueError("rootfs archive byte mismatch")
+manifest = {
+    "scope": "NONINSTALLABLE_SBAT6_MUSL_BUSYBOX_UBUSD_ROOTFS_STAGE",
+    "architecture": "aarch64",
+    "libc": "native-musl-static-1.2.5",
+    "busybox_version": "1.36.1",
+    "ubus_commit": "db20eff5535fe3126c05dc0edc029caf0e82fe10",
+    "libubox_commit": "da2d205a5cf3e877c45a2eec488218cbaf452e7d",
+    "json_c_commit": "41a55cfcedb54d9c1874f2f0eb07b504091d7e37",
+    "files_sha256": {
+        "bin/busybox": hashlib.sha256(busybox).hexdigest(),
+        "sbin/ubusd": hashlib.sha256(ubusd).hexdigest()
+    },
+    "archive_sha256": hashlib.sha256(compressed).hexdigest(),
+    "archive_bytes": len(compressed),
+    "rights_review": "pending",
+    "not_proven": ["bootable PID1/procd", "netifd", "uci", "SSH", "wpad",
+                   "SBAT6 OpenWrt target", "hardware AP", "distribution rights"]
+}
+archive_path.write_bytes(compressed)
+manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\n")
+print("SBAT6_MUSL_BUSYBOX_UBUSD_ROOTFS_STAGE_PASS",
+      "bytes=", len(compressed), "sha256=", manifest["archive_sha256"])
+PY
+  test -s "$tmp/sbat6-services-rootfs.tar.gz"
+  test -s "$tmp/sbat6-services-manifest.json"
+  sha256sum "$tmp/sbat6-services-rootfs.tar.gz"
+fi
+echo 'LIMIT: noninstallable BusyBox/ubusd rootfs stage only; no OpenWrt target, procd/netifd, AP or release.'

@@ -123,6 +123,18 @@ digest="$(sha256sum "$tmp/busybox/busybox" | cut -d' ' -f1)"
 bytes="$(wc -c < "$tmp/busybox/busybox")"
 echo "BusyBox 1.36.1 ARM64 ELF size_bytes=$bytes sha256=$digest"
 echo 'ARM64_BUSYBOX_SOURCE_COMPILE_PASS'
+# Explicit opt-in handoff to a *temporary* noninstallable service-rootfs stage.
+# The caller owns the parent directory and removes it after CI completes.
+if [[ -n "${SBAT6_MUSL_BUSYBOX_OUTPUT:-}" ]]; then
+  [[ "$musl_stage" == true && "$rootfs_stage" == true &&
+     "$SBAT6_MUSL_BUSYBOX_OUTPUT" == /* &&
+     ! -e "$SBAT6_MUSL_BUSYBOX_OUTPUT" &&
+     ! -L "$SBAT6_MUSL_BUSYBOX_OUTPUT" ]] || {
+    echo 'Unsafe musl BusyBox staging output' >&2; exit 2;
+  }
+  cp -- "$tmp/busybox/busybox" "$SBAT6_MUSL_BUSYBOX_OUTPUT"
+  chmod 0600 "$SBAT6_MUSL_BUSYBOX_OUTPUT"
+fi
 if [[ "$rootfs_stage" == true ]]; then
   libc_label=host-glibc-static
   if [[ "$musl_stage" == true ]]; then libc_label=musl-static; fi
