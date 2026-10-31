@@ -78,7 +78,8 @@ jobs:
           for obj in drivers/net/dsa/mt7530.o \
                      drivers/net/dsa/mt7530-mdio.o \
                      drivers/net/pcs/pcs-mtk-lynxi.o \
-                     drivers/net/ethernet/mediatek/mtk_eth.o; do
+                     drivers/net/ethernet/mediatek/mtk_eth_soc.o \
+                     drivers/net/ethernet/mediatek/mtk_eth_path.o; do
             test -s "$obj" || { echo "Missing built-in object: $obj" >&2; exit 1; }
           done
           echo 'UPSTREAM_MT7531_DSA_MEDIATEK_PCS_IMAGE_OBJECTS_PASS'
