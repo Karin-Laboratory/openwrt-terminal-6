@@ -1,0 +1,3 @@
+# SPDX-License-Identifier: MIT
+# procd inittab dispatches S* scripts itself; no console login is enabled.
+::sysinit:/etc/init.d/rcS S boot
