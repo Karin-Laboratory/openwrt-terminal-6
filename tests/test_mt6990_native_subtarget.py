@@ -38,6 +38,15 @@ class TargetStageTests(unittest.TestCase):
         self.makefile = self.tree / "target/linux/mediatek/Makefile"
         self.makefile.parent.mkdir(parents=True)
         self.makefile.write_text(UPSTREAM)
+        self.kernel_defaults = self.tree / mod.KERNEL_DEFAULTS
+        self.kernel_defaults.parent.mkdir(parents=True)
+        self.kernel_defaults.write_text(
+            "define Kernel/Configure/Default\n"
+            "\t$(LINUX_CONF_CMD) > $(LINUX_DIR)/.config.target\n"
+            + mod.CONFIGURE_ANCHOR + " headers_install\n"
+            "endef\n"
+        )
+        self.original_kernel_defaults = self.kernel_defaults.read_text()
         self.report = self.root / "report.json"
         self.templates = self.root / "templates"
         shutil.copytree(mod.TEMPLATES, self.templates)
@@ -52,6 +61,9 @@ class TargetStageTests(unittest.TestCase):
         self.assertEqual(result["status"], "MT6990_NATIVE_OPENWRT_SOURCE_SUBTARGET_STAGED")
         self.assertIn(mod.NEW_SUBTARGETS, self.makefile.read_text())
         self.assertIn(mod.MT6990_PARENT_DEFAULTS, self.makefile.read_text())
+        self.assertIn(mod.CONFIGURE_NORMALIZE + mod.CONFIGURE_ANCHOR,
+                      self.kernel_defaults.read_text())
+        self.assertIn("upstream_kernel_defaults_sha256", result)
         self.assertIn("DEVICE_TYPE:=basic", (self.tree / mod.TARGET).read_text())
         self.assertEqual(set(result["files"]), {mod.TARGET, mod.IMAGE, mod.CONFIG})
         self.assertFalse(result["signed"])
@@ -92,6 +104,14 @@ class TargetStageTests(unittest.TestCase):
             self.apply()
         self.assertFalse(self.report.exists())
 
+    def test_unrecognized_kernel_configure_rejected_without_writes(self):
+        self.kernel_defaults.write_text("unrecognized configure recipe\n")
+        with self.assertRaisesRegex(ValueError, "unexpected pinned OpenWrt kernel configure"):
+            self.apply()
+        self.assertEqual(self.makefile.read_text(), UPSTREAM)
+        self.assertFalse((self.tree / mod.TARGET).exists())
+        self.assertFalse(self.report.exists())
+
     def test_parent_kernel_defaults_mismatch_rejected(self):
         self.makefile.write_text(UPSTREAM.replace("kmod-gpio-button-hotplug", "kmod-other"))
         with self.assertRaisesRegex(ValueError, "unexpected pinned"):
@@ -114,6 +134,7 @@ class TargetStageTests(unittest.TestCase):
             self.apply()
         self.assertEqual(path.read_text(), "PRESERVE\n")
         self.assertEqual(self.makefile.read_text(), UPSTREAM)
+        self.assertEqual(self.kernel_defaults.read_text(), self.original_kernel_defaults)
 
     def test_template_symlink_rejected(self):
         path = self.templates / "target.mk"
