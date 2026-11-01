@@ -107,7 +107,13 @@ jobs:
           # packages; no target/install, image recipe, signer or flash step.
           make -C "$work/openwrt" -j2 tools/install
           make -C "$work/openwrt" -j2 toolchain/install
-          make -C "$work/openwrt" -j2 package/compile
+          # Full package/compile also selects kernel-coupled default packages
+          # (gpio-button-hotplug) before an MT6990 kernel is available. Compile
+          # the real procd/netifd userspace dependency closure explicitly;
+          # leave kernel-module and device-image builds for the kernel gate.
+          make -C "$work/openwrt" -j2 \
+            package/system/procd/compile \
+            package/network/config/netifd/compile
           package_dir="$work/openwrt/bin/packages"
           test -d "$package_dir"
           for pkg in procd netifd; do
