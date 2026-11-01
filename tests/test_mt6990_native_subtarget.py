@@ -62,6 +62,11 @@ class TargetStageTests(unittest.TestCase):
         for choice in ("CONFIG_ARM64_4K_PAGES=y", "CONFIG_ARM64_VA_BITS_48=y",
                        "CONFIG_ARM64_PA_BITS_48=y", "CONFIG_CPU_LITTLE_ENDIAN=y"):
             self.assertIn(choice, staged_config)
+        # Kbuild syncconfig must not ask interactively about newly
+        # discovered alternatives of already selected ARM64 choices.
+        for choice in ("ARM64_16K_PAGES", "ARM64_64K_PAGES",
+                       "ARM64_VA_BITS_39", "ARM64_VA_BITS_52"):
+            self.assertIn(f"# CONFIG_{choice} is not set", staged_config)
         self.assertTrue(json.loads(self.report.read_text())["not_verified"])
 
     def test_wrong_source_commit_rejected_before_mutation(self):
