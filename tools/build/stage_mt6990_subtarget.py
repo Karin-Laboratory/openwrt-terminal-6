@@ -29,6 +29,12 @@ KERNEL_CONFIG = """# SPDX-License-Identifier: GPL-2.0-only
 # MT6990 standalone kernel bootstrap. NO board DTS/NETSYS/TOPCK/radio runtime.
 CONFIG_64BIT=y
 CONFIG_ARM64=y
+# Explicit ARM64 6.18 Kconfig choices for noninteractive native Kbuild.
+# Bootstrap only: no claim that this matches an Air6 runtime kernel.
+CONFIG_ARM64_4K_PAGES=y
+CONFIG_ARM64_VA_BITS_48=y
+CONFIG_ARM64_PA_BITS_48=y
+CONFIG_CPU_LITTLE_ENDIAN=y
 CONFIG_ARCH_MEDIATEK=y
 CONFIG_MFD_SYSCON=y
 CONFIG_GENERIC_PHY=y
