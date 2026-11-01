@@ -16,6 +16,9 @@ import subprocess
 OPENWRT_PIN = "5799d2da76998be50432b0a3325b42713b4b619b"
 OLD_SUBTARGETS = "SUBTARGETS:=filogic mt7622 mt7623 mt7629"
 NEW_SUBTARGETS = "SUBTARGETS:=filogic mt6990 mt7622 mt7623 mt7629"
+# Parent MediaTek defaults require a built kernel; keep them for other targets.
+PARENT_KMOD_DEFAULTS = "DEFAULT_PACKAGES += \\\n\tkmod-leds-gpio kmod-gpio-button-hotplug"
+MT6990_PARENT_DEFAULTS = "ifneq ($(SUBTARGET),mt6990)\n" + PARENT_KMOD_DEFAULTS + "\nendif"
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES = ROOT / "tools/build/mt6990-target"
 TARGET = "target/linux/mediatek/mt6990/target.mk"
@@ -69,7 +72,8 @@ def stage(tree, report, templates=TEMPLATES):
         raise ValueError("missing or unsafe upstream Makefile")
     original = mediatek_makefile.read_text(encoding="utf-8")
     if (original.count(OLD_SUBTARGETS) != 1 or NEW_SUBTARGETS in original
-            or "KERNEL_PATCHVER:=6.18" not in original):
+            or "KERNEL_PATCHVER:=6.18" not in original
+            or original.count(PARENT_KMOD_DEFAULTS) != 1):
         raise ValueError("unexpected pinned OpenWrt target source")
     files = {
         TARGET: templates / "target.mk",
@@ -97,7 +101,9 @@ def stage(tree, report, templates=TEMPLATES):
                 raise ValueError("symlinked target parent: " + dest)
     # All validation is complete; write only four whitelisted upstream files.
     mediatek_makefile.write_text(
-        original.replace(OLD_SUBTARGETS, NEW_SUBTARGETS, 1), encoding="utf-8"
+        original.replace(OLD_SUBTARGETS, NEW_SUBTARGETS, 1).replace(
+            PARENT_KMOD_DEFAULTS, MT6990_PARENT_DEFAULTS, 1
+        ), encoding="utf-8"
     )
     for dest, data in payloads.items():
         target = tree / dest
