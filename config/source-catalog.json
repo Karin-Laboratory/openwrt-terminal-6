@@ -76,6 +76,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "patches/mt6990/0003-air6-check-sgmii-pll-errors.patch",
+      "component": "ethernet",
+      "origin": "modified-gpl-parent-derived",
+      "license": "GPL-2.0-only",
+      "git_blob_sha1": "717d4e25f95def18c60eaa6880b4fb484ef8a6fc",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch",
       "component": "ethernet",
       "origin": "linux-v6.18-derived",
