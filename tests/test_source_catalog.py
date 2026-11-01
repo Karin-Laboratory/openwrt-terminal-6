@@ -3,6 +3,8 @@
 from pathlib import Path
 import hashlib
 import importlib.util
+import json
+import re
 import sys
 import tempfile
 import unittest
@@ -133,6 +135,47 @@ class SourceCatalogTests(unittest.TestCase):
         target.write_bytes(self.data)
         f.symlink_to(target)
         self.assertTrue(any("symbolic-link" in p for p in check.validate(self.root, self.catalog)))
+
+
+    def test_documented_catalog_inventory_matches_source_of_truth(self):
+        """Release/status rights numbers may never drift from current catalog."""
+        catalog = json.loads((ROOT / "config/source-catalog.json").read_text())
+        inputs = catalog["inputs"]
+        expected_pending = sum(
+            item["rights_review"] == "pending" for item in inputs
+        )
+        docs = (
+            "docs/STATUS.md",
+            "docs/RIGHTS-REVIEW-20261030.md",
+            "docs/RELEASE-GATES.md",
+        )
+        pattern = r"<!-- source-catalog-inventory: inputs=(\\d+); pending=(\\d+) -->"
+        for relative in docs:
+            with self.subTest(document=relative):
+                document = (ROOT / relative).read_text()
+                markers = re.findall(pattern, document)
+                self.assertEqual(len(markers), 1, "Require one inventory marker")
+                self.assertEqual(
+                    (int(markers[0][0]), int(markers[0][1])),
+                    (len(inputs), expected_pending),
+                )
+
+    def test_rights_review_origin_license_table_matches_catalog(self):
+        """Every declared origin/license group is counted, not just grand total."""
+        catalog = json.loads((ROOT / "config/source-catalog.json").read_text())
+        counts = {}
+        for item in catalog["inputs"]:
+            key = (item["origin"], item["license"])
+            counts[key] = counts.get(key, 0) + 1
+        doc = (ROOT / "docs/RIGHTS-REVIEW-20261030.md").read_text()
+        rows = re.findall(
+            r"^\\| ([a-z][a-z0-9-]*) / ([A-Za-z0-9.+-]+) \\| (\\d+) \\|",
+            doc,
+            flags=re.MULTILINE,
+        )
+        observed = {(origin, license_): int(count) for origin, license_, count in rows}
+        self.assertEqual(observed, counts)
+        self.assertEqual(sum(observed.values()), len(catalog["inputs"]))
 
 
 if __name__ == "__main__":
