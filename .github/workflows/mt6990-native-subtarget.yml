@@ -234,4 +234,119 @@ jobs:
           test -s "$work/sbat6-rootfs-stage.tar.gz"
           sha256sum "$work/sbat6-rootfs-stage.tar.gz"
           echo 'PUBLIC_MT6990_NONINSTALLABLE_ROOTFS_STAGE_BUILD_PASS'
-          echo 'LIMIT: no Air6 DTB, matching runtime, device image, signer, hardware or rights approval'
+          # Build an external diagnostic PID1 cpio with the SAME pinned
+          # OpenWrt cross-toolchain as the native MT6990 kernel Image.
+          # It is not a procd boot test or a device-installable image.
+          # The previous native run built Image/rootfs successfully, then
+          # failed silently in this new gate. Resolve only the actual MT6990
+          # kernel directory and report each failed prerequisite explicitly.
+          kernel="$work/openwrt/build_dir/target-aarch64_cortex-a55_musl/linux-mediatek_mt6990/linux-6.18.60"
+          if ! test -s "$kernel/arch/arm64/boot/Image"; then
+            echo "Missing native MT6990 Image at $kernel" >&2
+            exit 1
+          fi
+          for required in CONFIG_ARCH_MEDIATEK=y CONFIG_BLK_DEV_INITRD=y; do
+            if ! grep -qx "$required" "$kernel/.config"; then
+              echo "Native kernel config lacks $required" >&2
+              grep -E '^(# )?CONFIG_(ARCH_MEDIATEK|BLK_DEV_INITRD)' "$kernel/.config" >&2 || true
+              exit 1
+            fi
+          done
+          echo 'PUBLIC_MT6990_NATIVE_KERNEL_CONFIG_FOR_PID1_PASS'
+          compiler="$(find "$work/openwrt/staging_dir" -maxdepth 4 \
+            -name 'aarch64-openwrt-linux-musl-gcc' -print -quit)"
+          if ! test -n "$compiler" || ! test -x "$compiler"; then
+            echo 'Missing native OpenWrt AArch64 musl cross compiler' >&2
+            find "$work/openwrt/staging_dir" -maxdepth 4 -name '*-gcc' -print >&2
+            exit 1
+          fi
+          cross="$(dirname "$compiler")/aarch64-openwrt-linux-musl-"
+          if ! test -x "${cross}ld"; then
+            echo "Missing matching AArch64 linker: ${cross}ld" >&2
+            exit 1
+          fi
+          echo 'PUBLIC_MT6990_NATIVE_PID1_TOOLCHAIN_READY'
+          "$compiler" -nostdlib -ffreestanding -fno-builtin \
+            -fno-stack-protector -fno-pic -static -O2 -no-pie \
+            -Wl,-e,_start -Wl,--build-id=none \
+            -o "$work/air6-init.elf" \
+            "$GITHUB_WORKSPACE/scripts/air6-diagnostic-init.c"
+          python3 - "$work/air6-init.elf" "$work/air6-initramfs.cpio" <<'PY'
+          import importlib.util
+          from pathlib import Path
+          import sys
+          spec = importlib.util.spec_from_file_location(
+              "air6_cpio", Path("scripts/build-minimal-arm64-initramfs.py").resolve())
+          mod = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          elf = Path(sys.argv[1]).read_bytes()
+          mod.validate_elf(elf)
+          raw = mod.make_archive(elf)
+          assert raw.startswith(b"070701") and b"TRAILER!!!" in raw
+          Path(sys.argv[2]).write_bytes(raw)
+          print("PUBLIC_MT6990_NATIVE_DIAGNOSTIC_PID1_CPIO_BUILD_PASS")
+          PY
+          test -s "$work/air6-initramfs.cpio"
+          # Reuse the exact public GPL-labelled MT6990 DTS inputs already
+          # compiled by arm64-image-build.yml. Rights review stays pending.
+          donor=https://raw.githubusercontent.com/13179415360/openwrt-mt6990-lg6851f/a40df9a5afb46716dea799acea69f17480df4d82
+          fetch_checked() {
+            local url="$1" dest="$2" expected="$3"
+            curl --fail --silent --show-error --location --retry 3 \
+              --max-time 90 "$url" -o "$dest"
+            test "$(git hash-object "$dest")" = "$expected" || {
+              echo "Pinned MT6990 DT input mismatch: $dest" >&2; exit 1;
+            }
+          }
+          test ! -e "$kernel/arch/arm64/boot/dts/mediatek/mt6990.dtsi"
+          fetch_checked "$donor/target/linux/mediatek/patches-6.18/969-arm64-dts-mediatek-add-mt6990-soc.patch" \
+            "$work/mt6990-soc.patch" 4f24ec8183c5495a312ec5f1109164d7b770a770
+          mkdir -p "$kernel/include/dt-bindings/clock" "$kernel/include/dt-bindings/power"
+          fetch_checked "$donor/target/linux/mediatek/files-6.18/include/dt-bindings/clock/mt6990-clk.h" \
+            "$kernel/include/dt-bindings/clock/mt6990-clk.h" eea7fbe58a5d5b7357c5ddb83eff6ffb74b3801a
+          fetch_checked "$donor/target/linux/mediatek/files-6.18/include/dt-bindings/power/mt6990-power.h" \
+            "$kernel/include/dt-bindings/power/mt6990-power.h" c221b322fb437683d052ec4241a33afaecb33979
+          python3 - "$work/mt6990-soc.patch" "$kernel/arch/arm64/boot/dts/mediatek/mt6990.dtsi" <<'PY'
+          from pathlib import Path
+          import sys
+          lines = Path(sys.argv[1]).read_text().splitlines()
+          start = next((i for i, s in enumerate(lines) if s.startswith("@@ -0,0 +1,")), None)
+          if start is None:
+              raise SystemExit("Pinned MT6990 SoC patch lacks expected new-file hunk")
+          body = [s[1:] for s in lines[start + 1:] if s.startswith("+")]
+          if len(body) < 400 or not body[0].startswith("// SPDX-License-Identifier:"):
+              raise SystemExit("Unexpected MT6990 SoC DTSI")
+          Path(sys.argv[2]).write_text("\n".join(body) + "\n")
+          PY
+          for dts in mt6990-air-terminal-6.dts mt6990-air-terminal-6-ethernet-test.dts; do
+            test ! -e "$kernel/arch/arm64/boot/dts/mediatek/$dts"
+            cp "$GITHUB_WORKSPACE/board/$dts" \
+              "$kernel/arch/arm64/boot/dts/mediatek/$dts"
+          done
+          cat >> "$kernel/arch/arm64/boot/dts/mediatek/Makefile" <<'EOF'
+          # Air6 compile-only candidate DTBs, not device image recipes.
+          dtb-$(CONFIG_ARCH_MEDIATEK) += mt6990-air-terminal-6.dtb
+          dtb-$(CONFIG_ARCH_MEDIATEK) += mt6990-air-terminal-6-ethernet-test.dtb
+          EOF
+          PATH="$(dirname "$compiler"):$PATH" timeout 1200s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 dtbs
+          for dtb in mt6990-air-terminal-6.dtb mt6990-air-terminal-6-ethernet-test.dtb; do
+            dtbpath="$kernel/arch/arm64/boot/dts/mediatek/$dtb"
+            test -s "$dtbpath"
+            python3 - "$dtbpath" <<'PY'
+          from pathlib import Path
+          import sys
+          blob = Path(sys.argv[1]).read_bytes()
+          assert blob[:4] == bytes.fromhex("d00dfeed"), "not a DTB"
+          assert b"softbank,air-terminal-6\x00" in blob
+          assert b"mediatek,mt7531\x00" in blob
+          print("PUBLIC_MT6990_NATIVE_AIR6_DTB_CONTENT_PASS", sys.argv[1])
+          PY
+          done
+          sha256sum "$kernel/arch/arm64/boot/Image" \
+            "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb" \
+            "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6-ethernet-test.dtb" \
+            "$work/air6-initramfs.cpio"
+          echo 'PUBLIC_MT6990_SAME_OPENWRT_KERNEL_IMAGE_AIR6_DTBS_PID1_BUILD_PASS'
+          echo 'LIMIT: external diagnostic PID1, no procd boot; DTB driver/clock/genpd/radio not integrated'
+          echo 'LIMIT: no device boot, signing, installable image, private material or rights approval'
