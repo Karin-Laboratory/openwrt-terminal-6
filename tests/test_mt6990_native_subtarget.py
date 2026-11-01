@@ -23,7 +23,8 @@ SUBTARGETS:=filogic mt7622 mt7623 mt7629
 FEATURES:=dt-overlay emmc fpu gpio nand pci pcie rootfs-part separate_ramdisk squashfs usb
 KERNEL_PATCHVER:=6.18
 include $(INCLUDE_DIR)/target.mk
-DEFAULT_PACKAGES += kmod-leds-gpio
+DEFAULT_PACKAGES += \\
+\tkmod-leds-gpio kmod-gpio-button-hotplug
 $(eval $(call BuildTarget))
 """
 
@@ -50,6 +51,8 @@ class TargetStageTests(unittest.TestCase):
         result = self.apply()
         self.assertEqual(result["status"], "MT6990_NATIVE_OPENWRT_SOURCE_SUBTARGET_STAGED")
         self.assertIn(mod.NEW_SUBTARGETS, self.makefile.read_text())
+        self.assertIn(mod.MT6990_PARENT_DEFAULTS, self.makefile.read_text())
+        self.assertIn("DEVICE_TYPE:=basic", (self.tree / mod.TARGET).read_text())
         self.assertEqual(set(result["files"]), {mod.TARGET, mod.IMAGE, mod.CONFIG})
         self.assertFalse(result["signed"])
         self.assertEqual(result["firmware_outputs"], "NONE")
@@ -77,6 +80,13 @@ class TargetStageTests(unittest.TestCase):
                                                   "KERNEL_PATCHVER:=6.17"))
         with self.assertRaisesRegex(ValueError, "unexpected pinned"):
             self.apply()
+        self.assertFalse(self.report.exists())
+
+    def test_parent_kernel_defaults_mismatch_rejected(self):
+        self.makefile.write_text(UPSTREAM.replace("kmod-gpio-button-hotplug", "kmod-other"))
+        with self.assertRaisesRegex(ValueError, "unexpected pinned"):
+            self.apply()
+        self.assertEqual(self.makefile.read_text(), UPSTREAM.replace("kmod-gpio-button-hotplug", "kmod-other"))
         self.assertFalse(self.report.exists())
 
     def test_installer_device_definition_rejected(self):
