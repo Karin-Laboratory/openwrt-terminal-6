@@ -1,0 +1,62 @@
+name: MT6990 OpenWrt native subtarget (source-only)
+on:
+  pull_request:
+    paths:
+      - tools/build/mt6990-target/**
+      - tools/build/stage_mt6990_subtarget.py
+      - tests/test_mt6990_native_subtarget.py
+      - config/source-catalog.json
+      - .github/workflows/mt6990-native-subtarget.yml
+permissions:
+  contents: read
+jobs:
+  native-defconfig:
+    name: Real upstream OpenWrt make defconfig (no firmware)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Test staging logic and source identity
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_mt6990_native_subtarget.py' -v
+          python3 tools/build/verify_source_catalog.py
+      - name: Pin clean upstream OpenWrt and register noninstallable target
+        shell: bash
+        run: |
+          set -euo pipefail
+          pin=5799d2da76998be50432b0a3325b42713b4b619b
+          work="$(mktemp -d)"
+          trap 'rm -rf -- "$work"' EXIT
+          git clone --quiet --no-checkout --filter=blob:none \
+            https://github.com/openwrt/openwrt.git "$work/openwrt"
+          git -C "$work/openwrt" fetch --quiet --depth=1 origin "$pin"
+          git -C "$work/openwrt" checkout --quiet --detach "$pin"
+          test "$(git -C "$work/openwrt" rev-parse HEAD)" = "$pin"
+          python3 tools/build/stage_mt6990_subtarget.py \
+            --tree "$work/openwrt" --report "$work/mt6990-source-report.json"
+          python3 - "$work/mt6990-source-report.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          result = json.loads(Path(sys.argv[1]).read_text())
+          assert result["status"] == "MT6990_NATIVE_OPENWRT_SOURCE_SUBTARGET_STAGED"
+          assert result["upstream_openwrt_commit"] == "5799d2da76998be50432b0a3325b42713b4b619b"
+          assert result["signed"] is False and result["firmware_outputs"] == "NONE"
+          print("PUBLIC_MT6990_SOURCE_REGISTRATION_PASS")
+          PY
+          cat > "$work/openwrt/.config" <<'EOF'
+          CONFIG_TARGET_mediatek=y
+          CONFIG_TARGET_mediatek_mt6990=y
+          EOF
+          # Native OpenWrt target validation requires umask 022.
+          umask 022
+          make -C "$work/openwrt" defconfig
+          grep -qx 'CONFIG_TARGET_mediatek_mt6990=y' "$work/openwrt/.config"
+          test -s "$work/openwrt/target/linux/mediatek/mt6990/config-6.18"
+          test -s "$work/openwrt/target/linux/mediatek/mt6990/target.mk"
+          ! grep -qE '^[[:space:]]*define Device/' \
+            "$work/openwrt/target/linux/mediatek/image/mt6990.mk"
+          echo 'PUBLIC_MT6990_REAL_OPENWRT_DEFCONFIG_PASS'
+          echo 'NO_DEVICE_PROFILE_NO_FIRMWARE_NO_SIGNING_NO_HARDWARE'
