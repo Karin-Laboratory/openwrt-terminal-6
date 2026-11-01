@@ -60,7 +60,8 @@ class TargetStageTests(unittest.TestCase):
         self.assertIn("CONFIG_SQUASHFS_XZ=y", (self.tree / mod.CONFIG).read_text())
         staged_config = (self.tree / mod.CONFIG).read_text()
         for choice in ("CONFIG_ARM64_4K_PAGES=y", "CONFIG_ARM64_VA_BITS_48=y",
-                       "CONFIG_ARM64_PA_BITS_48=y", "CONFIG_CPU_LITTLE_ENDIAN=y"):
+                       "CONFIG_ARM64_PA_BITS_48=y", "CONFIG_CPU_LITTLE_ENDIAN=y",
+                       "CONFIG_NR_CPUS=512"):
             self.assertIn(choice, staged_config)
         # Kbuild syncconfig must not ask interactively about newly
         # discovered alternatives of already selected ARM64 choices.
