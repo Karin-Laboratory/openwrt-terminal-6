@@ -3,10 +3,38 @@
 # Research-only procd service registration; no uplink/AP configuration.
 [ "${1:-}" = boot ] || exit 0
 if /bin/ubus -t 5 call service add '{"name":"netifd","instances":{"netifd":{"command":["/sbin/netifd"],"respawn":["3600","5","5"]}}}' >/dev/null; then
-    # Console marker allows an isolated guest to prove the actual procd
-    # sysinit -> rcS -> ubus service-add path, not just staged files.
+    # The first marker proves procd accepted the real ubus service-add call.
     echo 'SBAT6_PROCD_NETIFD_REGISTERED' > /dev/console
 else
     echo 'SBAT6_PROCD_NETIFD_REGISTRATION_FAILED' > /dev/console
     exit 1
 fi
+
+# The service-add reply is asynchronous. Verify that the real kernel exposes
+# a stable netifd process, not merely a registered service definition.
+# QEMU virt has no NIC and this is NOT a network/AP traffic assertion.
+netifd_pid() {
+    for comm in /proc/[0-9]*/comm; do
+        [ -r "$comm" ] || continue
+        IFS= read -r name < "$comm" || continue
+        [ "$name" = netifd ] || continue
+        pid=${comm#/proc/}
+        printf '%s\n' "${pid%/comm}"
+        return 0
+    done
+    return 1
+}
+attempt=0
+while [ "$attempt" -lt 20 ]; do
+    if pid="$(netifd_pid)"; then
+        sleep 1
+        if [ "$(netifd_pid)" = "$pid" ]; then
+            echo 'SBAT6_NETIFD_PROCESS_STABLE_RUNTIME_PASS' > /dev/console
+            exit 0
+        fi
+    fi
+    attempt=$((attempt + 1))
+    sleep 1
+done
+echo 'SBAT6_NETIFD_PROCESS_NOT_STABLE' > /dev/console
+exit 1

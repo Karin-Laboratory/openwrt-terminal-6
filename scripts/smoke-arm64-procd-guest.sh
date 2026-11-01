@@ -30,5 +30,9 @@ if ! grep -Fq 'SBAT6_PROCD_NETIFD_REGISTERED' "$log"; then
   echo 'SBAT6_QEMU_GUEST_BOOT_FAIL: procd service registration not observed' >&2
   exit 1
 fi
-echo 'SBAT6_QEMU_VIRT_PROCD_NETIFD_REGISTRATION_RUNTIME_PASS'
-echo 'LIMIT: QEMU virt only; service registration is not netifd traffic, Air6 boot, Ethernet or AP proof.'
+if ! grep -Fq 'SBAT6_NETIFD_PROCESS_STABLE_RUNTIME_PASS' "$log"; then
+  echo 'SBAT6_QEMU_GUEST_BOOT_FAIL: stable netifd process not observed after registration' >&2
+  exit 1
+fi
+echo 'SBAT6_QEMU_VIRT_PROCD_NETIFD_PROCESS_RUNTIME_PASS'
+echo 'LIMIT: QEMU virt only; a stable netifd process is not traffic, bridge, Air6 boot, Ethernet or AP proof.'
