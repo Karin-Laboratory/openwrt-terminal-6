@@ -168,11 +168,18 @@ jobs:
             package/system/ubus/compile \
             package/system/uci/compile \
             package/network/services/dropbear/compile
+          # OpenWrt's rules.mk places nonshared packages (e.g. Dropbear)
+          # under bin/targets/<board>/<subtarget>/packages, while other
+          # packages can live in bin/packages. Both are real build outputs.
+          # Do not mistake a repository-path assumption for a compile failure.
           for pkg in busybox ubus uci dropbear; do
-            if ! find "$package_dir" -type f \
-                \( -name "${pkg}-*.apk" -o -name "${pkg}_*.ipk" \) \
+            if ! find "$work/openwrt/bin/packages" \
+                "$work/openwrt/bin/targets/mediatek/mt6990/packages" \
+                -type f \( -name "${pkg}-*.apk" -o -name "${pkg}_*.ipk" \) \
                 -print -quit | grep -q .; then
               echo "Missing compiled OpenWrt package: $pkg" >&2
+              find "$work/openwrt/bin" -type f \
+                \( -name '*.apk' -o -name '*.ipk' \) -print | sort | tail -60 >&2
               exit 1
             fi
           done
