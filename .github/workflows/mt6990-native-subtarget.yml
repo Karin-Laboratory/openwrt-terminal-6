@@ -123,28 +123,6 @@ jobs:
           # packages; no target/install, image recipe, signer or flash step.
           make -C "$work/openwrt" -j2 tools/install
           make -C "$work/openwrt" -j2 toolchain/install
-          # The pinned kernel config can still contain new ARM64 Kconfig
-          # choices after OpenWrt merges generic and subtarget fragments.
-          # Resolve them noninteractively on the *prepared* kernel config
-          # before Kbuild's syncconfig, rather than guessing from the
-          # source fragment or accepting a default via stdin.
-          make -C "$work/openwrt" -j2 target/linux/configure
-          kernel_config="$(find "$work/openwrt/build_dir" -type f -name .config \
-            -path '*/linux-mediatek_mt6990/linux-*/.config' -print -quit)"
-          test -n "$kernel_config" && test -s "$kernel_config"
-          kernel_dir="${kernel_config%/.config}"
-          cross_gcc="$(find "$work/openwrt/staging_dir" \
-            -name aarch64-openwrt-linux-musl-gcc -print -quit)"
-          test -n "$cross_gcc" && test -x "$cross_gcc"
-          make -C "$kernel_dir" ARCH=arm64 \
-            CROSS_COMPILE="${cross_gcc%gcc}" olddefconfig
-          for selected in ARM64_4K_PAGES ARM64_VA_BITS_48 ARM64_PA_BITS_48; do
-            grep -qx "CONFIG_${selected}=y" "$kernel_dir/.config" || {
-              echo "Prepared kernel Kconfig choice not resolved: $selected" >&2
-              exit 1
-            }
-          done
-          echo 'PUBLIC_MT6990_PREPARED_KCONFIG_OLDDEFCONFIG_PASS'
           # The actual OpenWrt procd dependency closure reaches package/kernel/linux
           # even without selected kmod defaults. Build the native MT6990 kernel
           # first rather than hiding or bypassing its dependency. This is still
