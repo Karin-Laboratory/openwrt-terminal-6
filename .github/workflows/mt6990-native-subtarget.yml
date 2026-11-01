@@ -1,4 +1,4 @@
-name: MT6990 OpenWrt native subtarget (source-only)
+name: MT6990 OpenWrt native subtarget and package build
 on:
   pull_request:
     paths:
@@ -54,9 +54,103 @@ jobs:
           umask 022
           make -C "$work/openwrt" defconfig
           grep -qx 'CONFIG_TARGET_mediatek_mt6990=y' "$work/openwrt/.config"
+          # The kernel-less package gate must not inherit MediaTek GPIO/LED
+          # modules or generic router offload modules from parent defaults.
+          for pkg in kmod-gpio-button-hotplug kmod-leds-gpio kmod-nft-offload; do
+            if grep -qE "^CONFIG_PACKAGE_${pkg}=[ym]$" "$work/openwrt/.config"; then
+              echo "Unexpected kernel-coupled default in userspace-only build: $pkg" >&2
+              exit 1
+            fi
+          done
           test -s "$work/openwrt/target/linux/mediatek/mt6990/config-6.18"
           test -s "$work/openwrt/target/linux/mediatek/mt6990/target.mk"
           ! grep -qE '^[[:space:]]*define Device/' \
             "$work/openwrt/target/linux/mediatek/image/mt6990.mk"
           echo 'PUBLIC_MT6990_REAL_OPENWRT_DEFCONFIG_PASS'
           echo 'NO_DEVICE_PROFILE_NO_FIRMWARE_NO_SIGNING_NO_HARDWARE'
+
+  native-package-compile:
+    name: Compile real OpenWrt procd/netifd packages (noninstallable)
+    needs: native-defconfig
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build pinned native MT6990 userspace package closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          pin=5799d2da76998be50432b0a3325b42713b4b619b
+          work="$(mktemp -d)"
+          trap 'rm -rf -- "$work"' EXIT
+          git clone --quiet --no-checkout --filter=blob:none \
+            https://github.com/openwrt/openwrt.git "$work/openwrt"
+          git -C "$work/openwrt" fetch --quiet --depth=1 origin "$pin"
+          git -C "$work/openwrt" checkout --quiet --detach "$pin"
+          test "$(git -C "$work/openwrt" rev-parse HEAD)" = "$pin"
+          python3 tools/build/stage_mt6990_subtarget.py \
+            --tree "$work/openwrt" --report "$work/staging-report.json"
+          cat > "$work/openwrt/.config" <<'EOF'
+          CONFIG_TARGET_mediatek=y
+          CONFIG_TARGET_mediatek_mt6990=y
+          CONFIG_PACKAGE_busybox=y
+          CONFIG_PACKAGE_procd=y
+          CONFIG_PACKAGE_ubus=y
+          CONFIG_PACKAGE_uci=y
+          CONFIG_PACKAGE_netifd=y
+          CONFIG_PACKAGE_dropbear=y
+          EOF
+          umask 022
+          make -C "$work/openwrt" defconfig
+          grep -qx 'CONFIG_TARGET_mediatek_mt6990=y' "$work/openwrt/.config"
+          # The kernel-less package gate must not inherit MediaTek GPIO/LED
+          # modules or generic router offload modules from parent defaults.
+          for pkg in kmod-gpio-button-hotplug kmod-leds-gpio kmod-nft-offload; do
+            if grep -qE "^CONFIG_PACKAGE_${pkg}=[ym]$" "$work/openwrt/.config"; then
+              echo "Unexpected kernel-coupled default in userspace-only build: $pkg" >&2
+              exit 1
+            fi
+          done
+          for pkg in busybox procd ubus uci netifd dropbear; do
+            grep -qx "CONFIG_PACKAGE_${pkg}=y" "$work/openwrt/.config" || {
+              echo "Missing selected native package: $pkg" >&2
+              exit 1
+            }
+          done
+          # Build OpenWrt's actual host tools, cross-toolchain and target
+          # packages; no target/install, image recipe, signer or flash step.
+          make -C "$work/openwrt" -j2 tools/install
+          make -C "$work/openwrt" -j2 toolchain/install
+          # The actual OpenWrt procd dependency closure reaches package/kernel/linux
+          # even without selected kmod defaults. Build the native MT6990 kernel
+          # first rather than hiding or bypassing its dependency. This is still
+          # a generic source-stage Image, NOT an Air6-matched DTS/AP firmware.
+          # Preserve the actual Kbuild failure in hosted logs if a choice or
+          # driver dependency still blocks the matching native kernel.
+          make -C "$work/openwrt" -j2 V=s target/linux/compile
+          if ! find "$work/openwrt/build_dir" -type f \
+              -path '*/linux-mediatek_mt6990/linux-*/arch/arm64/boot/Image' \
+              -size +0c -print -quit | grep -q .; then
+            echo "Native MT6990 kernel Image was not produced" >&2
+            exit 1
+          fi
+          echo 'PUBLIC_MT6990_NATIVE_KERNEL_IMAGE_BUILD_PASS'
+          # Now build the real package dependency closure with matching
+          # OpenWrt kernel headers/modules metadata. No target/install.
+          make -C "$work/openwrt" -j2 \
+            package/system/procd/compile \
+            package/network/config/netifd/compile
+          package_dir="$work/openwrt/bin/packages"
+          test -d "$package_dir"
+          for pkg in procd netifd; do
+            if ! find "$package_dir" -type f \
+                \( -name "${pkg}-*.apk" -o -name "${pkg}_*.ipk" \) \
+                -print -quit | grep -q .; then
+              echo "Missing actual compiled OpenWrt package: $pkg" >&2
+              exit 1
+            fi
+          done
+          echo 'PUBLIC_MT6990_REAL_OPENWRT_PROCD_NETIFD_PACKAGES_PASS'
+          echo 'NONINSTALLABLE_PACKAGES_ONLY_NO_DEVICE_PROFILE_NO_SIGNING'

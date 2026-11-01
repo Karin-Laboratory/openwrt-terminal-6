@@ -4,6 +4,8 @@ ARCH:=aarch64
 SUBTARGET:=mt6990
 BOARDNAME:=MediaTek MT6990 (source-only research)
 CPU_TYPE:=cortex-a55
+# A kernel-less userspace stage must not inherit router-only kernel modules.
+DEVICE_TYPE:=basic
 KERNELNAME:=Image dtbs
 DEFAULT_PACKAGES += procd ubus uci netifd dropbear
 define Target/Description

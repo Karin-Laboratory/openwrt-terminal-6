@@ -16,16 +16,37 @@ import subprocess
 OPENWRT_PIN = "5799d2da76998be50432b0a3325b42713b4b619b"
 OLD_SUBTARGETS = "SUBTARGETS:=filogic mt7622 mt7623 mt7629"
 NEW_SUBTARGETS = "SUBTARGETS:=filogic mt6990 mt7622 mt7623 mt7629"
+# Parent MediaTek defaults require a built kernel; keep them for other targets.
+PARENT_KMOD_DEFAULTS = "DEFAULT_PACKAGES += \\\n\tkmod-leds-gpio kmod-gpio-button-hotplug"
+MT6990_PARENT_DEFAULTS = "ifneq ($(SUBTARGET),mt6990)\n" + PARENT_KMOD_DEFAULTS + "\nendif"
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES = ROOT / "tools/build/mt6990-target"
 TARGET = "target/linux/mediatek/mt6990/target.mk"
 IMAGE = "target/linux/mediatek/image/mt6990.mk"
 CONFIG = "target/linux/mediatek/mt6990/config-6.18"
+KERNEL_DEFAULTS = "include/kernel-defaults.mk"
+# Normalize the exact pinned OpenWrt kernel configuration *before* Kbuild
+# headers_install/modules, avoiding interactive syncconfig on new ARM64 symbols.
+CONFIGURE_ANCHOR = "\t$(_SINGLE) [ -d $(LINUX_DIR)/user_headers ] || $(KERNEL_MAKE)"
+CONFIGURE_NORMALIZE = "\t$(_SINGLE) $(KERNEL_MAKE) olddefconfig\n"
 # Same minimal Alpha 3 source-only Kconfig *bootstrap*, not a final board config.
 KERNEL_CONFIG = """# SPDX-License-Identifier: GPL-2.0-only
 # MT6990 standalone kernel bootstrap. NO board DTS/NETSYS/TOPCK/radio runtime.
 CONFIG_64BIT=y
 CONFIG_ARM64=y
+# Explicit ARM64 6.18 Kconfig choices for noninteractive native Kbuild.
+# Bootstrap only: no claim that this matches an Air6 runtime kernel.
+CONFIG_ARM64_4K_PAGES=y
+# CONFIG_ARM64_16K_PAGES is not set
+# CONFIG_ARM64_64K_PAGES is not set
+# CONFIG_ARM64_VA_BITS_39 is not set
+CONFIG_ARM64_VA_BITS_48=y
+# CONFIG_ARM64_VA_BITS_52 is not set
+CONFIG_ARM64_PA_BITS_48=y
+CONFIG_CPU_LITTLE_ENDIAN=y
+# Kernel 6.18.60 Kconfig requested this numeric value at syncconfig
+# after the ARM64 choices; fix the actual native build input.
+CONFIG_NR_CPUS=512
 CONFIG_ARCH_MEDIATEK=y
 CONFIG_MFD_SYSCON=y
 CONFIG_GENERIC_PHY=y
@@ -68,8 +89,17 @@ def stage(tree, report, templates=TEMPLATES):
     if mediatek_makefile.is_symlink() or not mediatek_makefile.is_file():
         raise ValueError("missing or unsafe upstream Makefile")
     original = mediatek_makefile.read_text(encoding="utf-8")
+    kernel_defaults = tree / KERNEL_DEFAULTS
+    if kernel_defaults.is_symlink() or not kernel_defaults.is_file():
+        raise ValueError("missing or unsafe pinned kernel-defaults.mk")
+    original_defaults = kernel_defaults.read_text(encoding="utf-8")
+    if (original_defaults.count(CONFIGURE_ANCHOR) != 1
+            or original_defaults.count("define Kernel/Configure/Default") != 1
+            or CONFIGURE_NORMALIZE in original_defaults):
+        raise ValueError("unexpected pinned OpenWrt kernel configure contract")
     if (original.count(OLD_SUBTARGETS) != 1 or NEW_SUBTARGETS in original
-            or "KERNEL_PATCHVER:=6.18" not in original):
+            or "KERNEL_PATCHVER:=6.18" not in original
+            or original.count(PARENT_KMOD_DEFAULTS) != 1):
         raise ValueError("unexpected pinned OpenWrt target source")
     files = {
         TARGET: templates / "target.mk",
@@ -95,14 +125,22 @@ def stage(tree, report, templates=TEMPLATES):
                 break
             if parent.is_symlink():
                 raise ValueError("symlinked target parent: " + dest)
-    # All validation is complete; write only four whitelisted upstream files.
+    # All validation is complete; modify only two pinned Makefiles and three
+    # whitelisted source-only subtarget files in the isolated checkout.
     mediatek_makefile.write_text(
-        original.replace(OLD_SUBTARGETS, NEW_SUBTARGETS, 1), encoding="utf-8"
+        original.replace(OLD_SUBTARGETS, NEW_SUBTARGETS, 1).replace(
+            PARENT_KMOD_DEFAULTS, MT6990_PARENT_DEFAULTS, 1
+        ), encoding="utf-8"
     )
     for dest, data in payloads.items():
         target = tree / dest
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
+    kernel_defaults.write_text(
+        original_defaults.replace(CONFIGURE_ANCHOR,
+                                  CONFIGURE_NORMALIZE + CONFIGURE_ANCHOR, 1),
+        encoding="utf-8"
+    )
     output = {
         "status": "MT6990_NATIVE_OPENWRT_SOURCE_SUBTARGET_STAGED",
         "upstream_openwrt_commit": OPENWRT_PIN,
@@ -110,6 +148,7 @@ def stage(tree, report, templates=TEMPLATES):
         "files": {k: {"bytes": len(v), "sha256": digest(v)}
                   for k, v in sorted(payloads.items())},
         "upstream_makefile_sha256": digest(mediatek_makefile.read_bytes()),
+        "upstream_kernel_defaults_sha256": digest(kernel_defaults.read_bytes()),
         "firmware_outputs": "NONE",
         "signed": False,
         "verified": ["source-identity", "noninstallable-target-registration"],

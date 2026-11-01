@@ -6,7 +6,7 @@ For the dated branch-tip, GitHub-conversation and source-equivalent ARM64 build 
 
 The source-only rights-label subgate is `python3 tools/build/verify_source_catalog.py --public-source`; it is expected to **FAIL** while attribution/redistribution reviews are PENDING. This subgate does not require unfinished firmware features, but a PASS would not supersede the independent security and rights checklist below.
 
-<!-- source-catalog-inventory: inputs=68; pending=68 -->
+<!-- source-catalog-inventory: inputs=72; pending=72 -->
 
 For the AP-first management release gate, see [key-only first-boot SSH policy](AP-FIRST-SSH-PROVISIONING.md). Public isolated QEMU CI is intentionally credential-free; release-capable private builds must separately validate owner public-key provisioning, unique device host keys, management isolation and recovery before any signer/flash decision.
 
@@ -49,4 +49,4 @@ The clean repository's self-hosted source build was restricted to **manual workf
 
 - The previously queued self-hosted runs [#40442794789](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40442794789) and [#40443522118](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40443522118) have since ended with **cancelled** status. These cancellations are not successful ARM64 builds. The Actions run list reports zero `queued` and zero `in_progress` runs as of this checkpoint; it does not establish the state of private runner registration or the repository's administrative settings.
 - [GitHub-hosted PR run #40984659074](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40984659074) and [main push #40984791183](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/40984791183) succeeded **with recorded test steps**, including current-history scanning. The original hosted-runner execution blockage (Issue #3) is resolved.
-- **Still open in Issue #2:** manual inspection of repository settings, branch/ruleset protections, confidential reporting, source authorship/redistribution rights (catalog snapshot **68** source/test/build entries, all `rights_review=pending`; see [current catalog](../config/source-catalog.json) and [review breakdown](RIGHTS-REVIEW-20261030.md)), PR/Issue and Actions-log content, and coordinated confidential disclosures. Host CI cannot substitute for these reviews. **Firmware release remains NO-GO.**
+- **Still open in Issue #2:** manual inspection of repository settings, branch/ruleset protections, confidential reporting, source authorship/redistribution rights (catalog snapshot **72** source/test/build entries, all `rights_review=pending`; see [current catalog](../config/source-catalog.json) and [review breakdown](RIGHTS-REVIEW-20261030.md)), PR/Issue and Actions-log content, and coordinated confidential disclosures. Host CI cannot substitute for these reviews. **Firmware release remains NO-GO.**

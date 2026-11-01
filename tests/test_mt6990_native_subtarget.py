@@ -23,7 +23,8 @@ SUBTARGETS:=filogic mt7622 mt7623 mt7629
 FEATURES:=dt-overlay emmc fpu gpio nand pci pcie rootfs-part separate_ramdisk squashfs usb
 KERNEL_PATCHVER:=6.18
 include $(INCLUDE_DIR)/target.mk
-DEFAULT_PACKAGES += kmod-leds-gpio
+DEFAULT_PACKAGES += \\
+\tkmod-leds-gpio kmod-gpio-button-hotplug
 $(eval $(call BuildTarget))
 """
 
@@ -37,6 +38,15 @@ class TargetStageTests(unittest.TestCase):
         self.makefile = self.tree / "target/linux/mediatek/Makefile"
         self.makefile.parent.mkdir(parents=True)
         self.makefile.write_text(UPSTREAM)
+        self.kernel_defaults = self.tree / mod.KERNEL_DEFAULTS
+        self.kernel_defaults.parent.mkdir(parents=True)
+        self.kernel_defaults.write_text(
+            "define Kernel/Configure/Default\n"
+            "\t$(LINUX_CONF_CMD) > $(LINUX_DIR)/.config.target\n"
+            + mod.CONFIGURE_ANCHOR + " headers_install\n"
+            "endef\n"
+        )
+        self.original_kernel_defaults = self.kernel_defaults.read_text()
         self.report = self.root / "report.json"
         self.templates = self.root / "templates"
         shutil.copytree(mod.TEMPLATES, self.templates)
@@ -50,11 +60,26 @@ class TargetStageTests(unittest.TestCase):
         result = self.apply()
         self.assertEqual(result["status"], "MT6990_NATIVE_OPENWRT_SOURCE_SUBTARGET_STAGED")
         self.assertIn(mod.NEW_SUBTARGETS, self.makefile.read_text())
+        self.assertIn(mod.MT6990_PARENT_DEFAULTS, self.makefile.read_text())
+        self.assertIn(mod.CONFIGURE_NORMALIZE + mod.CONFIGURE_ANCHOR,
+                      self.kernel_defaults.read_text())
+        self.assertIn("upstream_kernel_defaults_sha256", result)
+        self.assertIn("DEVICE_TYPE:=basic", (self.tree / mod.TARGET).read_text())
         self.assertEqual(set(result["files"]), {mod.TARGET, mod.IMAGE, mod.CONFIG})
         self.assertFalse(result["signed"])
         self.assertEqual(result["firmware_outputs"], "NONE")
         self.assertNotIn("define Device/", (self.tree / mod.IMAGE).read_text())
         self.assertIn("CONFIG_SQUASHFS_XZ=y", (self.tree / mod.CONFIG).read_text())
+        staged_config = (self.tree / mod.CONFIG).read_text()
+        for choice in ("CONFIG_ARM64_4K_PAGES=y", "CONFIG_ARM64_VA_BITS_48=y",
+                       "CONFIG_ARM64_PA_BITS_48=y", "CONFIG_CPU_LITTLE_ENDIAN=y",
+                       "CONFIG_NR_CPUS=512"):
+            self.assertIn(choice, staged_config)
+        # Kbuild syncconfig must not ask interactively about newly
+        # discovered alternatives of already selected ARM64 choices.
+        for choice in ("ARM64_16K_PAGES", "ARM64_64K_PAGES",
+                       "ARM64_VA_BITS_39", "ARM64_VA_BITS_52"):
+            self.assertIn(f"# CONFIG_{choice} is not set", staged_config)
         self.assertTrue(json.loads(self.report.read_text())["not_verified"])
 
     def test_wrong_source_commit_rejected_before_mutation(self):
@@ -79,6 +104,21 @@ class TargetStageTests(unittest.TestCase):
             self.apply()
         self.assertFalse(self.report.exists())
 
+    def test_unrecognized_kernel_configure_rejected_without_writes(self):
+        self.kernel_defaults.write_text("unrecognized configure recipe\n")
+        with self.assertRaisesRegex(ValueError, "unexpected pinned OpenWrt kernel configure"):
+            self.apply()
+        self.assertEqual(self.makefile.read_text(), UPSTREAM)
+        self.assertFalse((self.tree / mod.TARGET).exists())
+        self.assertFalse(self.report.exists())
+
+    def test_parent_kernel_defaults_mismatch_rejected(self):
+        self.makefile.write_text(UPSTREAM.replace("kmod-gpio-button-hotplug", "kmod-other"))
+        with self.assertRaisesRegex(ValueError, "unexpected pinned"):
+            self.apply()
+        self.assertEqual(self.makefile.read_text(), UPSTREAM.replace("kmod-gpio-button-hotplug", "kmod-other"))
+        self.assertFalse(self.report.exists())
+
     def test_installer_device_definition_rejected(self):
         with (self.templates / "mt6990.mk").open("a") as f:
             f.write("\ndefine Device/flashable\n")
@@ -94,6 +134,7 @@ class TargetStageTests(unittest.TestCase):
             self.apply()
         self.assertEqual(path.read_text(), "PRESERVE\n")
         self.assertEqual(self.makefile.read_text(), UPSTREAM)
+        self.assertEqual(self.kernel_defaults.read_text(), self.original_kernel_defaults)
 
     def test_template_symlink_rejected(self):
         path = self.templates / "target.mk"
