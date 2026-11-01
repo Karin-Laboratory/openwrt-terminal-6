@@ -1,0 +1,8 @@
+[
+  ["case", "ACTION", {
+    "add": [
+      ["if", ["and", ["has", "MAJOR"], ["has", "MINOR"], ["has", "DEVNAME"]],
+        ["makedev", "/dev/%DEVNAME%", "0600"]]
+    ]
+  }]
+]

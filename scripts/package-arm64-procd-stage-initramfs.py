@@ -23,9 +23,9 @@ cpio = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cpio)
 
 BINARIES = ("bin/busybox", "bin/ubus", "sbin/ubusd",
-            "sbin/uci", "sbin/init", "sbin/procd", "sbin/netifd")
+            "sbin/uci", "sbin/init", "sbin/procd", "sbin/netifd", "sbin/udevtrigger")
 DIRS = ("bin", "sbin", "etc", "etc/rc.d", "etc/config", "dev", "proc", "sys", "tmp", "var", "var/run")
-POLICY = ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network", "etc/passwd", "etc/group")
+POLICY = ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network", "etc/passwd", "etc/group", "etc/hotplug.json")
 POLICY_EXEC = ("etc/preinit", "etc/rc.d/S10netifd")
 EXPECTED = set(BINARIES) | set(DIRS) | set(POLICY) | {"bin/sh"}
 SOURCE_SCOPE = "NONINSTALLABLE_SBAT6_MUSL_BUSYBOX_UBUSD_UBUS_UCI_PROCD_NETIFD_ROOTFS_STAGE"

@@ -85,6 +85,16 @@ cp -a "$tmp/kernel-headers/include/." "$tmp/musl-prefix/include/"
 test -f "$tmp/musl-prefix/include/linux/kd.h"
 muslcc="$tmp/musl-prefix/bin/musl-gcc"
 test -x "$muslcc"
+# procd coldplug remounts /dev as tmpfs; stage the real pinned udevtrigger
+# so console and TTY device nodes can be repopulated via hotplug rules.
+if [[ "${SBAT6_BUILD_ROOTFS_SERVICES:-0}" == 1 ]]; then
+  curl --fail --silent --show-error --location --retry 3 --max-time 90 \
+    https://raw.githubusercontent.com/openwrt/procd/5aef7c33b01455157c1373a14e2a3fa47d024c6c/plug/udevtrigger.c \
+    -o "$tmp/udevtrigger.c"
+  test "$(git hash-object "$tmp/udevtrigger.c")" = f87a95ef32c2c48a070a9e3eb79bdfbab5c0b85c
+  "$muslcc" -static -Os -o "$tmp/service-inputs/udevtrigger" "$tmp/udevtrigger.c"
+  test -s "$tmp/service-inputs/udevtrigger"
+fi
 # Compiler and libc are native ARM64; no prebuilt cross SDK or donor firmware.
 # The BusyBox helper independently checks pinned source, ELF64 AArch64,
 # static linkage, deterministic archive and noninstallable manifest.
@@ -117,7 +127,7 @@ if [[ "${SBAT6_BUILD_ROOTFS_SERVICES:-0}" == 1 ]]; then
   python3 - "$SBAT6_MUSL_BUSYBOX_OUTPUT" "$SBAT6_MUSL_UBUSD_OUTPUT" \
     "$SBAT6_MUSL_UBUS_CLI_OUTPUT" "$SBAT6_MUSL_UCI_CLI_OUTPUT" \
     "$SBAT6_MUSL_PROCD_INIT_OUTPUT" "$SBAT6_MUSL_PROCD_SERVICE_OUTPUT" \
-    "$SBAT6_MUSL_NETIFD_OUTPUT" "$tmp/sbat6-services-rootfs.tar.gz" "$tmp/sbat6-services-manifest.json" "$policy_dir" <<'PY'
+    "$SBAT6_MUSL_NETIFD_OUTPUT" "$tmp/service-inputs/udevtrigger" "$tmp/sbat6-services-rootfs.tar.gz" "$tmp/sbat6-services-manifest.json" "$policy_dir" <<'PY'
 import gzip
 import hashlib
 import io
@@ -146,10 +156,10 @@ def read_static_aarch64(filename):
             raise ValueError("PT_INTERP is not permitted in musl-static stage")
     return data
 
-busybox, ubusd, ubus_cli, uci_cli, procd_init, procd_service, netifd = [read_static_aarch64(arg) for arg in sys.argv[1:8]]
-archive_path, manifest_path = map(Path, sys.argv[8:10])
-policy_root = Path(sys.argv[10])
-policy_names = ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network", "etc/passwd", "etc/group")
+busybox, ubusd, ubus_cli, uci_cli, procd_init, procd_service, netifd, udevtrigger = [read_static_aarch64(arg) for arg in sys.argv[1:9]]
+archive_path, manifest_path = map(Path, sys.argv[9:11])
+policy_root = Path(sys.argv[11])
+policy_names = ("etc/preinit", "etc/inittab", "etc/rc.d/S10netifd", "etc/config/network", "etc/passwd", "etc/group", "etc/hotplug.json")
 policy_data = {}
 for name in policy_names:
     path = policy_root / name
@@ -176,6 +186,7 @@ with tarfile.open(fileobj=buffer, mode="w", format=tarfile.GNU_FORMAT) as tar:
     add("sbin/init", tarfile.REGTYPE, 0o755, procd_init)
     add("sbin/procd", tarfile.REGTYPE, 0o755, procd_service)
     add("sbin/netifd", tarfile.REGTYPE, 0o755, netifd)
+    add("sbin/udevtrigger", tarfile.REGTYPE, 0o755, udevtrigger)
     for name, payload in policy_data.items():
         add(name, tarfile.REGTYPE, 0o755 if name in ("etc/preinit", "etc/rc.d/S10netifd") else 0o644, payload)
     add("bin/sh", tarfile.SYMTYPE, 0o777, linkname="busybox")
@@ -183,7 +194,7 @@ with tarfile.open(fileobj=buffer, mode="w", format=tarfile.GNU_FORMAT) as tar:
 compressed = gzip.compress(buffer.getvalue(), compresslevel=9, mtime=0)
 with tarfile.open(fileobj=io.BytesIO(gzip.decompress(compressed)), mode="r:") as tar:
     expected = {"bin", "sbin", "etc", "etc/rc.d", "etc/config", "dev", "proc", "sys", "tmp",
-                "var", "var/run", "bin/busybox", "bin/ubus", "bin/sh", "sbin/ubusd", "sbin/uci", "sbin/init", "sbin/procd", "sbin/netifd"} | set(policy_names)
+                "var", "var/run", "bin/busybox", "bin/ubus", "bin/sh", "sbin/ubusd", "sbin/uci", "sbin/init", "sbin/procd", "sbin/netifd", "sbin/udevtrigger"} | set(policy_names)
     if set(tar.getnames()) != expected:
         raise ValueError("unexpected rootfs stage member")
     if tar.getmember("bin/sh").linkname != "busybox":
@@ -191,7 +202,7 @@ with tarfile.open(fileobj=io.BytesIO(gzip.decompress(compressed)), mode="r:") as
     for name, original in (("bin/busybox", busybox), ("bin/ubus", ubus_cli),
                            ("sbin/ubusd", ubusd), ("sbin/uci", uci_cli),
                            ("sbin/init", procd_init), ("sbin/procd", procd_service),
-                           ("sbin/netifd", netifd)):
+                           ("sbin/netifd", netifd), ("sbin/udevtrigger", udevtrigger)):
         if tar.extractfile(name).read() != original:
             raise ValueError("rootfs archive byte mismatch")
     for name, original in policy_data.items():
@@ -219,6 +230,7 @@ manifest = {
         "sbin/init": hashlib.sha256(procd_init).hexdigest(),
         "sbin/procd": hashlib.sha256(procd_service).hexdigest(),
         "sbin/netifd": hashlib.sha256(netifd).hexdigest(),
+        "sbin/udevtrigger": hashlib.sha256(udevtrigger).hexdigest(),
         **{name: hashlib.sha256(data).hexdigest() for name, data in policy_data.items()}
     },
     "archive_sha256": hashlib.sha256(compressed).hexdigest(),
