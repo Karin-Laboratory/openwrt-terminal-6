@@ -15,7 +15,7 @@ status=0
 timeout --signal=TERM --kill-after=5s 120s qemu-system-aarch64 \
   -machine virt -cpu cortex-a57 -accel tcg -m 768 -smp 2 \
   -display none -serial stdio -monitor none -nic none -no-reboot \
-  -kernel "$1" -append 'console=ttyAMA0 loglevel=7 panic=1' \
+  -kernel "$1" -append 'console=ttyAMA0 loglevel=7 panic=1 sbat6.qemu_bridge_smoke=1' \
   >"$log" 2>&1 || status=$?
 tail -n 100 "$log"
 if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
@@ -34,5 +34,9 @@ if ! grep -Fq 'SBAT6_NETIFD_PROCESS_STABLE_RUNTIME_PASS' "$log"; then
   echo 'SBAT6_QEMU_GUEST_BOOT_FAIL: stable netifd process not observed after registration' >&2
   exit 1
 fi
-echo 'SBAT6_QEMU_VIRT_PROCD_NETIFD_PROCESS_RUNTIME_PASS'
-echo 'LIMIT: QEMU virt only; a stable netifd process is not traffic, bridge, Air6 boot, Ethernet or AP proof.'
+if ! grep -Fq 'SBAT6_NETIFD_EMPTY_BRIDGE_RUNTIME_PASS' "$log"; then
+  echo 'SBAT6_QEMU_GUEST_BOOT_FAIL: netifd-created bridge not observed' >&2
+  exit 1
+fi
+echo 'SBAT6_QEMU_VIRT_PROCD_NETIFD_BRIDGE_RUNTIME_PASS'
+echo 'LIMIT: QEMU virt only; an empty isolated netifd bridge is not Ethernet traffic, Air6 boot, Wi-Fi AP or rights proof.'
