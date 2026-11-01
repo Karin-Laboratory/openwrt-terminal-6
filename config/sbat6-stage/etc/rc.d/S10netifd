@@ -28,7 +28,7 @@ attempt=0
 stable=0
 while [ "$attempt" -lt 20 ]; do
     if pid="$(netifd_pid)"; then
-        sleep 1
+        /bin/busybox sleep 1 || exit 1
         if [ "$(netifd_pid)" = "$pid" ]; then
             echo 'SBAT6_NETIFD_PROCESS_STABLE_RUNTIME_PASS' > /dev/console
             stable=1
@@ -36,7 +36,7 @@ while [ "$attempt" -lt 20 ]; do
         fi
     fi
     attempt=$((attempt + 1))
-    sleep 1
+    /bin/busybox sleep 1 || exit 1
 done
 if [ "$stable" -ne 1 ]; then
     echo 'SBAT6_NETIFD_PROCESS_NOT_STABLE' > /dev/console
@@ -46,7 +46,13 @@ fi
 # This optional exercise is activated ONLY by the isolated QEMU virt CI
 # kernel command line. The normal research stage remains loopback-only.
 # It proves real netifd -> kernel bridge creation, not Air6 Ethernet or AP.
-case " $(cat /proc/cmdline) " in
+# The stage ships BusyBox as /bin/busybox, without individual applet
+# symlinks. Use shell builtins for cmdline and explicit BusyBox for sleep.
+if ! IFS= read -r cmdline < /proc/cmdline; then
+    echo 'SBAT6_QEMU_BRIDGE_CMDLINE_UNREADABLE' > /dev/console
+    exit 1
+fi
+case " $cmdline " in
     *" sbat6.qemu_bridge_smoke=1 "*) ;;
     *) exit 0 ;;
 esac
@@ -81,7 +87,7 @@ while [ "$attempt" -lt 20 ]; do
         break
     fi
     attempt=$((attempt + 1))
-    sleep 1
+    /bin/busybox sleep 1 || exit 1
 done
 if [ "$attempt" -eq 20 ]; then
     echo 'SBAT6_NETIFD_BRIDGE_RELOAD_FAILED' > /dev/console
@@ -94,7 +100,7 @@ while [ "$attempt" -lt 20 ]; do
         exit 0
     fi
     attempt=$((attempt + 1))
-    sleep 1
+    /bin/busybox sleep 1 || exit 1
 done
 echo 'SBAT6_NETIFD_BRIDGE_NOT_CREATED' > /dev/console
 exit 1
