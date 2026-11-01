@@ -39,6 +39,9 @@ CONFIG_ARM64_VA_BITS_48=y
 # CONFIG_ARM64_VA_BITS_52 is not set
 CONFIG_ARM64_PA_BITS_48=y
 CONFIG_CPU_LITTLE_ENDIAN=y
+# Kernel 6.18.60 Kconfig requested this numeric value at syncconfig
+# after the ARM64 choices; fix the actual native build input.
+CONFIG_NR_CPUS=512
 CONFIG_ARCH_MEDIATEK=y
 CONFIG_MFD_SYSCON=y
 CONFIG_GENERIC_PHY=y
