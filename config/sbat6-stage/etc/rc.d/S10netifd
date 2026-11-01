@@ -25,16 +25,67 @@ netifd_pid() {
     return 1
 }
 attempt=0
+stable=0
 while [ "$attempt" -lt 20 ]; do
     if pid="$(netifd_pid)"; then
         sleep 1
         if [ "$(netifd_pid)" = "$pid" ]; then
             echo 'SBAT6_NETIFD_PROCESS_STABLE_RUNTIME_PASS' > /dev/console
-            exit 0
+            stable=1
+            break
         fi
     fi
     attempt=$((attempt + 1))
     sleep 1
 done
-echo 'SBAT6_NETIFD_PROCESS_NOT_STABLE' > /dev/console
+if [ "$stable" -ne 1 ]; then
+    echo 'SBAT6_NETIFD_PROCESS_NOT_STABLE' > /dev/console
+    exit 1
+fi
+
+# This optional exercise is activated ONLY by the isolated QEMU virt CI
+# kernel command line. The normal research stage remains loopback-only.
+# It proves real netifd -> kernel bridge creation, not Air6 Ethernet or AP.
+case " $(cat /proc/cmdline) " in
+    *" sbat6.qemu_bridge_smoke=1 "*) ;;
+    *) exit 0 ;;
+esac
+if [ -e /sys/class/net/eth0 ]; then
+    echo 'SBAT6_QEMU_BRIDGE_UNEXPECTED_NIC' > /dev/console
+    exit 1
+fi
+# A deliberately empty bridge has no external ports, IP address, DHCP or NAT.
+# The matching interface keeps the device active for netifd's device graph.
+/sbin/uci -q batch <<'UCI' || exit 1
+set network.sbat6_bridge=device
+set network.sbat6_bridge.name=br-sbat6
+set network.sbat6_bridge.type=bridge
+set network.sbat6_bridge.bridge_empty=1
+set network.sbat6_bridge_mgmt=interface
+set network.sbat6_bridge_mgmt.device=br-sbat6
+set network.sbat6_bridge_mgmt.proto=none
+commit network
+UCI
+attempt=0
+while [ "$attempt" -lt 20 ]; do
+    if /bin/ubus -t 5 call network reload '{}' >/dev/null 2>&1; then
+        break
+    fi
+    attempt=$((attempt + 1))
+    sleep 1
+done
+if [ "$attempt" -eq 20 ]; then
+    echo 'SBAT6_NETIFD_BRIDGE_RELOAD_FAILED' > /dev/console
+    exit 1
+fi
+attempt=0
+while [ "$attempt" -lt 20 ]; do
+    if [ -d /sys/class/net/br-sbat6/bridge ]; then
+        echo 'SBAT6_NETIFD_EMPTY_BRIDGE_RUNTIME_PASS' > /dev/console
+        exit 0
+    fi
+    attempt=$((attempt + 1))
+    sleep 1
+done
+echo 'SBAT6_NETIFD_BRIDGE_NOT_CREATED' > /dev/console
 exit 1
