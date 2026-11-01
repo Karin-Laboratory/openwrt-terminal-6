@@ -13,6 +13,7 @@ on:
       - scripts/package-arm64-busybox-rootfs.py
       - scripts/package-arm64-procd-stage-initramfs.py
       - scripts/smoke-arm64-musl-ipc.py
+      - scripts/smoke-arm64-procd-guest.sh
       - 'config/sbat6-stage/**'
       - board/mt6990-air-terminal-6.dts
       - board/mt6990-air-terminal-6-ethernet-test.dts
@@ -31,6 +32,7 @@ on:
       - scripts/package-arm64-busybox-rootfs.py
       - scripts/package-arm64-procd-stage-initramfs.py
       - scripts/smoke-arm64-musl-ipc.py
+      - scripts/smoke-arm64-procd-guest.sh
       - 'config/sbat6-stage/**'
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
   workflow_dispatch:
@@ -219,6 +221,31 @@ jobs:
           echo 'UPSTREAM_ARM64_IMAGE_WITH_PID1_BUILD_PASS'
           echo 'SBAT6_PROCD_INIT_STAGE_EMBEDDED_IMAGE_PASS (native musl-static, no procd runtime/boot)'
           echo 'SBAT6_PROCD_NETIFD_BOOT_POLICY_EMBEDDED_IMAGE_PASS (loopback-only policy, no runtime/boot)'
+          # Execute the built Image as a QEMU virt guest with NO networking,
+          # disks, host device passthrough or installable image output.
+          # This is a real PID1/procd/ubus service-registration runtime check,
+          # not a hardware Air6 boot or a netifd traffic test.
+          # GitHub-hosted ARM64 images do not ship qemu-system-aarch64.
+          # Provision it ONLY inside an ephemeral, non-privileged Docker
+          # build from a digest-pinned official Ubuntu multiarch base.
+          # The Ubuntu package index is signed; no host sudo/apt, no home
+          # runner, no private registry or device access. Guest execution
+          # has no container network, no capabilities and read-only mounts.
+          command -v docker >/dev/null
+          cat > "$tmp/Dockerfile.qemu" <<'EOF'
+          FROM ubuntu@sha256:80dd3c3b9c6cecb9f1667e9290b3bc61b78c2678c02cbdae5f0fea92cc6734ab
+          RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-arm bash coreutils grep && rm -rf /var/lib/apt/lists/*
+          USER 1001:1001
+          EOF
+          docker build --pull --file "$tmp/Dockerfile.qemu" --tag sbat6-qemu-guest:ci "$tmp"
+          docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 128 --memory 2g --cpus 2 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --user "$(id -u):$(id -g)" \
+            --mount "type=bind,src=$PWD/arch/arm64/boot/Image,dst=/Image,readonly" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/scripts/smoke-arm64-procd-guest.sh,dst=/smoke.sh,readonly" \
+            sbat6-qemu-guest:ci bash /smoke.sh /Image
 
           # Stage only three byte-pinned, public GPL-identified MT6990 DTS
           # inputs already used by the source-only DTC preflight. This is

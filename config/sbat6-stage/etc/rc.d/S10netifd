@@ -2,4 +2,11 @@
 # SPDX-License-Identifier: MIT
 # Research-only procd service registration; no uplink/AP configuration.
 [ "${1:-}" = boot ] || exit 0
-exec /bin/ubus -t 5 call service add '{"name":"netifd","instances":{"netifd":{"command":["/sbin/netifd"],"respawn":["3600","5","5"]}}}'
+if /bin/ubus -t 5 call service add '{"name":"netifd","instances":{"netifd":{"command":["/sbin/netifd"],"respawn":["3600","5","5"]}}}' >/dev/null; then
+    # Console marker allows an isolated guest to prove the actual procd
+    # sysinit -> rcS -> ubus service-add path, not just staged files.
+    echo 'SBAT6_PROCD_NETIFD_REGISTERED' > /dev/console
+else
+    echo 'SBAT6_PROCD_NETIFD_REGISTRATION_FAILED' > /dev/console
+    exit 1
+fi

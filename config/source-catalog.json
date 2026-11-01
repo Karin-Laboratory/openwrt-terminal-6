@@ -125,7 +125,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "21676265885d11f72e536bc1465b1aa4c245bc0b",
+      "git_blob_sha1": "bd745567a37e93ca2b5348fd0bbecb4c0c46bcfd",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -197,7 +197,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "f801f4a68c85c4eeed6a4ef5226e0fb7345f585f",
+      "git_blob_sha1": "8b793409f4844fa75b85757e44793aadb1455a06",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -216,6 +216,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "45be45e5e59fe111f971b2306b0db02a3600baee",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "scripts/smoke-arm64-procd-guest.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "0e1aa1dc4d7d88c46aed3277a403c52e08432385",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
