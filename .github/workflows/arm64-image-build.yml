@@ -18,6 +18,7 @@ on:
       - board/mt6990-air-terminal-6.dts
       - board/mt6990-air-terminal-6-ethernet-test.dts
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
+      - patches/mt6990/0003-air6-check-sgmii-pll-errors.patch
   push:
     branches: [main]
     paths:
@@ -35,6 +36,7 @@ on:
       - scripts/smoke-arm64-procd-guest.sh
       - 'config/sbat6-stage/**'
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
+      - patches/mt6990/0003-air6-check-sgmii-pll-errors.patch
   workflow_dispatch:
 permissions:
   contents: read
@@ -111,6 +113,8 @@ jobs:
             598f9c8d0a905bf6e293157d2fd475fef54bfacd
           git apply --check "$GITHUB_WORKSPACE/patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch"
           git apply "$GITHUB_WORKSPACE/patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch"
+          git apply --check "$GITHUB_WORKSPACE/patches/mt6990/0003-air6-check-sgmii-pll-errors.patch"
+          git apply "$GITHUB_WORKSPACE/patches/mt6990/0003-air6-check-sgmii-pll-errors.patch"
           ! grep -q 'mt6990_sgmii_top_cycle' drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c
           cat >> drivers/phy/mediatek/Kconfig <<'EOF'
 
@@ -199,6 +203,7 @@ jobs:
           done
           echo 'UPSTREAM_MT7531_DSA_MEDIATEK_PCS_IMAGE_OBJECTS_PASS'
           echo 'MT6990_SGMII_PHY_PATCHED_KBUILD_OBJECT_PASS (no cold-boot or rights approval)'
+          echo 'MT6990_SGMII_PLL_ERROR_PROPAGATION_KBUILD_PASS (no runtime fault injection)'
           echo 'MT6990_IFRAO_CLOCK_PROVIDER_KBUILD_OBJECT_PASS (compile only; no MMIO/probe or rights approval)'
           # Linux v6.18 uses __irf_start/__irf_end and __initramfs_size;
           # it does not define the obsolete __initramfs_start/end symbols.
