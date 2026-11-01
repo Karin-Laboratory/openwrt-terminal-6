@@ -101,6 +101,7 @@ jobs:
           CONFIG_PACKAGE_uci=y
           CONFIG_PACKAGE_netifd=y
           CONFIG_PACKAGE_dropbear=y
+          # CONFIG_SIGNED_PACKAGES is not set
           EOF
           umask 022
           make -C "$work/openwrt" defconfig
@@ -154,3 +155,83 @@ jobs:
           done
           echo 'PUBLIC_MT6990_REAL_OPENWRT_PROCD_NETIFD_PACKAGES_PASS'
           echo 'NONINSTALLABLE_PACKAGES_ONLY_NO_DEVICE_PROFILE_NO_SIGNING'
+          # Close the next material gap: compile the actual first-boot tools
+          # from the same pinned OpenWrt toolchain, not a synthetic rootfs.
+          # Do NOT run target/install, build a Device profile or sign an index.
+          if grep -q '^CONFIG_SIGNED_PACKAGES=y$' "$work/openwrt/.config"; then
+            echo 'Package signing unexpectedly enabled' >&2
+            exit 1
+          fi
+          make -C "$work/openwrt" -j2 \
+            package/base-files/compile \
+            package/utils/busybox/compile \
+            package/system/ubus/compile \
+            package/system/uci/compile \
+            package/network/services/dropbear/compile
+          # OpenWrt's rules.mk places nonshared packages (e.g. Dropbear)
+          # under bin/targets/<board>/<subtarget>/packages, while other
+          # packages can live in bin/packages. Both are real build outputs.
+          # Do not mistake a repository-path assumption for a compile failure.
+          for pkg in busybox ubus uci dropbear; do
+            if ! find "$work/openwrt/bin/packages" \
+                "$work/openwrt/bin/targets/mediatek/mt6990/packages" \
+                -type f \( -name "${pkg}-*.apk" -o -name "${pkg}_*.ipk" \) \
+                -print -quit | grep -q .; then
+              echo "Missing compiled OpenWrt package: $pkg" >&2
+              find "$work/openwrt/bin" -type f \
+                \( -name '*.apk' -o -name '*.ipk' \) -print | sort | tail -60 >&2
+              exit 1
+            fi
+          done
+          echo 'PUBLIC_MT6990_FIRST_BOOT_PACKAGES_BUILD_PASS'
+          # OpenWrt package/install populates only a staging root directory.
+          # Unlike target/install it cannot produce a device boot/flash image.
+          # CONFIG_SIGNED_PACKAGES=n prevents package-index signing.
+          make -C "$work/openwrt" -j1 package/install
+          rootfs="$(find "$work/openwrt/build_dir" -maxdepth 3 \
+            -type d -name 'root-mediatek' -print -quit)"
+          test -n "$rootfs" && test -d "$rootfs"
+          for executable in bin/busybox sbin/procd sbin/netifd \
+                            sbin/ubusd sbin/uci usr/sbin/dropbear; do
+            test -s "$rootfs/$executable" || {
+              echo "Missing real staged rootfs executable: $executable" >&2
+              exit 1
+            }
+          done
+          # A generic OpenWrt root password may initially be empty. Lock it
+          # in this ephemeral research stage; SSH must not autostart before
+          # owner-specific public-key provisioning in a separate process.
+          python3 - "$rootfs/etc/shadow" <<'PY'
+          from pathlib import Path
+          import sys
+          path = Path(sys.argv[1])
+          if not path.is_file() or path.is_symlink():
+              raise SystemExit("No safe /etc/shadow in staged rootfs")
+          lines = path.read_text().splitlines()
+          found = 0
+          for index, line in enumerate(lines):
+              fields = line.split(":")
+              if fields[0] == "root":
+                  if len(fields) < 2:
+                      raise SystemExit("Malformed root shadow record")
+                  fields[1] = "!"
+                  lines[index] = ":".join(fields)
+                  found += 1
+          if found != 1:
+              raise SystemExit("Expected exactly one root shadow record")
+          path.write_text("\n".join(lines) + "\n")
+          print("SBAT6_ROOT_PASSWORD_LOCKED_IN_EPHEMERAL_STAGE")
+          PY
+          find "$rootfs/etc/rc.d" -maxdepth 1 -name '*dropbear*' \
+            -type l -delete
+          if find "$rootfs" -type f -path '*/lib/firmware/*' \
+              -print -quit | grep -q .; then
+            echo 'Unexpected firmware payload in rights-pending rootfs' >&2
+            exit 1
+          fi
+          tar --sort=name --mtime='@0' --owner=0 --group=0 \
+            --numeric-owner -C "$rootfs" -czf "$work/sbat6-rootfs-stage.tar.gz" .
+          test -s "$work/sbat6-rootfs-stage.tar.gz"
+          sha256sum "$work/sbat6-rootfs-stage.tar.gz"
+          echo 'PUBLIC_MT6990_NONINSTALLABLE_ROOTFS_STAGE_BUILD_PASS'
+          echo 'LIMIT: no Air6 DTB, matching runtime, device image, signer, hardware or rights approval'
