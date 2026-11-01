@@ -58,6 +58,10 @@ class TargetStageTests(unittest.TestCase):
         self.assertEqual(result["firmware_outputs"], "NONE")
         self.assertNotIn("define Device/", (self.tree / mod.IMAGE).read_text())
         self.assertIn("CONFIG_SQUASHFS_XZ=y", (self.tree / mod.CONFIG).read_text())
+        staged_config = (self.tree / mod.CONFIG).read_text()
+        for choice in ("CONFIG_ARM64_4K_PAGES=y", "CONFIG_ARM64_VA_BITS_48=y",
+                       "CONFIG_ARM64_PA_BITS_48=y", "CONFIG_CPU_LITTLE_ENDIAN=y"):
+            self.assertIn(choice, staged_config)
         self.assertTrue(json.loads(self.report.read_text())["not_verified"])
 
     def test_wrong_source_commit_rejected_before_mutation(self):
