@@ -158,8 +158,7 @@ jobs:
           # Close the next material gap: compile the actual first-boot tools
           # from the same pinned OpenWrt toolchain, not a synthetic rootfs.
           # Do NOT run target/install, build a Device profile or sign an index.
-          if grep -q '^CONFIG_SIGNED_PACKAGES=y
- "$work/openwrt/.config"; then
+          if grep -q '^CONFIG_SIGNED_PACKAGES=y$' "$work/openwrt/.config"; then
             echo 'Package signing unexpectedly enabled' >&2
             exit 1
           fi
