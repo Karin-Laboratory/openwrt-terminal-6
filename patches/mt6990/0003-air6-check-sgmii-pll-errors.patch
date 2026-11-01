@@ -1,0 +1,64 @@
+From: Karin-Laboratory <noreply@github.com>
+Subject: [PATCH] phy: mediatek: propagate MT6990 SGMII PLL regmap failures
+
+The MT6990 analog PHY's configure and power_on callbacks previously ignored
+regmap_update_bits() failures, allowing a false successful configuration or
+power-on when the shared PLL register was inaccessible. Check the first PLL
+write before the cached configured fast path, remove the duplicate write,
+and return the power_on error to the generic PHY caller.
+
+Apply after 0002-air6-avoid-sgmii-top-cycle.patch to the exact pinned
+GPL-2.0-only donor PHY source. Preserve the existing shared PLL/genpd
+ownership and avoid a destructive SGMII TOP power cycle.
+
+Build-only candidate. No hardware probe, injected MMIO fault, cold-boot,
+redistribution approval or firmware signing is claimed.
+
+--- a/drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c
++++ b/drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c
+@@ -60,6 +60,7 @@
+ static int mt6990_sgmii_phy_configure(struct phy *phy)
+ {
+ 	struct mt6990_sgmii_phy *priv = phy_get_drvdata(phy);
++	int ret;
+ 
+ 	/* The SDK requires the shared PLL enable to remain asserted for the
+ 	 * complete SGMII active lifetime.  Reassert it even when the analog
+@@ -66,8 +67,10 @@
+ 	 * table is already configured: another consumer of the shared AO
+ 	 * register bank must not leave a live port without its 3.125G clock.
+ 	 */
+-	regmap_update_bits(priv->pll, MT6990_SGMII_PLL_CON0,
+-			   MT6990_SGMII_PLL_EN, MT6990_SGMII_PLL_EN);
++	ret = regmap_update_bits(priv->pll, MT6990_SGMII_PLL_CON0,
++				 MT6990_SGMII_PLL_EN, MT6990_SGMII_PLL_EN);
++	if (ret)
++		return ret;
+ 
+ 	if (priv->configured)
+ 		return 0;
+@@ -74,10 +77,6 @@
+ 
+ 	dev_info(&phy->dev, "applying MT6990 SGMII Gen2 SerDes settings\n");
+ 
+-	/* The analog XFI windows discard accesses until the shared PLL is on. */
+-	regmap_update_bits(priv->pll, MT6990_SGMII_PLL_CON0,
+-			   MT6990_SGMII_PLL_EN, MT6990_SGMII_PLL_EN);
+-
+ 	/* Exact SDK mtk_sgmii_phy_gen2() sequence selected by the MT6990
+ 	 * CONFIG_MEDIATEK_NETSYS_V2=y kernel configuration.
+ 	 */
+@@ -135,11 +134,9 @@
+ 	/* SDK mtk_sgmii_setup_mode_force() enables the shared PLL before any
+ 	 * per-port TOP/PCS operation and keeps it enabled while the link is up.
+ 	 */
+-	regmap_update_bits(priv->pll, MT6990_SGMII_PLL_CON0,
+-			   MT6990_SGMII_PLL_EN, MT6990_SGMII_PLL_EN);
+-
+ 	/* The PCS releases SGMSYS_QPHY_PWR_STATE_CTRL later in .pcs_config(). */
+-	return 0;
++	return regmap_update_bits(priv->pll, MT6990_SGMII_PLL_CON0,
++				  MT6990_SGMII_PLL_EN, MT6990_SGMII_PLL_EN);
+ }
+ 
+ static int mt6990_sgmii_phy_set_mode(struct phy *phy, enum phy_mode mode,
