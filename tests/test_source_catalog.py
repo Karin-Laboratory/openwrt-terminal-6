@@ -149,7 +149,7 @@ class SourceCatalogTests(unittest.TestCase):
             "docs/RIGHTS-REVIEW-20261030.md",
             "docs/RELEASE-GATES.md",
         )
-        pattern = r"<!-- source-catalog-inventory: inputs=(\\d+); pending=(\\d+) -->"
+        pattern = r"<!-- source-catalog-inventory: inputs=(\d+); pending=(\d+) -->"
         for relative in docs:
             with self.subTest(document=relative):
                 document = (ROOT / relative).read_text()
@@ -169,7 +169,7 @@ class SourceCatalogTests(unittest.TestCase):
             counts[key] = counts.get(key, 0) + 1
         doc = (ROOT / "docs/RIGHTS-REVIEW-20261030.md").read_text()
         rows = re.findall(
-            r"^\\| ([a-z][a-z0-9-]*) / ([A-Za-z0-9.+-]+) \\| (\\d+) \\|",
+            r"^\| ([a-z][a-z0-9-]*) / ([A-Za-z0-9.+-]+) \| (\d+) \|",
             doc,
             flags=re.MULTILINE,
         )
