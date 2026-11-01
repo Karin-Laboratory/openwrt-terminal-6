@@ -54,6 +54,14 @@ jobs:
           umask 022
           make -C "$work/openwrt" defconfig
           grep -qx 'CONFIG_TARGET_mediatek_mt6990=y' "$work/openwrt/.config"
+          # The kernel-less package gate must not inherit MediaTek GPIO/LED
+          # modules or generic router offload modules from parent defaults.
+          for pkg in kmod-gpio-button-hotplug kmod-leds-gpio kmod-nft-offload; do
+            if grep -qE "^CONFIG_PACKAGE_${pkg}=[ym]$" "$work/openwrt/.config"; then
+              echo "Unexpected kernel-coupled default in userspace-only build: $pkg" >&2
+              exit 1
+            fi
+          done
           test -s "$work/openwrt/target/linux/mediatek/mt6990/config-6.18"
           test -s "$work/openwrt/target/linux/mediatek/mt6990/target.mk"
           ! grep -qE '^[[:space:]]*define Device/' \
@@ -97,6 +105,14 @@ jobs:
           umask 022
           make -C "$work/openwrt" defconfig
           grep -qx 'CONFIG_TARGET_mediatek_mt6990=y' "$work/openwrt/.config"
+          # The kernel-less package gate must not inherit MediaTek GPIO/LED
+          # modules or generic router offload modules from parent defaults.
+          for pkg in kmod-gpio-button-hotplug kmod-leds-gpio kmod-nft-offload; do
+            if grep -qE "^CONFIG_PACKAGE_${pkg}=[ym]$" "$work/openwrt/.config"; then
+              echo "Unexpected kernel-coupled default in userspace-only build: $pkg" >&2
+              exit 1
+            fi
+          done
           for pkg in busybox procd ubus uci netifd dropbear; do
             grep -qx "CONFIG_PACKAGE_${pkg}=y" "$work/openwrt/.config" || {
               echo "Missing selected native package: $pkg" >&2
@@ -107,10 +123,9 @@ jobs:
           # packages; no target/install, image recipe, signer or flash step.
           make -C "$work/openwrt" -j2 tools/install
           make -C "$work/openwrt" -j2 toolchain/install
-          # Full package/compile also selects kernel-coupled default packages
-          # (gpio-button-hotplug) before an MT6990 kernel is available. Compile
-          # the real procd/netifd userspace dependency closure explicitly;
-          # leave kernel-module and device-image builds for the kernel gate.
+          # Parent MediaTek GPIO/LED and router-only kernel defaults are excluded
+          # from this kernel-less MT6990 stage; compile actual userspace closure.
+          # Kernel-module and device-image builds remain a separate gate.
           make -C "$work/openwrt" -j2 \
             package/system/procd/compile \
             package/network/config/netifd/compile
