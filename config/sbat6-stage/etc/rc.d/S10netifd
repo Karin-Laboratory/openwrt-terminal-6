@@ -50,13 +50,16 @@ case " $(cat /proc/cmdline) " in
     *" sbat6.qemu_bridge_smoke=1 "*) ;;
     *) exit 0 ;;
 esac
+echo 'SBAT6_QEMU_BRIDGE_GATE_ENABLED' > /dev/console
 if [ -e /sys/class/net/eth0 ]; then
     echo 'SBAT6_QEMU_BRIDGE_UNEXPECTED_NIC' > /dev/console
     exit 1
 fi
 # A deliberately empty bridge has no external ports, IP address, DHCP or NAT.
 # The matching interface keeps the device active for netifd's device graph.
-/sbin/uci -q batch <<'UCI' || exit 1
+# Keep UCI errors visible on the guest console. A failed configuration
+# must never be interpreted as an absent kernel bridge or a passing test.
+if /sbin/uci batch >/dev/console 2>&1 <<'UCI'
 set network.sbat6_bridge=device
 set network.sbat6_bridge.name=br-sbat6
 set network.sbat6_bridge.type=bridge
@@ -66,6 +69,12 @@ set network.sbat6_bridge_mgmt.device=br-sbat6
 set network.sbat6_bridge_mgmt.proto=none
 commit network
 UCI
+then
+    echo 'SBAT6_QEMU_BRIDGE_UCI_COMMIT_OK' > /dev/console
+else
+    echo 'SBAT6_QEMU_BRIDGE_UCI_COMMIT_FAILED' > /dev/console
+    exit 1
+fi
 attempt=0
 while [ "$attempt" -lt 20 ]; do
     if /bin/ubus -t 5 call network reload '{}' >/dev/null 2>&1; then
