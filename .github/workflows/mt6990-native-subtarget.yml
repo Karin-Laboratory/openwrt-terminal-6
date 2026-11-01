@@ -237,16 +237,35 @@ jobs:
           # Build an external diagnostic PID1 cpio with the SAME pinned
           # OpenWrt cross-toolchain as the native MT6990 kernel Image.
           # It is not a procd boot test or a device-installable image.
-          kernel="$(find "$work/openwrt/build_dir" -maxdepth 4 \
-            -type d -name 'linux-6.18.*' -print -quit)"
-          test -n "$kernel" && test -s "$kernel/arch/arm64/boot/Image"
-          grep -qx 'CONFIG_ARCH_MEDIATEK=y' "$kernel/.config"
-          grep -qx 'CONFIG_BLK_DEV_INITRD=y' "$kernel/.config"
+          # The previous native run built Image/rootfs successfully, then
+          # failed silently in this new gate. Resolve only the actual MT6990
+          # kernel directory and report each failed prerequisite explicitly.
+          kernel="$work/openwrt/build_dir/target-aarch64_cortex-a55_musl/linux-mediatek_mt6990/linux-6.18.60"
+          if ! test -s "$kernel/arch/arm64/boot/Image"; then
+            echo "Missing native MT6990 Image at $kernel" >&2
+            exit 1
+          fi
+          for required in CONFIG_ARCH_MEDIATEK=y CONFIG_BLK_DEV_INITRD=y; do
+            if ! grep -qx "$required" "$kernel/.config"; then
+              echo "Native kernel config lacks $required" >&2
+              grep -E '^(# )?CONFIG_(ARCH_MEDIATEK|BLK_DEV_INITRD)' "$kernel/.config" >&2 || true
+              exit 1
+            fi
+          done
+          echo 'PUBLIC_MT6990_NATIVE_KERNEL_CONFIG_FOR_PID1_PASS'
           compiler="$(find "$work/openwrt/staging_dir" -maxdepth 4 \
             -name 'aarch64-openwrt-linux-musl-gcc' -print -quit)"
-          test -n "$compiler" && test -x "$compiler"
+          if ! test -n "$compiler" || ! test -x "$compiler"; then
+            echo 'Missing native OpenWrt AArch64 musl cross compiler' >&2
+            find "$work/openwrt/staging_dir" -maxdepth 4 -name '*-gcc' -print >&2
+            exit 1
+          fi
           cross="$(dirname "$compiler")/aarch64-openwrt-linux-musl-"
-          test -x "$cross""ld"
+          if ! test -x "${cross}ld"; then
+            echo "Missing matching AArch64 linker: ${cross}ld" >&2
+            exit 1
+          fi
+          echo 'PUBLIC_MT6990_NATIVE_PID1_TOOLCHAIN_READY'
           "$compiler" -nostdlib -ffreestanding -fno-builtin \
             -fno-stack-protector -fno-pic -static -O2 -no-pie \
             -Wl,-e,_start -Wl,--build-id=none \
