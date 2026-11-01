@@ -129,9 +129,10 @@ jobs:
           # before Kbuild's syncconfig, rather than guessing from the
           # source fragment or accepting a default via stdin.
           make -C "$work/openwrt" -j2 target/linux/configure
-          kernel_dir="$(find "$work/openwrt/build_dir" -type f -name .config \
-            -path '*/linux-mediatek_mt6990/linux-*/.config' -printf '%h\\n' -quit)"
-          test -n "$kernel_dir" && test -s "$kernel_dir/.config"
+          kernel_config="$(find "$work/openwrt/build_dir" -type f -name .config \
+            -path '*/linux-mediatek_mt6990/linux-*/.config' -print -quit)"
+          test -n "$kernel_config" && test -s "$kernel_config"
+          kernel_dir="${kernel_config%/.config}"
           cross_gcc="$(find "$work/openwrt/staging_dir" \
             -name aarch64-openwrt-linux-musl-gcc -print -quit)"
           test -n "$cross_gcc" && test -x "$cross_gcc"
