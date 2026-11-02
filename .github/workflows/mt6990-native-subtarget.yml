@@ -4,6 +4,9 @@ on:
     paths:
       - tools/build/mt6990-target/**
       - tools/build/stage_mt6990_subtarget.py
+      - scripts/stage-native-mt6990-phy-ifrao.sh
+      - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
+      - patches/mt6990/0003-air6-check-sgmii-pll-errors.patch
       - tests/test_mt6990_native_subtarget.py
       - config/source-catalog.json
       - .github/workflows/mt6990-native-subtarget.yml
