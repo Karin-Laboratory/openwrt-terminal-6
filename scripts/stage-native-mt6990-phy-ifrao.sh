@@ -41,9 +41,16 @@ fetch_checked "$donor/drivers/clk/mediatek/clk-mt6990-ifrao.c" \
   "$kernel/drivers/clk/mediatek/clk-mt6990-ifrao.c" \
   298a335231da6d1c7c150a49106211f2adf36128
 mkdir -p "$kernel/include/dt-bindings/clock"
-fetch_checked "$donor/include/dt-bindings/clock/mt6990-clk.h" \
-  "$kernel/include/dt-bindings/clock/mt6990-clk.h" \
-  eea7fbe58a5d5b7357c5ddb83eff6ffb74b3801a
+clock_binding="$kernel/include/dt-bindings/clock/mt6990-clk.h"
+if [[ -e "$clock_binding" ]]; then
+  # Same source was already pinned when compiling both Air6 DTBs.
+  test ! -L "$clock_binding"
+  test "$(git hash-object "$clock_binding")" = \
+    eea7fbe58a5d5b7357c5ddb83eff6ffb74b3801a
+else
+  fetch_checked "$donor/include/dt-bindings/clock/mt6990-clk.h" \
+    "$clock_binding" eea7fbe58a5d5b7357c5ddb83eff6ffb74b3801a
+fi
 (
   cd "$kernel"
   for patch in 0002-air6-avoid-sgmii-top-cycle.patch \
