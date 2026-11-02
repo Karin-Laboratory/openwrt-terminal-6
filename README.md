@@ -2,6 +2,8 @@
 
 Public, source-only community research toward OpenWrt support for the SoftBank Air Terminal 6 (SBAT6 series / MediaTek MT6990).
 
+> **2026-11-02 Alpha 3 RC1 Developer Preview:** [Read the Alpha 3 source and technical-status announcement](docs/ALPHA3-RC1-20261102.md). This shares research milestones and collaboration guidance, **not a publicly downloadable, installable or C-device-boot-verified RC1 firmware**. For testing interest, see [Discussions #50](https://github.com/Karin-Laboratory/openwrt-terminal-6/discussions/50).
+
 > **Source-only experimental project. No downloadable or supported firmware, installation instructions, signature keys, or confirmed safe recovery procedure are provided. Do not flash images based on this repository.**
 
 ## Demonstrated development milestones
