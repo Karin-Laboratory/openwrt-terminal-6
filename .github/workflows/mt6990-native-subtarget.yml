@@ -454,7 +454,12 @@ jobs:
             --enable NET_DSA --enable NET_DSA_MT7530 \
             --enable NET_DSA_MT7530_MDIO \
             --enable NET_VENDOR_MEDIATEK --enable NET_MEDIATEK_SOC \
-            --enable PCS_MTK_LYNXI
+            --enable PCS_MTK_LYNXI \
+            --enable ARM_AMBA --enable TTY \
+            --enable SERIAL_AMBA_PL011 --enable SERIAL_AMBA_PL011_CONSOLE \
+            --enable DEVTMPFS --enable DEVTMPFS_MOUNT \
+            --enable TMPFS --enable PROC_FS --enable SYSFS \
+            --enable BINFMT_ELF --enable UNIX
           # Material kernel/userspace integration: rebuild this SAME native
           # MT6990 OpenWrt Image with the real procd PID1 cpio embedded by
           # Kbuild. This is a separate ephemeral research Image, never an
@@ -502,6 +507,59 @@ jobs:
           sha256sum "$kernel/usr/initramfs_data.o" \
             "$kernel/arch/arm64/boot/Image"
           echo 'PUBLIC_MT6990_SAME_KERNEL_EMBEDDED_PROCD_PID1_IMAGE_BUILD_PASS'
-          echo 'LIMIT: Kbuild embed PASS only; no native QEMU PID1 boot, Air6 bootloader or AP runtime'
+          # Boot this exact native OpenWrt Image (with its real procd rootfs)
+          # under QEMU virt. No Air6 DTB is passed: virt uses QEMU-generated
+          # DT and PL011 console. The only success claim is guest PID1 startup.
+          # Isolate execution in an unprivileged container on GitHub-hosted CI.
+          for option in SERIAL_AMBA_PL011 SERIAL_AMBA_PL011_CONSOLE \
+                        DEVTMPFS PROC_FS SYSFS BINFMT_ELF; do
+            grep -qx "CONFIG_$option=y" "$kernel/.config" || {
+              echo "QEMU virt guest requires CONFIG_$option=y" >&2
+              exit 1
+            }
+          done
+          command -v docker >/dev/null
+          cat > "$work/Dockerfile.native-qemu" <<'EOF'
+          FROM ubuntu@sha256:80dd3c3b9c6cecb9f1667e9290b3bc61b78c2678c02cbdae5f0fea92cc6734ab
+          RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-arm bash coreutils grep && rm -rf /var/lib/apt/lists/*
+          USER 1001:1001
+          EOF
+          docker build --pull --file "$work/Dockerfile.native-qemu" \
+            --tag sbat6-native-procd-qemu:ci "$work"
+          docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 128 --memory 2g --cpus 2 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --user 1001:1001 \
+            --mount "type=bind,src=$kernel/arch/arm64/boot/Image,dst=/Image,readonly" \
+            sbat6-native-procd-qemu:ci bash -c '
+              set -euo pipefail
+              status=0
+              timeout --signal=TERM --kill-after=5s 120s qemu-system-aarch64 \
+                -machine virt -cpu cortex-a57 -accel tcg -m 1024 -smp 2 \
+                -display none -serial stdio -monitor none -nic none -no-reboot \
+                -kernel /Image -append "console=ttyAMA0 loglevel=7 panic=1 init=/init" \
+                >/tmp/native-procd-boot.log 2>&1 || status=$?
+              tail -n 120 /tmp/native-procd-boot.log
+              if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+                echo "NATIVE_QEMU_PROCD_BOOT_FAIL: QEMU exit $status" >&2
+                exit 1
+              fi
+              if grep -Eq "Kernel panic|Failed to execute /init" /tmp/native-procd-boot.log; then
+                echo "NATIVE_QEMU_PROCD_BOOT_FAIL: kernel could not start PID1" >&2
+                exit 1
+              fi
+              grep -Fq "Run /init as init process" /tmp/native-procd-boot.log || {
+                echo "NATIVE_QEMU_PROCD_BOOT_FAIL: kernel PID1 handoff missing" >&2
+                exit 1
+              }
+              grep -Eq "procd: - (early|init) -" /tmp/native-procd-boot.log || {
+                echo "NATIVE_QEMU_PROCD_BOOT_FAIL: procd runtime evidence missing" >&2
+                exit 1
+              }
+              echo PUBLIC_MT6990_NATIVE_SAME_IMAGE_QEMU_PROCD_PID1_BOOT_PASS
+              echo "LIMIT: QEMU virt PID1 only; no Air6 DTB, Ethernet, radio or hardware proof"
+            '
+          echo 'LIMIT: QEMU virt cannot establish Air6 bootloader/DTB/AP compatibility'
           echo 'LIMIT: procd rootfs archive was externally staged; QEMU/device boot not tested'
           echo 'LIMIT: no device boot, signing, installable image, private material or rights approval'
