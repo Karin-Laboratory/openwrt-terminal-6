@@ -377,10 +377,20 @@ jobs:
               raise SystemExit("Unexpected /sbin/init link: " + os.readlink(init))
           if (root / "init").exists() or (root / "init").is_symlink():
               raise SystemExit("Refusing to overwrite existing /init")
-          for name in ("sbin/procd", "sbin/netifd", "sbin/ubusd"):
-              blob = (root / name).read_bytes()[:64]
-              if (blob[:6] != b"\x7fELF\x02\x01"
-                      or struct.unpack_from("<H", blob, 18)[0] != 183):
+          # Diagnose the actual staged package bytes, not the toolchain name.
+          # The previous native run reached this gate but rejected procd;
+          # preserve the AArch64 requirement and expose only public ELF metadata.
+          for name in ("sbin/init", "sbin/procd", "sbin/netifd", "sbin/ubusd"):
+              path = root / name
+              blob = path.read_bytes()[:64]
+              ident = blob[:6].hex()
+              machine = (struct.unpack_from("<H", blob, 18)[0]
+                         if len(blob) >= 20 else None)
+              print("NATIVE_ROOTFS_ELF_METADATA", name,
+                    "ident=" + ident, "machine=" + str(machine),
+                    "symlink=" + str(path.is_symlink()),
+                    "size=" + str(path.stat().st_size))
+              if ident != "7f454c460201" or machine != 183:
                   raise SystemExit("Non-AArch64 native executable: " + name)
           shadow = (root / "etc/shadow").read_text().splitlines()
           if sum(line.startswith("root:!:") for line in shadow) != 1:
