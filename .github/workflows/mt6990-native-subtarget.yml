@@ -379,7 +379,7 @@ jobs:
               raise SystemExit("Refusing to overwrite existing /init")
           for name in ("sbin/procd", "sbin/netifd", "sbin/ubusd"):
               blob = (root / name).read_bytes()[:64]
-              if (blob[:6] != b"\\x7fELF\\x02\\x01"
+              if (blob[:6] != b"\x7fELF\x02\x01"
                       or struct.unpack_from("<H", blob, 18)[0] != 183):
                   raise SystemExit("Non-AArch64 native executable: " + name)
           shadow = (root / "etc/shadow").read_text().splitlines()
