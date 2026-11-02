@@ -436,6 +436,22 @@ jobs:
           PY
           test -s "$work/air6-procd-initramfs.cpio"
           sha256sum "$work/air6-procd-initramfs.cpio"
+          # Integrate actual MT6990 analog PHY and IFRAO clock providers into
+          # the SAME native OpenWrt 6.18.60 kernel that embeds procd below.
+          # This reuses the pinned GPL-labelled source/patches already built
+          # in the separate upstream v6.18 Image job; no private binaries.
+          # No Device profile, firmware payload, signer or artifact upload.
+          bash "$GITHUB_WORKSPACE/scripts/stage-native-mt6990-phy-ifrao.sh" "$kernel"
+          "$kernel/scripts/config" --file "$kernel/.config" \
+            --enable ARCH_MEDIATEK --enable MFD_SYSCON \
+            --enable GENERIC_PHY --enable COMMON_CLK_MEDIATEK \
+            --enable PHY_MTK_MT6990_SGMII \
+            --enable COMMON_CLK_MT6990_IFRAO_AIR6_RESEARCH \
+            --enable IPV6 --enable BRIDGE --disable HSR \
+            --enable NET_DSA --enable NET_DSA_MT7530 \
+            --enable NET_DSA_MT7530_MDIO \
+            --enable NET_VENDOR_MEDIATEK --enable NET_MEDIATEK_SOC \
+            --enable PCS_MTK_LYNXI
           # Material kernel/userspace integration: rebuild this SAME native
           # MT6990 OpenWrt Image with the real procd PID1 cpio embedded by
           # Kbuild. This is a separate ephemeral research Image, never an
@@ -453,6 +469,28 @@ jobs:
             make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
           test -s "$kernel/usr/initramfs_data.o"
           test -s "$kernel/arch/arm64/boot/Image"
+          # Require real built-in objects, not only requested Kconfig symbols.
+          for option in PHY_MTK_MT6990_SGMII \
+                        COMMON_CLK_MT6990_IFRAO_AIR6_RESEARCH \
+                        NET_DSA_MT7530_MDIO NET_MEDIATEK_SOC PCS_MTK_LYNXI; do
+            grep -qx "CONFIG_$option=y" "$kernel/.config" || {
+              echo "Native MT6990 kernel did not select $option" >&2
+              exit 1
+            }
+          done
+          for object in \
+            drivers/phy/mediatek/phy-mtk-mt6990-sgmii.o \
+            drivers/clk/mediatek/clk-mt6990-ifrao.o \
+            drivers/net/dsa/mt7530.o \
+            drivers/net/dsa/mt7530-mdio.o \
+            drivers/net/pcs/pcs-mtk-lynxi.o \
+            drivers/net/ethernet/mediatek/mtk_eth_soc.o; do
+            test -s "$kernel/$object" || {
+              echo "Native same-kernel Ethernet/clock object missing: $object" >&2
+              exit 1
+            }
+          done
+          echo 'PUBLIC_MT6990_NATIVE_PHY_IFRAO_SAME_PROCD_IMAGE_KBUILD_PASS'
           embedded_image_sha="$(sha256sum "$kernel/arch/arm64/boot/Image" | cut -d' ' -f1)"
           if [[ "$embedded_image_sha" == "$base_image_sha" ]]; then
             echo 'Embedded-procd Image unchanged after Kbuild: reject stale output' >&2
