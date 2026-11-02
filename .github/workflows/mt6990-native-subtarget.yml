@@ -576,8 +576,8 @@ jobs:
               # Do not mistake a kernel/procd boot for an operational AP
               # userspace. These are emitted only by the real guest service
               # script after procd/ubus registration and netifd-created bridge.
-              for marker in SBAT6_PROCD_NETIFD_REGISTERED \\
-                            SBAT6_NETIFD_PROCESS_STABLE_RUNTIME_PASS \\
+              for marker in SBAT6_PROCD_NETIFD_REGISTERED \
+                            SBAT6_NETIFD_PROCESS_STABLE_RUNTIME_PASS \
                             SBAT6_NETIFD_EMPTY_BRIDGE_RUNTIME_PASS; do
                 grep -Fq "$marker" /tmp/native-procd-boot.log || {
                   echo "NATIVE_QEMU_NETIFD_BRIDGE_FAIL: missing $marker" >&2
