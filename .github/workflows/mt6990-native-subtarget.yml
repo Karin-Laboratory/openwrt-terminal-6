@@ -349,4 +349,82 @@ jobs:
             "$work/air6-initramfs.cpio"
           echo 'PUBLIC_MT6990_SAME_OPENWRT_KERNEL_IMAGE_AIR6_DTBS_PID1_BUILD_PASS'
           echo 'LIMIT: external diagnostic PID1, no procd boot; DTB driver/clock/genpd/radio not integrated'
+          # Material next stage: archive the ACTUAL OpenWrt package/install
+          # rootfs as a procd-PID1 initramfs, not the freestanding diagnostic
+          # ELF. It shares the native kernel toolchain/package build above.
+          # No target/install, image recipe, signing, upload or device access.
+          python3 - "$rootfs" "$work/air6-procd-initramfs.cpio" <<'PY'
+          import importlib.util
+          import os
+          from pathlib import Path
+          import stat
+          import struct
+          import sys
+
+          root, output = Path(sys.argv[1]), Path(sys.argv[2])
+          if not root.is_dir() or root.is_symlink() or output.exists():
+              raise SystemExit("Unsafe procd initramfs staging paths")
+          for name in ("sbin/procd", "sbin/netifd", "sbin/ubusd",
+                       "bin/busybox", "etc/shadow", "lib/ld-musl-aarch64.so.1"):
+              path = root / name
+              if not path.exists() or not path.is_file():
+                  raise SystemExit("Missing procd runtime dependency: " + name)
+          init = root / "sbin/init"
+          if not init.is_symlink() and not init.is_file():
+              raise SystemExit("Native rootfs lacks /sbin/init (procd PID1)")
+          if init.is_symlink() and os.readlink(init) not in (
+                  "procd", "/sbin/procd", "sbin/procd"):
+              raise SystemExit("Unexpected /sbin/init link: " + os.readlink(init))
+          if (root / "init").exists() or (root / "init").is_symlink():
+              raise SystemExit("Refusing to overwrite existing /init")
+          for name in ("sbin/procd", "sbin/netifd", "sbin/ubusd"):
+              blob = (root / name).read_bytes()[:64]
+              if (blob[:6] != b"\x7fELF\x02\x01"
+                      or struct.unpack_from("<H", blob, 18)[0] != 183):
+                  raise SystemExit("Non-AArch64 native executable: " + name)
+          shadow = (root / "etc/shadow").read_text().splitlines()
+          if sum(line.startswith("root:!:") for line in shadow) != 1:
+              raise SystemExit("root password is not locked")
+          if any((root / "etc/rc.d").glob("*dropbear*")):
+              raise SystemExit("Dropbear autostart is not disabled")
+          if any((root / "lib/firmware").rglob("*")) if (
+                  root / "lib/firmware").exists() else False:
+              raise SystemExit("Radio firmware unexpectedly present")
+          spec = importlib.util.spec_from_file_location(
+              "air6_newc", Path("scripts/build-minimal-arm64-initramfs.py").resolve())
+          mod = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          entries = {}
+          for path in root.rglob("*"):
+              name = path.relative_to(root).as_posix()
+              info = path.lstat()
+              if stat.S_ISDIR(info.st_mode):
+                  payload = b""
+              elif stat.S_ISLNK(info.st_mode):
+                  payload = os.fsencode(os.readlink(path))
+              elif stat.S_ISREG(info.st_mode):
+                  payload = path.read_bytes()
+              else:
+                  raise SystemExit("Unsupported rootfs special file: " + name)
+              entries[name] = (info.st_mode, payload, 0, 0)
+          for name in ("dev", "proc", "sys"):
+              entries.setdefault(name, (stat.S_IFDIR | 0o755, b"", 0, 0))
+          for name, major, minor, perms in (
+                  ("dev/console", 5, 1, 0o600), ("dev/null", 1, 3, 0o666)):
+              entries.setdefault(name, (stat.S_IFCHR | perms, b"", major, minor))
+          entries["init"] = (stat.S_IFLNK | 0o777, b"sbin/init", 0, 0)
+          archive = bytearray()
+          for ino, name in enumerate(sorted(entries), 1):
+              mode, payload, major, minor = entries[name]
+              archive += mod.newc_entry(name, mode, payload, ino, major, minor)
+          archive += mod.newc_entry("TRAILER!!!", 0, ino=len(entries) + 1)
+          if len(archive) > 256 * 1024 * 1024:
+              raise SystemExit("Procd initramfs exceeds 256 MiB safety limit")
+          output.write_bytes(archive)
+          print("PUBLIC_MT6990_NATIVE_PROCD_PID1_INITRAMFS_BUILD_PASS",
+                "entries=" + str(len(entries)), "bytes=" + str(len(archive)))
+          PY
+          test -s "$work/air6-procd-initramfs.cpio"
+          sha256sum "$work/air6-procd-initramfs.cpio"
+          echo 'LIMIT: procd rootfs archive is not embedded or QEMU/device boot tested'
           echo 'LIMIT: no device boot, signing, installable image, private material or rights approval'
