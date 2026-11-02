@@ -238,6 +238,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "scripts/stage-native-mt6990-phy-ifrao.sh",
+      "component": "ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "34d19cc9ff8e5041aff200e755b37c7794f23911",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "scripts/verify-air6-board-dtc.sh",
       "component": "board-dt",
       "origin": "independent-original",
