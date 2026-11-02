@@ -104,6 +104,8 @@ jobs:
           CONFIG_PACKAGE_uci=y
           CONFIG_PACKAGE_netifd=y
           CONFIG_PACKAGE_dropbear=y
+          # Build actual AP authentication userspace without enabling a radio.
+          CONFIG_PACKAGE_wpad-basic-mbedtls=y
           # CONFIG_SIGNED_PACKAGES is not set
           EOF
           umask 022
@@ -117,7 +119,7 @@ jobs:
               exit 1
             fi
           done
-          for pkg in busybox procd ubus uci netifd dropbear; do
+          for pkg in busybox procd ubus uci netifd dropbear wpad-basic-mbedtls; do
             grep -qx "CONFIG_PACKAGE_${pkg}=y" "$work/openwrt/.config" || {
               echo "Missing selected native package: $pkg" >&2
               exit 1
@@ -187,6 +189,18 @@ jobs:
             fi
           done
           echo 'PUBLIC_MT6990_FIRST_BOOT_PACKAGES_BUILD_PASS'
+          # Compile the real pinned OpenWrt WPA2/WPA3 AP daemon variant and
+          # its dependencies. No Wi-Fi device, firmware, EEPROM, SSID, key,
+          # radio enablement, or hostapd execution is involved here.
+          make -C "$work/openwrt" -j2 package/network/services/hostapd/compile
+          if ! find "$work/openwrt/bin/packages" \
+              "$work/openwrt/bin/targets/mediatek/mt6990/packages" \
+              -type f \( -name 'wpad-basic-mbedtls-*.apk' -o -name 'wpad-basic-mbedtls_*.ipk' \) \
+              -print -quit | grep -q .; then
+            echo 'Missing real native wpad-basic-mbedtls package' >&2
+            exit 1
+          fi
+          echo 'PUBLIC_MT6990_NATIVE_WPAD_BASIC_MBEDTLS_PACKAGE_BUILD_PASS'
           # OpenWrt package/install populates only a staging root directory.
           # Unlike target/install it cannot produce a device boot/flash image.
           # CONFIG_SIGNED_PACKAGES=n prevents package-index signing.
@@ -195,7 +209,8 @@ jobs:
             -type d -name 'root-mediatek' -print -quit)"
           test -n "$rootfs" && test -d "$rootfs"
           for executable in bin/busybox sbin/procd sbin/netifd \
-                            sbin/ubusd sbin/uci usr/sbin/dropbear; do
+                            sbin/ubusd sbin/uci usr/sbin/dropbear \
+                            usr/sbin/wpad; do
             test -s "$rootfs/$executable" || {
               echo "Missing real staged rootfs executable: $executable" >&2
               exit 1
@@ -227,6 +242,23 @@ jobs:
           PY
           find "$rootfs/etc/rc.d" -maxdepth 1 -name '*dropbear*' \
             -type l -delete
+          # AP authentication daemon is present but must not start until
+          # a separate rights-cleared radio/board configuration is provided.
+          find "$rootfs/etc/rc.d" -maxdepth 1 -name '*wpad*' \
+            -type l -delete
+          if find "$rootfs/etc/rc.d" -maxdepth 1 \
+              \( -name '*wpad*' -o -name '*dropbear*' \) -print -quit | grep -q .; then
+            echo 'Unprovisioned radio/SSH service would autostart' >&2
+            exit 1
+          fi
+          if test -e "$rootfs/etc/config/wireless" || \
+              test -L "$rootfs/etc/config/wireless"; then
+            echo 'Unexpected preconfigured wireless settings' >&2
+            exit 1
+          fi
+          test -s "$rootfs/usr/sbin/wpad"
+          test -L "$rootfs/usr/sbin/hostapd"
+          echo 'PUBLIC_MT6990_NATIVE_WPAD_UNPROVISIONED_ROOTFS_STAGED'
           if find "$rootfs" -type f -path '*/lib/firmware/*' \
               -print -quit | grep -q .; then
             echo 'Unexpected firmware payload in rights-pending rootfs' >&2
