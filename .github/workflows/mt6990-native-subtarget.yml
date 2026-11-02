@@ -436,5 +436,31 @@ jobs:
           PY
           test -s "$work/air6-procd-initramfs.cpio"
           sha256sum "$work/air6-procd-initramfs.cpio"
-          echo 'LIMIT: procd rootfs archive is not embedded or QEMU/device boot tested'
+          # Material kernel/userspace integration: rebuild this SAME native
+          # MT6990 OpenWrt Image with the real procd PID1 cpio embedded by
+          # Kbuild. This is a separate ephemeral research Image, never an
+          # OpenWrt Device profile, LK payload, flashable or signed firmware.
+          base_image_sha="$(sha256sum "$kernel/arch/arm64/boot/Image" | cut -d' ' -f1)"
+          test -s "$kernel/scripts/config"
+          "$kernel/scripts/config" --file "$kernel/.config" \
+            --set-str INITRAMFS_SOURCE "$work/air6-procd-initramfs.cpio"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
+          grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-procd-initramfs.cpio\"" \
+            "$kernel/.config"
+          grep -qx 'CONFIG_BLK_DEV_INITRD=y' "$kernel/.config"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
+          test -s "$kernel/usr/initramfs_data.o"
+          test -s "$kernel/arch/arm64/boot/Image"
+          embedded_image_sha="$(sha256sum "$kernel/arch/arm64/boot/Image" | cut -d' ' -f1)"
+          if [[ "$embedded_image_sha" == "$base_image_sha" ]]; then
+            echo 'Embedded-procd Image unchanged after Kbuild: reject stale output' >&2
+            exit 1
+          fi
+          sha256sum "$kernel/usr/initramfs_data.o" \
+            "$kernel/arch/arm64/boot/Image"
+          echo 'PUBLIC_MT6990_SAME_KERNEL_EMBEDDED_PROCD_PID1_IMAGE_BUILD_PASS'
+          echo 'LIMIT: Kbuild embed PASS only; no native QEMU PID1 boot, Air6 bootloader or AP runtime'
+          echo 'LIMIT: procd rootfs archive was externally staged; QEMU/device boot not tested'
           echo 'LIMIT: no device boot, signing, installable image, private material or rights approval'
