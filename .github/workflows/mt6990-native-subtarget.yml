@@ -232,6 +232,21 @@ jobs:
             echo 'Unexpected firmware payload in rights-pending rootfs' >&2
             exit 1
           fi
+          # Exercise actual native OpenWrt procd -> ubus -> netifd -> Linux
+          # bridge in the SAME native Image on isolated QEMU virt. Stage the
+          # already reviewed research-only boot policy in this ephemeral
+          # rootfs; the source tree and package archives remain untouched.
+          # No NIC, DHCP server, NAT, SSH listener, credentials or radio.
+          test ! -e "$rootfs/etc/rc.d/S10netifd"
+          test ! -L "$rootfs/etc/rc.d/S10netifd"
+          test ! -L "$rootfs/etc/config/network"
+          install -D -m 0755 "$GITHUB_WORKSPACE/config/sbat6-stage/etc/rc.d/S10netifd" \
+            "$rootfs/etc/rc.d/S10netifd"
+          install -D -m 0644 "$GITHUB_WORKSPACE/config/sbat6-stage/etc/config/network" \
+            "$rootfs/etc/config/network"
+          test -x "$rootfs/etc/rc.d/S10netifd"
+          grep -Fq "config interface 'loopback'" "$rootfs/etc/config/network"
+          echo 'PUBLIC_MT6990_NATIVE_QEMU_NETIFD_BRIDGE_BOOT_POLICY_STAGED'
           tar --sort=name --mtime='@0' --owner=0 --group=0 \
             --numeric-owner -C "$rootfs" -czf "$work/sbat6-rootfs-stage.tar.gz" .
           test -s "$work/sbat6-rootfs-stage.tar.gz"
@@ -509,7 +524,7 @@ jobs:
           echo 'PUBLIC_MT6990_SAME_KERNEL_EMBEDDED_PROCD_PID1_IMAGE_BUILD_PASS'
           # Boot this exact native OpenWrt Image (with its real procd rootfs)
           # under QEMU virt. No Air6 DTB is passed: virt uses QEMU-generated
-          # DT and PL011 console. The only success claim is guest PID1 startup.
+          # DT and PL011 console. Require real PID1, netifd and bridge runtime.
           # Isolate execution in an unprivileged container on GitHub-hosted CI.
           for option in SERIAL_AMBA_PL011 SERIAL_AMBA_PL011_CONSOLE \
                         DEVTMPFS PROC_FS SYSFS BINFMT_ELF; do
@@ -538,7 +553,7 @@ jobs:
               timeout --signal=TERM --kill-after=5s 120s qemu-system-aarch64 \
                 -machine virt -cpu cortex-a57 -accel tcg -m 1024 -smp 2 \
                 -display none -serial stdio -monitor none -nic none -no-reboot \
-                -kernel /Image -append "console=ttyAMA0 loglevel=7 panic=1 init=/init" \
+                -kernel /Image -append "console=ttyAMA0 loglevel=7 panic=1 init=/init sbat6.qemu_bridge_smoke=1" \
                 >/tmp/native-procd-boot.log 2>&1 || status=$?
               tail -n 120 /tmp/native-procd-boot.log
               if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
@@ -558,8 +573,20 @@ jobs:
                 exit 1
               }
               echo PUBLIC_MT6990_NATIVE_SAME_IMAGE_QEMU_PROCD_PID1_BOOT_PASS
-              echo "LIMIT: QEMU virt PID1 only; no Air6 DTB, Ethernet, radio or hardware proof"
+              # Do not mistake a kernel/procd boot for an operational AP
+              # userspace. These are emitted only by the real guest service
+              # script after procd/ubus registration and netifd-created bridge.
+              for marker in SBAT6_PROCD_NETIFD_REGISTERED \
+                            SBAT6_NETIFD_PROCESS_STABLE_RUNTIME_PASS \
+                            SBAT6_NETIFD_EMPTY_BRIDGE_RUNTIME_PASS; do
+                grep -Fq "$marker" /tmp/native-procd-boot.log || {
+                  echo "NATIVE_QEMU_NETIFD_BRIDGE_FAIL: missing $marker" >&2
+                  exit 1
+                }
+              done
+              echo PUBLIC_MT6990_NATIVE_SAME_IMAGE_QEMU_NETIFD_BRIDGE_RUNTIME_PASS
+              echo "LIMIT: QEMU virt empty bridge only; no NIC, Air6 DTB, Ethernet traffic, radio or hardware proof"
             '
           echo 'LIMIT: QEMU virt cannot establish Air6 bootloader/DTB/AP compatibility'
-          echo 'LIMIT: procd rootfs archive was externally staged; QEMU/device boot not tested'
+          echo 'LIMIT: native procd QEMU virt boot only; Air6 device boot not tested'
           echo 'LIMIT: no device boot, signing, installable image, private material or rights approval'
