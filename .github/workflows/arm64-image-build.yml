@@ -4,6 +4,7 @@ on:
     paths:
       - .github/workflows/arm64-image-build.yml
       - scripts/air6-diagnostic-init.c
+      - scripts/check-air6-compiled-fdt.py
       - scripts/build-minimal-arm64-initramfs.py
       - scripts/build-arm64-busybox-smoke.sh
       - scripts/build-arm64-musl-busybox-stage.sh
@@ -24,6 +25,7 @@ on:
     paths:
       - .github/workflows/arm64-image-build.yml
       - scripts/air6-diagnostic-init.c
+      - scripts/check-air6-compiled-fdt.py
       - scripts/build-minimal-arm64-initramfs.py
       - scripts/build-arm64-busybox-smoke.sh
       - scripts/build-arm64-musl-busybox-stage.sh
@@ -301,15 +303,8 @@ jobs:
           timeout 1200s make ARCH=arm64 -j4 dtbs
           for dtb in mt6990-air-terminal-6.dtb mt6990-air-terminal-6-ethernet-test.dtb; do
             test -s "arch/arm64/boot/dts/mediatek/$dtb"
-            python3 - "arch/arm64/boot/dts/mediatek/$dtb" <<'PY'
-          from pathlib import Path
-          import sys
-          blob = Path(sys.argv[1]).read_bytes()
-          assert blob[:4] == bytes.fromhex('d00dfeed'), "not a DTB"
-          for needle in (b'softbank,air-terminal-6\x00', b'mediatek,mt7531\x00'):
-              assert needle in blob, f"missing compiled DT property: {needle!r}"
-          print("AIR6_KERNEL_TREE_DTB_CONTENT_PASS", sys.argv[1])
-          PY
+            python3 "$GITHUB_WORKSPACE/scripts/check-air6-compiled-fdt.py" \
+              "arch/arm64/boot/dts/mediatek/$dtb"
           done
           sha256sum arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6*.dtb
           wc -c arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6*.dtb
