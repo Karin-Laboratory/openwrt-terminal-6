@@ -1,5 +1,8 @@
 # Reproducible build input catalog, source-only stage
 
+> **Development vs release (2026-11-04):** Follow the [current p25/p26 mainline policy](MAINLINE-P25-P26-POLICY.md) for work selection. The catalog's pending rights labels and the optional `--public-source` / `--public-build` completeness modes do **not** prohibit local engineering, independently authored observation-based implementations, or building and testing unsigned p25/p26. Preserve OpenWrt-standard licensing and check redistribution obligations before externally releasing images. Historical source-only coverage is not a mandate to avoid implementing real image production.
+
+
 The [dated branch-tip and ARM64 build evidence](PREPUBLICATION-REF-AND-BUILD-AUDIT-20261027.md) records one verified upstream Ethernet object compile on the separate Private v2 runner, not a complete firmware build. The machine-readable [source catalog](../config/source-catalog.json) pins catalogued source, unit-test, board-overlay and build-helper files (Git blob identities) for Ethernet RFCs, Stage10 MED DMA code, A/B research and the synthetic modem transport model.
 
 The checker also fails when a source/test/Makefile/shell file exists in the covered directories without a catalog entry. The initial 27-path snapshot was checked against a complete GitHub tree on 2026-10-27. Later reviews expanded coverage; use the current catalog for the authoritative inventory. This is a reproducibility *contract for catalogued files present here*, not a complete firmware Bill of Materials or a signature. The catalog intentionally records rights review as PENDING and lists missing components rather than fabricating OpenWrt firmware build success.
