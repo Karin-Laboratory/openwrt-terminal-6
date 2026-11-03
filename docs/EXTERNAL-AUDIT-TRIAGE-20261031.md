@@ -1,3 +1,5 @@
+> **Historical implementation record:** The [2026-11-04 mainline p25/p26 policy](MAINLINE-P25-P26-POLICY.md) supersedes any older AP-first priority, source-only development ceiling, or pending-rights stop-work implications on this page. Earlier measurements/limitations remain evidence of their stated date. Current engineering allows ephemeral unsigned image builds; public binary distribution is separately gated.
+
 # External audit triage: AP-first source integration (2026-10-31)
 
 Status: engineering review, **not** legal clearance, build certification, or hardware approval. Applies to the current public `main` and milestone [#74](https://github.com/Karin-Laboratory/openwrt-terminal-6/issues/74). External audit observations are proposals until reproduced against actual source/CI.

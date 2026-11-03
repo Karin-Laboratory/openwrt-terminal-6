@@ -15,4 +15,4 @@ This is a staged **source-development** sequence, not a deployment checklist.
 7. **Modem:** preserve proven historical LTE IPv4 Stage9B/10 source attribution; reproduce end-to-end radio/data with rights-cleared drivers and userland. Separately test NR and IPv6.
 8. **Resilience and release:** test fallback, power loss, boot repeatability, hardware permissions, first-boot credentials and artifact signing with independent rescue before any general firmware package.
 
-The first public milestone is **reviewable source and tests**, which can be shared without claiming a flashable product. An OpenWrt upstream merge requires separately reviewable kernel/SoC, board, userland and license-ready components.
+The **current engineering milestone** is reproducible unsigned p25 and p26. The public distribution remains reviewable source and tests, not a flashable product. An OpenWrt upstream merge requires separately reviewable kernel/SoC, board, userland and license-ready components.

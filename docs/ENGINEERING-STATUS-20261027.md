@@ -1,3 +1,5 @@
+> **Historical implementation record:** The [2026-11-04 mainline p25/p26 policy](MAINLINE-P25-P26-POLICY.md) supersedes any older AP-first priority, source-only development ceiling, or pending-rights stop-work implications on this page. Earlier measurements/limitations remain evidence of their stated date. Current engineering allows ephemeral unsigned image builds; public binary distribution is separately gated.
+
 # Integration status and next concrete build gate (2026-10-27)
 
 **The source repository is Public as of 2026-10-27; it is not a complete SBAT6 firmware.** Development continues with a separate clean public Git history and retained Private research archives. Public visibility is a maintainer decision, not evidence that all source-rights, security or firmware-release gates have passed.

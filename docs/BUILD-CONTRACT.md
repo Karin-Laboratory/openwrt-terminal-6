@@ -1,5 +1,8 @@
 # Reproducible build input catalog, source-only stage
 
+> The legacy `SOURCE_ONLY` catalog schema describes what may enter public Git history, **not a ban on locally or ephemerally building unsigned p25/p26**. Public CI must not upload built images/intermediates into artifacts, caches, Releases or registries; see [workflow policy](../tools/security/check_workflows.py). Actual image distribution requires the applicable GPL corresponding source/notices and third-party license rights.
+
+
 > **Development vs release (2026-11-04):** Follow the [current p25/p26 mainline policy](MAINLINE-P25-P26-POLICY.md) for work selection. The catalog's pending rights labels and the optional `--public-source` / `--public-build` completeness modes do **not** prohibit local engineering, independently authored observation-based implementations, or building and testing unsigned p25/p26. Preserve OpenWrt-standard licensing and check redistribution obligations before externally releasing images. Historical source-only coverage is not a mandate to avoid implementing real image production.
 
 

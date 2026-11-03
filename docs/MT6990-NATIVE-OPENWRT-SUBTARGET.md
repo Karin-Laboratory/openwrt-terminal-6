@@ -1,5 +1,8 @@
 # MT6990 native OpenWrt source-only target bootstrap (PR-A)
 
+> **Scope clarification (2026-11-04):** This describes the original noninstallable bootstrap, not the current ceiling. The [new mainline policy](MAINLINE-P25-P26-POLICY.md) welcomes the next implementation needed for complete unsigned p25/p26 image production, without publishing flashable artifacts.
+
+
 This work ports the **minimal noninstallable target registration** proven in
 PRIVATE Alpha 3, without porting any donor kernel/driver, calibration, OEM
 material, image/signature logic or device access.

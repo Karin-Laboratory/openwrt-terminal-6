@@ -1,3 +1,5 @@
+> **Historical implementation record:** The [2026-11-04 mainline p25/p26 policy](MAINLINE-P25-P26-POLICY.md) supersedes any older AP-first priority, source-only development ceiling, or pending-rights stop-work implications on this page. Earlier measurements/limitations remain evidence of their stated date. Current engineering allows ephemeral unsigned image builds; public binary distribution is separately gated.
+
 # AP-first milestone: standalone unsigned AArch64 PID1 initramfs
 
 **Scope: real, non-installable ARM64 initramfs construction, not an OpenWrt rootfs, Air6 kernel Image, Air6 DTB, AP or hardware boot.** Tracks #74 / #21 / #4.

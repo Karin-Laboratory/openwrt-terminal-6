@@ -1,5 +1,8 @@
 # Rights-aware OpenWrt MT6990 donor source acquisition
 
+> **Scope clarification (2026-11-04):** This describes the limited historical donor-inspection tool, not a ban on building unsigned images in the public mainline. The [new policy](MAINLINE-P25-P26-POLICY.md) encourages lawful/independent backports. A public donor checkout by itself proves neither license rights nor compatibility: note upstream URL/revision/license for each reused source change and exclude unclear OEM binaries.
+
+
 This step assists **source inspection only**, NOT a runnable SBAT6 target, rootfs reproduction, signing or flashing guide.
 
 ## Pinned public donor

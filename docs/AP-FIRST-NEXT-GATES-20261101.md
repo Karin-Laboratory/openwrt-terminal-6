@@ -1,3 +1,5 @@
+> **Historical implementation record:** The [2026-11-04 mainline p25/p26 policy](MAINLINE-P25-P26-POLICY.md) supersedes any older AP-first priority, source-only development ceiling, or pending-rights stop-work implications on this page. Earlier measurements/limitations remain evidence of their stated date. Current engineering allows ephemeral unsigned image builds; public binary distribution is separately gated.
+
 # AP-first next gates: reproducible OpenWrt packages and isolated wireless smoke
 
 **2026-11-01 design/triage only.** The evidence hierarchy is documented in [STATUS](STATUS.md) and the acceptance criteria in [Issue #74](https://github.com/Karin-Laboratory/openwrt-terminal-6/issues/74). No test in this document has been run by adding this file.

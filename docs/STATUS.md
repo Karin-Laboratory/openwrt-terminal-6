@@ -1,5 +1,8 @@
 # Technical status
 
+> **Current mainline target (2026-11-04):** [Reproducible unsigned p25/p26 from proven backports](MAINLINE-P25-P26-POLICY.md). The table and dated CI checkpoints below are historical technical evidence, **not** a restriction on new image-build work or a claim that complete image outputs already exist. Public distribution is currently source-only.
+
+
 Hardware research snapshot: 2026-10-27; public source/CI evidence updated: **2026-11-01**. This repository still does **not** provide an installable Air6 device firmware or a fully validated OpenWrt device target.
 
 | Component | Observed in historical experiments | Available here | Remaining work |

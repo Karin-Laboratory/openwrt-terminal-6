@@ -1,5 +1,8 @@
 # Air6 independent OpenWrt userspace source selection (2026-10-30)
 
+> **Historical source-selection contract:** This particular manifest validates metadata and does not generate rootfs, but the [2026-11-04 p25/p26 policy](MAINLINE-P25-P26-POLICY.md) explicitly permits implementing a separate p26 build path and ephemeral CI compilation. Do not use this dated limitation as a stop-work gate.
+
+
 **Scope: metadata and source verification only. NOT an OpenWrt rootfs, package build, image, or deployable SBAT6 target.**
 
 - Upstream repository: `openwrt/openwrt` official GitHub mirror. Pinned development-main commit `5700101d7c85381889d890dc1d3d001d0b4b6446` observed by GitHub on 2026-10-30. This is a working *source inspection reference*, **not** a release recommendation or a proven MT6990 build base.
@@ -26,7 +29,7 @@
 
 1. Independently verify the selected OpenWrt base and five feed Git objects against canonical origins (GitHub mirror inspection alone is insufficient); run the optional six-Makefile local-byte gate against an independently obtained source tree and verify the complete upstream commit plus dependency closure, then review package and source redistribution rights. Retain exact hashes and no binary donor checkout.
 2. Add a real SBAT6-specific build target/config in a separate review PR. Establish kernel ABI, target identity and package closure without copying LG6851F Android/F2FS image recipes, calibration, radio firmware or signing data.
-3. In isolated non-root CI, build a **noninstallable** package/rootfs staging tree with pinned compiler/inputs and SHA-256 manifest. The present contract explicitly does **not** authorize this step; review and change its scope in a separate PR with tests.
+3. In isolated non-root CI, build a **noninstallable** package/rootfs staging tree with pinned compiler/inputs and SHA-256 manifest. This old metadata-only contract cannot perform the step; build it in a distinct target/package flow with tests under the current mainline policy.
 4. Prove safety/first-boot behavior and source rights; independently coordinate #20 DTS/driver integration, #22 modem transport and #2 publication before any device test or image release.
 
 Passing this manifest gate is a stricter source-selection **preflight**, not #21 completion. Issue stays OPEN.
