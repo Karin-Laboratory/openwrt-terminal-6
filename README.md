@@ -6,6 +6,12 @@ Public, source-only community research toward OpenWrt support for the SoftBank A
 
 > **Source-only experimental project. No downloadable or supported firmware, installation instructions, signature keys, or confirmed safe recovery procedure are provided. Do not flash images based on this repository.**
 
+## Current mainline priority (2026-11-04)
+
+**Build complete, redistributable unsigned p25 (boot_a) and p26 (rootfs_a) from auditable OpenWrt-compatible source inputs.** Reuse implementation and build knowledge from already boot-successful research builds wherever legally reusable; independently written code based on device observations and ordinary upstream GPL/MIT reuse are welcome. Focus this public mainline on backporting, source/licensing cleanup, and reproducible image construction, **not new feature exploration**. File-level review flags are not a prerequisite for implementing or testing; actual public binary distribution has its own compliance checks.
+
+**Automated contributors / 12-minute runs:** read [the current mainline execution policy](docs/MAINLINE-P25-P26-POLICY.md) first. This supersedes older AP-first task ordering; signing and public flashable releases remain separate.
+
 ## Demonstrated development milestones
 
 - A development device booted Linux 6.18.44 with OpenWrt userspace; Ethernet and 2.4/5 GHz networking were reported functional in limited tests. A 6 GHz access point started, but external client association, Wi-Fi 7 EHT/MLO and stable reboot persistence were not established.
