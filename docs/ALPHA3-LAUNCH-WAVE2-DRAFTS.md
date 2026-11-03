@@ -24,7 +24,7 @@ Start: [status](ALPHA3-DEVELOPER-PREVIEW-STATUS.md) · [contribute](ALPHA3-CONTR
 現段階はあくまで**Developer Preview、ソースのみ**。一般の方が書き込める完成ファームウェアや安全なインストール方法は公開していません。完成していないからこそ、技術的な根拠を区別しながら、協力者が迷わず参加できる場所を用意してみました。
 
 公開リポジトリ：[openwrt-terminal-6](https://github.com/Karin-Laboratory/openwrt-terminal-6)  
-[現在の技術状態](ALPHA3-DEVELOPER-PREVIEW-STATUS.md)（GitHub内）／[参加ガイド](ALPHA3-CONTRIBUTOR-START.md)（日英対応）  
+[現在の技術状態](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/codex/alpha3-devpreview-wave2-20261103/docs/ALPHA3-DEVELOPER-PREVIEW-STATUS.md)／[参加ガイド](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/codex/alpha3-devpreview-wave2-20261103/docs/ALPHA3-CONTRIBUTOR-START.md)（日英対応）  
 [Discussions #50](https://github.com/Karin-Laboratory/openwrt-terminal-6/discussions/50)（相談・関心表明。配布保証ではありません）
 
 ## 3. X向け短い日本語告知（未投稿）
@@ -53,4 +53,4 @@ Thank you for the previous technical discussions and contributions. I'm preparin
 
 ---
 
-**Owner publication checklist:** replace GitHub-relative Markdown links with absolute public URLs when posting to note/X; verify no stale test claim, no linked private root/flash/keys, preserve attribution/licensing, and obtain explicit publication approval. Do not auto-post, tag third parties, upload firmware or create a Release.
+**Owner publication checklist:** after merging, replace draft-branch GitHub links with stable main-branch URLs before posting to note/X; verify no stale test claim, no linked private root/flash/keys, preserve attribution/licensing, and obtain explicit publication approval. Do not auto-post, tag third parties, upload firmware or create a Release.
