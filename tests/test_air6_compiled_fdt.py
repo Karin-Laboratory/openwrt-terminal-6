@@ -48,6 +48,28 @@ class CompiledFdtTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate node"):
             gate.parse_fdt(fixture(duplicate=True))
 
+    def test_repeated_root_rejected(self):
+        blob = fixture()
+        root = node("", [("compatible", b"softbank,air-terminal-6\0")])
+        body = blob[56:-11]
+        new_body = body[:-4] + root + word(9)
+        strings = b"compatible\0"
+        total = 56 + len(new_body) + len(strings)
+        header = struct.pack(">10I", gate.MAGIC, total, 56, 56 + len(new_body),
+                             40, 17, 16, 0, len(strings), len(new_body))
+        with self.assertRaisesRegex(ValueError, "repeated root"):
+            gate.parse_fdt(header + b"\0" * 16 + new_body + strings)
+
+    def test_trailing_structure_token_rejected(self):
+        blob = fixture()
+        body = blob[56:-11] + word(4)
+        strings = b"compatible\0"
+        total = 56 + len(body) + len(strings)
+        header = struct.pack(">10I", gate.MAGIC, total, 56, 56 + len(body),
+                             40, 17, 16, 0, len(strings), len(body))
+        with self.assertRaises(ValueError):
+            gate.parse_fdt(header + b"\0" * 16 + body + strings)
+
     def test_truncated_rejected(self):
         with self.assertRaises(ValueError):
             gate.parse_fdt(fixture()[:-1])
