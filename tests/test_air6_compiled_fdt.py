@@ -70,6 +70,24 @@ class CompiledFdtTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             gate.parse_fdt(header + b"\0" * 16 + body + strings)
 
+    def test_overlapping_blocks_rejected(self):
+        blob = bytearray(fixture())
+        struct.pack_into(">I", blob, 12, 56)  # strings begin inside structure
+        with self.assertRaisesRegex(ValueError, "overlapping FDT blocks"):
+            gate.parse_fdt(bytes(blob))
+
+    def test_unterminated_reservation_map_rejected(self):
+        blob = bytearray(fixture())
+        blob[40:56] = word(1) + word(0) + word(0) + word(1)
+        with self.assertRaisesRegex(ValueError, "unterminated FDT reservation map"):
+            gate.parse_fdt(bytes(blob))
+
+    def test_misaligned_reservation_map_rejected(self):
+        blob = bytearray(fixture())
+        struct.pack_into(">I", blob, 16, 44)
+        with self.assertRaisesRegex(ValueError, "invalid FDT reservation map"):
+            gate.parse_fdt(bytes(blob))
+
     def test_truncated_rejected(self):
         with self.assertRaises(ValueError):
             gate.parse_fdt(fixture()[:-1])
