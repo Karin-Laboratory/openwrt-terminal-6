@@ -22,7 +22,7 @@ def parse_fdt(blob):
         raise ValueError("invalid FDT offsets")
     if off_struct + struct_len > total or off_strings + strings_len > total:
         raise ValueError("FDT block out of bounds")
-    strings = blob[off_strings:off_strings + strings_len]
+    # Reject overlapping blocks and an unterminated memory reservation map.\n    blocks = [(off_struct, off_struct + struct_len),\n              (off_strings, off_strings + strings_len)]\n    if any(start < 40 or end < start for start, end in blocks):\n        raise ValueError("invalid FDT block extent")\n    if max(blocks[0][0], blocks[1][0]) < min(blocks[0][1], blocks[1][1]):\n        raise ValueError("overlapping FDT blocks")\n    reserve_end = min(off_struct, off_strings)\n    if off_rsv % 8 or off_rsv + 16 > reserve_end:\n        raise ValueError("invalid FDT reservation map")\n    reserve_pos = off_rsv\n    while reserve_pos + 16 <= reserve_end:\n        address, size = struct.unpack_from(">QQ", blob, reserve_pos)\n        reserve_pos += 16\n        if address == 0 and size == 0:\n            break\n    else:\n        raise ValueError("unterminated FDT reservation map")\n    strings = blob[off_strings:off_strings + strings_len]
     pos, stop = off_struct, off_struct + struct_len
     stack, nodes, properties = [], set(), {}
     root_seen = False
