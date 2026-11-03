@@ -1,12 +1,15 @@
 # Source rights and redistribution audit queue (2026-10-30)
 
+> **Current engineering scope (2026-11-04):** The [p25/p26 mainline policy](MAINLINE-P25-P26-POLICY.md) permits implementation, proven backports, local tests and ephemeral unsigned image builds without finishing this entire 73-entry inventory. Each **publicly committed** source contribution still needs a defensible origin/license, and distributed binaries require component-specific compliance. Pending inventory status is **not a development stop-work gate**.
+
+
 **Issue #2, ongoing review. This document does not grant copyright, contributor authorization, secure disclosure clearance, or firmware redistribution permission.**
 
 ## Verified inventory facts (catalog refreshed 2026-11-01)
 
 - `config/source-catalog.json` currently contains **73** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
 - The clean Public repository is already visible. GitHub-hosted CI has passed the source-only tests and reachable-history scanner, but this is narrower than complete publication/right-to-redistribute and sensitive artifact reviews.
-- Full firmware, signing, vendor radio/EEPROM material, LK recovery implementation and installable images are **outside** the current supported source-only distribution.
+- **Public distribution remains source-only**; unsigned p25/p26 image construction in private or ephemeral CI is the current goal. Signed/installable releases, vendor radio/EEPROM materials, signing and device operations remain outside routine public distribution.
 
 ## Inventory by declared origin/license (not legal conclusions)
 
@@ -24,7 +27,7 @@ The summary is a **2026-11-01 source-catalog snapshot**. Changes to catalog entr
 | independent-original / GPL-2.0-only | 4 | `board/mt6990-air-terminal-6.dts`, ethernet test DTS | pending; verify authorship |
 | **Total** | **73** | Catalog entries; additional `missing_dependencies` are not source files | **73 pending** |
 
-The listed labels are claims to verify, not a substitute for signed contribution authorization or a copyright audit. Every new and modified code file must retain a catalog identity and a **pending** review status until independently cleared.
+The labels are not a copyright ruling. New/modified source retains a catalog identity and **pending** status until supported by evidence, but pending does not prevent development or isolated builds. Public backports carry a short PR origin URL/revision (or self-authored observation basis), license and any unresolved concerns.
 
 ## Concrete review queue and acceptance evidence
 
@@ -37,9 +40,9 @@ The listed labels are claims to verify, not a substitute for signed contribution
 | P1 | Independent host tests and tooling | Confirm actual project authorship and MIT notices; trace any embedded GPL-derived code | File-by-file rights review recorded, no blanket MIT claim |
 | P1 | GitHub governance | Verify branch rules, security reporting, runner permissions, Actions logs/artifacts, Issue/PR discussions and past external distribution | Manual checks documented with dates and responsible reviewer; no sensitive details publicly dumped |
 
-## Required reviewer record (for each file)
+## Minimal per-change provenance; distribution review separately
 
-Record privately or in a rights-cleared PR: `path`, catalog Git blob, declared origin, original upstream URL and revision, copyright holder, SPDX obligations, contributor authorization evidence, redistributability decision, review date, reviewer and remaining questions. Only then change `rights_review` from `pending` to `approved`. Do not mass-approve entries based on labels or CI success.
+During normal development, a **one-line PR origin/revision/license note** is sufficient; do not mass-approve `rights_review` from labels or CI. Before distributing specific source or binaries, resolve significant third-party permission questions and satisfy applicable GPL source and notice duties. A fuller private record (rights holder, license, permission evidence, reviewer and date) is useful for **disputed or unclear components**, not a standing 73-file precondition to developing firmware.
 
 ## Hard boundaries for future implementation
 

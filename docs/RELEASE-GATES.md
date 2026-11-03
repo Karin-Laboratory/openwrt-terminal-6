@@ -1,5 +1,8 @@
 # Publication and firmware distribution are separate milestones
 
+> **Current 2026-11-04 distinction:** [Unsigned p25/p26 development](MAINLINE-P25-P26-POLICY.md) may proceed locally and in ephemeral CI. These are **distribution/device-release conditions**, not an authorization gate for writing or testing code. Public PRs require rights for the source disclosed; generated binaries must not be published by routine public CI through artifacts, caches, Releases or registries. Before any later binary distribution, provide corresponding source and notices required by the actual component licenses, whether signed or unsigned.
+
+
 Current track-by-track integration and self-hosted build evidence: [engineering status 2026-10-27](ENGINEERING-STATUS-20261027.md). Pending runs are not counted as PASS.
 
 For the dated branch-tip, GitHub-conversation and source-equivalent ARM64 build review, see [2026-10-27 additional audit](PREPUBLICATION-REF-AND-BUILD-AUDIT-20261027.md). It is limited in scope and does not clear these gates.
@@ -39,7 +42,7 @@ The lack of a firmware release is **not** a failure of source-only upstream rese
 
 ## CI trust boundary
 
-Use GitHub-hosted, short-lived runners for source-only test jobs. No SDK keys, device access, preserved private build paths, firmware signers, shell access to home infrastructure or secret-backed upload actions are authorized in public PR workflows.
+Use GitHub-hosted, short-lived runners for public source tests and ephemeral unsigned build jobs. No SDK keys, device access, preserved private build paths, firmware signers, shell access to home infrastructure or secret-backed upload actions are authorized in public PR workflows.
 
 ## Queued trusted-runner safety condition (2026-10-27)
 

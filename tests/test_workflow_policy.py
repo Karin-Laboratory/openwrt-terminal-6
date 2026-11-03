@@ -71,6 +71,43 @@ class WorkflowPolicyTests(unittest.TestCase):
         self.assertIn("explicit security re-review",
                       " ".join(gate.check_trusted_workflow(original + "\\n# modified")))
 
+
+    def test_block_artifact_release_and_cache_actions(self):
+        for action in (
+            "actions/upload-artifact",
+            "actions/cache",
+            "actions/cache/save",
+            "actions/cache/restore",
+            "softprops/action-gh-release",
+            "ncipollo/release-action",
+            "docker/build-push-action",
+        ):
+            with self.subTest(action=action):
+                workflow = SAFE + ("      - uses: " + action + "@" + "a" * 40 + "\n")
+                self.assertIn("published build-output action", gate.check(workflow))
+
+    def test_block_cli_release_cache_and_registry_push(self):
+        for command in (
+            "gh release create v1 release.img",
+            "gh release upload v1 boot.img",
+            "gh cache create something",
+            "gh api --method POST repos/org/repo/releases",
+            "docker push registry.invalid/firmware",
+            "podman push registry.invalid/firmware",
+        ):
+            with self.subTest(command=command):
+                self.assertIn("published build-output command",
+                              gate.check(SAFE + "      - run: " + command + "\n"))
+
+    def test_block_implicit_dependency_cache(self):
+        self.assertIn("public workflow caching",
+                      gate.check(SAFE + "        cache: pip\n"))
+        self.assertEqual(gate.check(SAFE + "        cache: false\n"), [])
+
+    def test_ephemeral_compilation_is_still_allowed(self):
+        workflow = SAFE + "      - run: make Image && test -s Image && rm Image\n"
+        self.assertEqual(gate.check(workflow), [])
+
     def test_block_mutable_action(self):
         issues = gate.check(SAFE.replace(
             "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",

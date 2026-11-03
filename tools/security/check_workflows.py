@@ -29,6 +29,26 @@ PROHIBITED = [
     ("privileged shell", re.compile(r"\bsudo\s")),
     ("token write permission", re.compile(r"\b(?:contents|actions|id-token|issues|pull-requests|packages)\s*:\s*write\b")),
     ("floating action reference", re.compile(r"(?m)^\s*-\s*uses:\s*[^\n@]+@(?![0-9a-f]{40}(?:\s|$))[^\s#]+")),
+    # Public Actions artifacts, caches and Releases can expose compiled binaries.
+    # Keep generated p25/p26 and intermediate build outputs ephemeral until
+    # a separate explicit distribution decision; this does not block builds.
+    ("published build-output action", re.compile(
+        r"(?mi)^\s*-\s*uses:\s*(?:"
+        r"actions/(?:upload-artifact|cache(?:/(?:save|restore))?|create-release|upload-release-asset)"
+        r"|softprops/action-gh-release|ncipollo/release-action"
+        r"|docker/build-push-action)@"
+    )),
+    ("published build-output command", re.compile(
+        r"(?mi)^\s*(?!#).*?\b(?:"
+        r"gh\s+(?:release\s+(?:create|upload)|cache\s+(?:create|save))"
+        r"|gh\s+api\b[^\n]*(?:/releases\b|/actions/(?:artifacts|caches)\b)"
+        r"|(?:docker|podman)\s+push\b"
+        r")"
+    )),
+    ("public workflow caching", re.compile(
+        r"(?mi)^\s*cache:\s*(?!false\b|off\b|none\b)[^\s#\r\n]+"
+    )),
+
 ]
 
 def check(text: str):

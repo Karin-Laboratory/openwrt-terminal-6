@@ -1,5 +1,8 @@
 # Source origin, licenses and evidence boundaries
 
+> **Current 2026-11-04 approach:** The [p25/p26 mainline policy](MAINLINE-P25-P26-POLICY.md) welcomes proven backports and independently authored code based on real-device observations. Published backports need a one-line origin/revision/license note. An `independent-original` catalog tag is a claimed source category, **not conclusive evidence of copyright ownership of AI-assisted material**. An inventory entry still pending does not prevent local builds; publication requires rights for the material actually published.
+
+
 This repository was constructed in a **new Git history** by selecting individual source files rather than cloning or rebasing the private research archive. Rights review remains ongoing after the repository became Public; publication is not independent approval of third-party redistribution rights.
 
 ## New board research source attribution

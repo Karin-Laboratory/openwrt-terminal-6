@@ -1,16 +1,18 @@
 # OpenWrt for SoftBank Air Terminal 6
 
-Public, source-only community research toward OpenWrt support for the SoftBank Air Terminal 6 (SBAT6 series / MediaTek MT6990).
+Public-source community development for the SoftBank Air Terminal 6 (SBAT6 series / MediaTek MT6990), with unsigned p25/p26 engineering builds as the current goal.
 
 > **2026-11-02 Alpha 3 RC1 Developer Preview:** [Read the Alpha 3 source and technical-status announcement](docs/ALPHA3-RC1-20261102.md). This shares research milestones and collaboration guidance, **not a publicly downloadable, installable or C-device-boot-verified RC1 firmware**. For testing interest, see [Discussions #50](https://github.com/Karin-Laboratory/openwrt-terminal-6/discussions/50).
 
-> **Source-only experimental project. No downloadable or supported firmware, installation instructions, signature keys, or confirmed safe recovery procedure are provided. Do not flash images based on this repository.**
+> **Public distribution remains source-only today. Local and ephemeral unsigned p25/p26 builds are engineering work, not downloadable or supported firmware. No signing keys, install instructions, or confirmed safe recovery procedure are supplied. Do not flash images based on this repository.**
 
 ## Current mainline priority (2026-11-04)
 
 **Build complete, redistributable unsigned p25 (boot_a) and p26 (rootfs_a) from auditable OpenWrt-compatible source inputs.** Reuse implementation and build knowledge from already boot-successful research builds wherever legally reusable; independently written code based on device observations and ordinary upstream GPL/MIT reuse are welcome. Focus this public mainline on backporting, source/licensing cleanup, and reproducible image construction, **not new feature exploration**. File-level review flags are not a prerequisite for implementing or testing; actual public binary distribution has its own compliance checks.
 
 **Automated contributors / 12-minute runs:** read [the current mainline execution policy](docs/MAINLINE-P25-P26-POLICY.md) first. This supersedes older AP-first task ordering; signing and public flashable releases remain separate.
+
+**Publication boundary:** public PRs contain shareable source only; public CI may compile images ephemerally but must not upload generated binaries to artifacts, caches, Releases or registries. Include one origin/revision/license line for each backport; the full pending inventory does not stop development. Modifying Wi-Fi/cellular operation can affect Japanese radio certification, carrier agreements and warranty; verify permissible use before RF transmission.
 
 ## Demonstrated development milestones
 
@@ -26,7 +28,7 @@ Read the [engineering integration status](docs/ENGINEERING-STATUS-20261027.md), 
 
 ## Start here
 
-This is a **public development repository**, not a firmware download page. Browse [technical status](docs/STATUS.md) to distinguish what worked on a research unit from what is reproducible from this tree. Review [roadmap](docs/ROADMAP.md) for next engineering milestones and [build contract](docs/BUILD-CONTRACT.md) for offline checks. Report bugs or propose small source improvements via Issues and PRs, following [CONTRIBUTING.md](CONTRIBUTING.md).
+This is a **public source development repository with unsigned image-build work underway**, not a firmware download page. Browse [technical status](docs/STATUS.md) to distinguish what worked on a research unit from what is reproducible from this tree. Review [roadmap](docs/ROADMAP.md) for next engineering milestones and [build contract](docs/BUILD-CONTRACT.md) for offline checks. Report bugs or propose small source improvements via Issues and PRs, following [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **What you can do today:** inspect the code, patches and the new [independently authored Air6 DTS source candidate](board/mt6990-air-terminal-6.dts), run host-side syntax tests, review provenance and discuss upstream integration. The DTS is **not** a complete or verified Air6 board definition; unvalidated hardware consumers are disabled. **What you cannot do from this repository:** build a complete supported SBAT6 firmware or safely flash a device.
 
