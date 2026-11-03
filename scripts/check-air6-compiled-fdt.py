@@ -25,6 +25,7 @@ def parse_fdt(blob):
     strings = blob[off_strings:off_strings + strings_len]
     pos, stop = off_struct, off_struct + struct_len
     stack, nodes, properties = [], set(), {}
+    root_seen = False
     ended = False
     while pos + 4 <= stop:
         token = struct.unpack_from(">I", blob, pos)[0]
@@ -37,8 +38,10 @@ def parse_fdt(blob):
             if "/" in name:
                 raise ValueError("invalid node name")
             pos = (end + 4) & ~3
-            if not stack and name != "":
-                raise ValueError("missing root")
+            if not stack:
+                if name != "" or root_seen:
+                    raise ValueError("invalid or repeated root")
+                root_seen = True
             path = (stack[-1] if stack else "") + "/" + name
             if path in nodes:
                 raise ValueError("duplicate node " + path)
@@ -73,7 +76,7 @@ def parse_fdt(blob):
             break
         else:
             raise ValueError("unknown FDT token " + str(token))
-    if not ended or ("/", "compatible") not in properties:
+    if not ended or pos != stop or ("/", "compatible") not in properties:
         raise ValueError("missing FDT end/root compatible")
     compatibles = properties[("/", "compatible")].split(b"\0")
     if b"softbank,air-terminal-6" not in compatibles:
