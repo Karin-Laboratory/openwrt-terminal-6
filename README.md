@@ -4,7 +4,7 @@ Public, source-only community research toward OpenWrt support for the SoftBank A
 
 > **2026-11-02 Alpha 3 RC1 Developer Preview:** [Read the Alpha 3 source and technical-status announcement](docs/ALPHA3-RC1-20261102.md). This shares research milestones and collaboration guidance, **not a publicly downloadable, installable or C-device-boot-verified RC1 firmware**. For testing interest, see [Discussions #50](https://github.com/Karin-Laboratory/openwrt-terminal-6/discussions/50).
 
-> **Source-only experimental project. No downloadable or supported firmware, installation instructions, signature keys, or confirmed safe recovery procedure are provided. Do not flash images based on this repository.**
+> **Alpha 3 Developer Preview Wave 2 (2026-11-03):** [Current evidence and release gates](docs/ALPHA3-DEVELOPER-PREVIEW-STATUS.md) · [Contributor getting started / 参加ガイド (日本語・English)](docs/ALPHA3-CONTRIBUTOR-START.md). Source-only participation is open; **no public flashable firmware, authentic C-unit Linux boot claim, or safe installation procedure**.\n\n> **Source-only experimental project. No downloadable or supported firmware, installation instructions, signature keys, or confirmed safe recovery procedure are provided. Do not flash images based on this repository.**
 
 ## Demonstrated development milestones
 
