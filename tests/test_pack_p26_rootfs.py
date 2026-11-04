@@ -113,7 +113,16 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "UNPROVISIONED_AUTOSTART"):
                 mod.check_tree(root)
 
-    def test_output_inside_rootfs_rejected(self):\n        with tempfile.TemporaryDirectory() as d:\n            root = Path(d) / "stage"\n            root.mkdir()\n            self.make_root(root)\n            # This must fail before a source receipt or squashfs tools are needed.\n            with self.assertRaisesRegex(ValueError, "OUTPUT_INSIDE_INPUT_ROOTFS"):\n                mod.produce(root, root / "out", Path(d) / "missing.json")\n\n    def test_output_requires_verified_source_receipt(self):
+    def test_output_inside_rootfs_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "stage"
+            root.mkdir()
+            self.make_root(root)
+            # This must fail before a source receipt or squashfs tools are needed.
+            with self.assertRaisesRegex(ValueError, "OUTPUT_INSIDE_INPUT_ROOTFS"):
+                mod.produce(root, root / "out", Path(d) / "missing.json")
+
+    def test_output_requires_verified_source_receipt(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
             root.mkdir()
