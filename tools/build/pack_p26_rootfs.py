@@ -55,8 +55,8 @@ def check_tree(root):
         item = root / directory
         require(not item.exists() and not item.is_symlink(), "FIRMWARE_RIGHTS_UNPROVEN")
     for path in root.rglob("*"):
-        require(not path.is_symlink() or not os.readlink(path).startswith("/"),
-                "ABSOLUTE_SYMLINK_" + path.relative_to(root).as_posix())
+        # OpenWrt legitimately uses in-filesystem absolute links such as /var -> /tmp.
+        # Preserve them; the filesystem is not mounted or dereferenced by this validator.
         if not path.is_symlink():
             require(path.is_file() or path.is_dir(), "SPECIAL_FILE")
         rel = path.relative_to(root).as_posix()
@@ -81,9 +81,15 @@ def produce(root, output, source_receipt):
             "UNPINNED_OPENWRT_SOURCE")
     require(record.get("package_install") is True and
             record.get("source_built") is True, "UNVERIFIED_PACKAGE_SOURCE")
+    require(isinstance(record.get("packages"), list) and
+            all(isinstance(p, str) and p for p in record["packages"]) and
+            set(("base-files", "busybox", "procd", "ubus", "uci", "netifd", "dropbear")).issubset(record["packages"]),
+            "INCOMPLETE_PACKAGE_INVENTORY")
+    require(isinstance(record.get("feeds"), dict), "PINNED_FEEDS_RECEIPT_REQUIRED")
     check_tree(root)
     require(output.is_absolute() and not output.exists() and
-            output.parent.is_dir() and not output.parent.is_symlink(),
+            output.parent.is_dir() and not output.parent.is_symlink() and
+            stat.S_IMODE(output.parent.stat().st_mode) & 0o077 == 0,
             "NEW_ABSOLUTE_OUTPUT_DIRECTORY_REQUIRED")
     require(shutil.which("mksquashfs") is not None and
             shutil.which("unsquashfs") is not None, "SQUASHFS_TOOLS_MISSING")
@@ -91,7 +97,7 @@ def produce(root, output, source_receipt):
     output.mkdir(mode=0o700)
     raw = output / "rootfs.squashfs"
     full = output / "rootfs_a.p26"
-    # Fixed time and sorted file order eliminate obvious host timestamp drift.
+    # Fixed time improves repeatability; pin squashfs-tools version independently.
     # Exact byte reproducibility still depends on pinned squashfs-tools version.
     subprocess.run(["mksquashfs", str(root), str(raw), "-noappend", "-comp", "xz",
                     "-b", "262144", "-processors", "1", "-no-progress",
