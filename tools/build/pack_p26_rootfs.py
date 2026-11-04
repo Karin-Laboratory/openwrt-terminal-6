@@ -53,7 +53,13 @@ def check_tree(root):
     rows = [line for line in shadow.splitlines() if line.startswith("root:")]
     require(len(rows) == 1 and rows[0].split(":")[1].startswith(("!", "*")),
             "ROOT_ACCOUNT_NOT_LOCKED")
+    # Do not follow symlinked ancestors when inspecting forbidden paths.
+    # Otherwise a staged link can hide credentials outside the tree.
     for name in FORBIDDEN:
+        parts = Path(name).parts
+        require(all(not (root / Path(*parts[:i])).is_symlink()
+                    for i in range(1, len(parts))),
+                "FORBIDDEN_PARENT_SYMLINK_" + name.replace("/", "_").upper())
         item = root / name
         require(not item.exists() and not item.is_symlink(),
                 "DEVICE_SECRET_OR_UNPROVISIONED_RADIO_" + name.replace("/", "_").upper())
@@ -70,6 +76,7 @@ def check_tree(root):
                 ("dropbear_rsa_host_key", "dropbear_ed25519_host_key", "calibration", "eeprom.bin")),
                 "CREDENTIAL_OR_CALIBRATION")
     rc = root / "etc/rc.d"
+    require(not rc.is_symlink(), "AUTOSTART_DIRECTORY_SYMLINK")
     if rc.exists():
         for item in rc.iterdir():
             require(not any(x in item.name.lower() for x in ("dropbear", "wpad", "hostapd")),
