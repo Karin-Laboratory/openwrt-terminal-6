@@ -32,6 +32,20 @@ class P26PackerTests(unittest.TestCase):
             self.make_root(root)
             self.assertTrue(mod.check_tree(root))
 
+    def test_required_parent_symlink_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "stage"
+            root.mkdir()
+            self.make_root(root)
+            external = Path(d) / "host"
+            external.mkdir()
+            (external / "dropbear").write_text("host secret")
+            (root / "usr/sbin/dropbear").unlink()
+            (root / "usr/sbin").rmdir()
+            (root / "usr/sbin").symlink_to(external, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "REQUIRED_PARENT_SYMLINK"):
+                mod.check_tree(root)
+
     def test_unlocked_password_fails(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
