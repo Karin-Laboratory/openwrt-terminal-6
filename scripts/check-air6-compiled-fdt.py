@@ -43,12 +43,15 @@ def parse_fdt(blob):
     strings = blob[off_strings:off_strings + strings_len]
     pos, stop = off_struct, off_struct + struct_len
     stack, nodes, properties = [], set(), {}
+    child_started = []
     root_seen = False
     ended = False
     while pos + 4 <= stop:
         token = struct.unpack_from(">I", blob, pos)[0]
         pos += 4
         if token == BEGIN:
+            if child_started:
+                child_started[-1] = True
             end = blob.find(b"\0", pos, stop)
             if end < 0:
                 raise ValueError("unterminated node")
@@ -65,13 +68,17 @@ def parse_fdt(blob):
                 raise ValueError("duplicate node " + path)
             nodes.add(path)
             stack.append(path.rstrip("/"))
+            child_started.append(False)
         elif token == END_NODE:
             if not stack:
                 raise ValueError("unbalanced FDT")
             stack.pop()
+            child_started.pop()
         elif token == PROP:
             if not stack or pos + 8 > stop:
                 raise ValueError("invalid property")
+            if child_started[-1]:
+                raise ValueError("property after child node")
             length, nameoff = struct.unpack_from(">II", blob, pos)
             pos += 8
             if nameoff >= len(strings):
