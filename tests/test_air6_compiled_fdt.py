@@ -106,6 +106,19 @@ class CompiledFdtTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unterminated compatible"):
             gate.parse_fdt(blob)
 
+    def test_property_after_child_rejected(self):
+        blob = fixture()
+        # Place a root property after the switch child, before root END_NODE.
+        body = blob[56:-11]
+        prop = word(3) + word(4) + word(0) + b"bad\0"
+        new_body = body[:-8] + prop + body[-8:]
+        strings = b"compatible\0"
+        total = 56 + len(new_body) + len(strings)
+        header = struct.pack(">10I", gate.MAGIC, total, 56, 56 + len(new_body),
+                             40, 17, 16, 0, len(strings), len(new_body))
+        with self.assertRaisesRegex(ValueError, "property after child node"):
+            gate.parse_fdt(header + b"\0" * 16 + new_body + strings)
+
     def test_truncated_rejected(self):
         with self.assertRaises(ValueError):
             gate.parse_fdt(fixture()[:-1])
