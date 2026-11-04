@@ -106,7 +106,7 @@ def produce(root, output, source_receipt):
             "INCOMPLETE_PACKAGE_INVENTORY")
     require(isinstance(record.get("feeds"), dict), "PINNED_FEEDS_RECEIPT_REQUIRED")
     check_tree(root)
-    require(output.is_absolute() and not output.exists() and
+    # Never write output inside the input tree: mksquashfs would ingest its\n    # own output, and an ancestor symlink could conceal that relationship.\n    require(not output.resolve().is_relative_to(root),\n            "OUTPUT_INSIDE_INPUT_ROOTFS")\n    require(output.is_absolute() and not output.exists() and
             output.parent.is_dir() and not output.parent.is_symlink() and
             stat.S_IMODE(output.parent.stat().st_mode) & 0o077 == 0,
             "NEW_ABSOLUTE_OUTPUT_DIRECTORY_REQUIRED")
