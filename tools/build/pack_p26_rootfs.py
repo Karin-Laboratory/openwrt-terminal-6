@@ -64,6 +64,10 @@ def check_tree(root):
         require(not item.exists() and not item.is_symlink(),
                 "DEVICE_SECRET_OR_UNPROVISIONED_RADIO_" + name.replace("/", "_").upper())
     for directory in ("lib/firmware", "usr/lib/firmware"):
+        parts = Path(directory).parts
+        require(all(not (root / Path(*parts[:i])).is_symlink()
+                    for i in range(1, len(parts))),
+                "FIRMWARE_PARENT_SYMLINK")
         item = root / directory
         require(not item.exists() and not item.is_symlink(), "FIRMWARE_RIGHTS_UNPROVEN")
     for path in root.rglob("*"):
@@ -75,6 +79,7 @@ def check_tree(root):
         require(not any(token in rel.lower() for token in
                 ("dropbear_rsa_host_key", "dropbear_ed25519_host_key", "calibration", "eeprom.bin")),
                 "CREDENTIAL_OR_CALIBRATION")
+    require(not (root / "etc").is_symlink(), "AUTOSTART_PARENT_SYMLINK")
     rc = root / "etc/rc.d"
     require(not rc.is_symlink(), "AUTOSTART_DIRECTORY_SYMLINK")
     if rc.exists():
