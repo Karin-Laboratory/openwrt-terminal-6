@@ -53,7 +53,7 @@ def parse_fdt(blob):
             if end < 0:
                 raise ValueError("unterminated node")
             name = blob[pos:end].decode("ascii")
-            if "/" in name:
+            if "/" in name or (stack and not name):
                 raise ValueError("invalid node name")
             pos = (end + 4) & ~3
             if not stack:
@@ -96,6 +96,9 @@ def parse_fdt(blob):
             raise ValueError("unknown FDT token " + str(token))
     if not ended or pos != stop or ("/", "compatible") not in properties:
         raise ValueError("missing FDT end/root compatible")
+    for (path, name), value in properties.items():
+        if name == "compatible" and (not value or not value.endswith(b"\0")):
+            raise ValueError("unterminated compatible property")
     compatibles = properties[("/", "compatible")].split(b"\0")
     if b"softbank,air-terminal-6" not in compatibles:
         raise ValueError("not Air Terminal 6")
