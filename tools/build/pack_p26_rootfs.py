@@ -92,6 +92,10 @@ def check_tree(root):
 def produce(root, output, source_receipt):
     require(not root.is_symlink(), "ROOTFS_SYMLINK")
     root = root.resolve(strict=True)
+    # Never write output inside the input tree: mksquashfs would ingest its
+    # own output, and an ancestor symlink could conceal that relationship.
+    require(not output.resolve().is_relative_to(root),
+            "OUTPUT_INSIDE_INPUT_ROOTFS")
     require(source_receipt.is_file() and not source_receipt.is_symlink(),
             "SOURCE_RECEIPT_REQUIRED")
     record = json.loads(source_receipt.read_text())
@@ -106,10 +110,6 @@ def produce(root, output, source_receipt):
             "INCOMPLETE_PACKAGE_INVENTORY")
     require(isinstance(record.get("feeds"), dict), "PINNED_FEEDS_RECEIPT_REQUIRED")
     check_tree(root)
-    # Never write output inside the input tree: mksquashfs would ingest its
-    # own output, and an ancestor symlink could conceal that relationship.
-    require(not output.resolve().is_relative_to(root),
-            "OUTPUT_INSIDE_INPUT_ROOTFS")
     require(output.is_absolute() and not output.exists() and
             output.parent.is_dir() and not output.parent.is_symlink() and
             stat.S_IMODE(output.parent.stat().st_mode) & 0o077 == 0,
