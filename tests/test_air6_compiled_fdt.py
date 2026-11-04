@@ -88,6 +88,24 @@ class CompiledFdtTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid FDT reservation map"):
             gate.parse_fdt(bytes(blob))
 
+    def test_empty_child_name_rejected(self):
+        blob = fixture()
+        # Keep the FDT length/layout intact while blanking the child name.
+        mutated = blob.replace(b"switch@0\0", b"\0\0\0\0\0\0\0\0\0")
+        with self.assertRaisesRegex(ValueError, "invalid node name"):
+            gate.parse_fdt(mutated)
+
+    def test_unterminated_root_compatible_rejected(self):
+        blob = fixture().replace(b"softbank,air-terminal-6\0",
+                                 b"softbank,air-terminal-6X")
+        with self.assertRaisesRegex(ValueError, "unterminated compatible"):
+            gate.parse_fdt(blob)
+
+    def test_unterminated_switch_compatible_rejected(self):
+        blob = fixture().replace(b"mediatek,mt7531\0", b"mediatek,mt7531X")
+        with self.assertRaisesRegex(ValueError, "unterminated compatible"):
+            gate.parse_fdt(blob)
+
     def test_truncated_rejected(self):
         with self.assertRaises(ValueError):
             gate.parse_fdt(fixture()[:-1])
