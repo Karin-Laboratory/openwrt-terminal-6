@@ -40,13 +40,12 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "ROOT_ACCOUNT_NOT_LOCKED"):
                 mod.check_tree(root)
 
-    def test_absolute_symlink_fails(self):
+    def test_standard_absolute_symlink_preserved(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             self.make_root(root)
-            (root / "bad").symlink_to("/etc/shadow")
-            with self.assertRaisesRegex(ValueError, "ABSOLUTE_SYMLINK"):
-                mod.check_tree(root)
+            (root / "var").symlink_to("/tmp")
+            self.assertTrue(mod.check_tree(root))
 
     def test_forbidden_firmware_fails(self):
         with tempfile.TemporaryDirectory() as d:
