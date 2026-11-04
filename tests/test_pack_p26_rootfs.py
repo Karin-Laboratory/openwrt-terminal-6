@@ -69,6 +69,18 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "AUTOSTART_DIRECTORY_SYMLINK"):
                 mod.check_tree(root)
 
+    def test_firmware_parent_symlink_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "stage"
+            root.mkdir()
+            self.make_root(root)
+            outside = Path(d) / "outside"
+            outside.mkdir()
+            (outside / "firmware").mkdir()
+            (root / "usr/lib").symlink_to(outside, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "FIRMWARE_PARENT_SYMLINK"):
+                mod.check_tree(root)
+
     def test_unlocked_password_fails(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
