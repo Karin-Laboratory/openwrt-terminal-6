@@ -40,6 +40,12 @@ def check_tree(root):
     require(root.is_dir() and not root.is_symlink(), "ROOTFS_NOT_REAL_DIRECTORY")
     require(root != Path("/"), "HOST_ROOT_FORBIDDEN")
     for name in REQUIRED:
+        # Required executables must be inside the staged tree, not reached via
+        # a parent-directory symlink into the build host.
+        parts = Path(name).parts
+        require(all(not (root / Path(*parts[:i])).is_symlink()
+                    for i in range(1, len(parts))),
+                "REQUIRED_PARENT_SYMLINK_" + name.replace("/", "_").upper())
         item = root / name
         require(item.is_file() and not item.is_symlink() and item.stat().st_size > 0,
                 "MISSING_" + name.replace("/", "_").upper())
@@ -72,6 +78,7 @@ def check_tree(root):
 
 
 def produce(root, output, source_receipt):
+    require(not root.is_symlink(), "ROOTFS_SYMLINK")
     root = root.resolve(strict=True)
     require(source_receipt.is_file() and not source_receipt.is_symlink(),
             "SOURCE_RECEIPT_REQUIRED")
