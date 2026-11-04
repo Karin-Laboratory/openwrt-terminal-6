@@ -175,6 +175,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "scripts/check-air6-compiled-fdt.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1edb1acebe98ded55761d308b207c7a71a6894dc",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "scripts/fetch-pinned-openwrt-donor.sh",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -279,6 +288,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "9389f4e45355839956039fa1585819e4d102bfc2",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_compiled_fdt.py",
+      "component": "board-dt",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "822ecfb965ab1a104110f79854120c550028f402",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
