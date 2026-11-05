@@ -110,3 +110,16 @@ ONE_BLOCKER: one concrete missing input or failed verification
 ~~~
 
 「絶対に失敗しない」ことは保証できない。実行順・入力・結果を固定し、**最初の確定した欠落でfail closed、成功層は再実行しない**方式で失敗と手戻りを極小化する。
+
+## 8. 2026-11-05 19:56 JST 追加実ジョブログ診断：リビルドせず台帳を直す
+
+最新PR #127ブランチのActions [#42014814965](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42014814965) と [#42014814721](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42014814721) はFAIL。前者の job `127202567173`、後者の job `127202566372` の**生ログ**を個別取得して確認した。どちらも最初の停止原因は `python3 tools/build/verify_source_catalog.py` で、実ログは次の2点。
+
+- `SOURCE CATALOG BLOCKED: input#43: source bytes differ from catalog identity`
+- `SOURCE CATALOG BLOCKED: uncatalogued source/test: tools/build/verify_p26_partition.py`
+
+この run の `native-defconfig` の10件の Python unit tests はPASSした後にcatalogで停止し、上流OpenWrt checkout/`make defconfig` の実行ステップは**SKIPPED**、続く native package-compile job も**SKIPPED**。公開source CIではEthernet/FDTなど既存host checksはPASSし、同じcatalogで停止した。一方 [#42014814904](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42014814904) のp26 synthetic packer testsはSUCCESS。**最新headの全3workflow PASSや実p26製造PASSとは報告しない。**
+
+**最短の一手：** #127の現在HEADで、(1) input#43のパス・記録SHAと現行git blobを正確に照合し、(2) `verify_p26_partition.py` の出典・SPDX/権利を確認してcatalog/関連inventoryへ登録し、(3) **catalog verifier単独**で再実行してから該当するCIだけ通す。正当なソース変更を伴わない帳尻合わせや権利の架空承認は禁止。その後、同じjob内の実OpenWrt package/install → p26 packer → 別プロセスの全量検証へ進む。これは**新しい全kernel / 221 APK再製造の指示ではない**。
+
+この診断は過去全件のmetadata索引とは別に、上記2失敗jobの実ログを精査した追補。最新runは凍結索引のcutoff後であるため、648件の確定総数に加算しない。失敗のない運用は保証できず、原因を1点ずつ固定して再実行範囲を最小化する。
