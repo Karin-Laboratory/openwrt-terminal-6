@@ -76,6 +76,18 @@ class VerifyP26PartitionTests(unittest.TestCase):
         self.receipt.write_text(json.dumps(record))
         self.assertNotEqual(self.run_verifier().returncode, 0)
 
+    def test_truncated_partition_rejected(self):
+        with self.image.open("r+b") as stream:
+            stream.truncate(PARTITION_SIZE - 1)
+        self.assertNotEqual(self.run_verifier().returncode, 0)
+
+    def test_squashfs_version_tamper_rejected_even_with_updated_hashes(self):
+        with self.image.open("r+b") as stream:
+            stream.seek(28)
+            stream.write(struct.pack("<HH", 3, 0))
+        self.write_receipt()
+        self.assertNotEqual(self.run_verifier().returncode, 0)
+
     def test_signed_receipt_rejected(self):
         record = json.loads(self.receipt.read_text())
         record["signed"] = True
