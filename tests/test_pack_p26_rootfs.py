@@ -142,6 +142,20 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "OUTPUT_INSIDE_INPUT_ROOTFS"):
                 mod.produce(root, alias / "nested", Path(d) / "missing.json")
 
+    def test_output_ancestor_symlink_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "stage"
+            root.mkdir()
+            self.make_root(root)
+            actual = Path(d) / "actual"
+            actual.mkdir(mode=0o700)
+            alias = Path(d) / "alias"
+            alias.symlink_to(actual, target_is_directory=True)
+            receipt = Path(d) / "missing.json"
+            # Fail before checking the receipt or invoking mksquashfs.
+            with self.assertRaisesRegex(ValueError, "OUTPUT_ANCESTOR_SYMLINK"):
+                mod.produce(root, alias / "out", receipt)
+
     def test_output_requires_verified_source_receipt(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
