@@ -1,5 +1,7 @@
 # 公開本線 p25/p26：全履歴からの最小手戻り・自動再現手順
 
+> **参照先の役割:** この文書（[PR #128](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/128)）は固定時点の公開Actions全履歴と最小再現手順の**正本**。最新の作業台帳、既知エラーと公開ドキュメントの入口は[PR #129](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/129)の[証拠・作業索引](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/evidence-workflow-index-20261105/docs/EVIDENCE-WORKFLOW-INDEX-20261105.md)を参照する。履歴JSONの複製やcron変更は行わない。両PRは未マージの独立ブランチ。
+
 更新: 2026-11-05 JST / 対象: PUBLIC Karin-Laboratory/openwrt-terminal-6
 正規の完成条件: [MAINLINE-P25-P26-POLICY.md](MAINLINE-P25-P26-POLICY.md)。
 **本記録は既存目標を変更しない履歴監査と実行設計。新しい完成イメージ、実機PASS、署名、公開配布を実行・承認した証拠ではない。**
