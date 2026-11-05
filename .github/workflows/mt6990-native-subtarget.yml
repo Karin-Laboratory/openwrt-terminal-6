@@ -290,6 +290,27 @@ jobs:
           print("P26_SAME_RUN_PACKAGE_INSTALL_RECEIPT_READY",
                 len(packages), record["installed_db_sha256"])
           PY
+          # Produce an ephemeral real p26 from THIS job's actual package/install
+          # root, then independently read back its full 128 MiB and filesystem.
+          # No Actions artifact, cache, release, signing, or device interaction.
+          command -v mksquashfs >/dev/null || {
+            sudo apt-get update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq squashfs-tools
+          }
+          test -x "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py" || \
+            test -f "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py"
+          install -d -m 0700 "$work/private-p26"
+          python3 "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py" \
+            --rootfs "$rootfs" \
+            --source-receipt "$work/p26-source-receipt.json" \
+            --output "$work/private-p26/packed"
+          test "$(stat -c %s "$work/private-p26/packed/rootfs_a.p26")" -eq 134217728
+          python3 "$GITHUB_WORKSPACE/tools/build/verify_p26_independent.py" \
+            --rootfs "$rootfs" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --squashfs "$work/private-p26/packed/rootfs.squashfs"
+          echo 'PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS'
+          echo 'LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution'
           # Build an external diagnostic PID1 cpio with the SAME pinned
           # OpenWrt cross-toolchain as the native MT6990 kernel Image.
           # It is not a procd boot test or a device-installable image.
