@@ -75,6 +75,14 @@ def check_tree(root):
         # Preserve them; the filesystem is not mounted or dereferenced by this validator.
         if not path.is_symlink():
             require(path.is_file() or path.is_dir(), "SPECIAL_FILE")
+        # -no-xattrs would silently discard capabilities and other metadata.
+        # Refuse such trees until a faithful metadata-preserving path exists.
+        if hasattr(os, "listxattr"):
+            try:
+                attrs = os.listxattr(path, follow_symlinks=False)
+            except OSError as exc:
+                raise ValueError("P26_BLOCKED_XATTR_INSPECTION_FAILED") from exc
+            require(not attrs, "XATTR_WOULD_BE_DROPPED")
         rel = path.relative_to(root).as_posix()
         require(not any(token in rel.lower() for token in
                 ("dropbear_rsa_host_key", "dropbear_ed25519_host_key", "calibration", "eeprom.bin")),
