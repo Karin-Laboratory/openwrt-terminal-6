@@ -167,6 +167,19 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "OUTPUT_ANCESTOR_SYMLINK"):
                 mod.produce(root, alias / "out", receipt)
 
+    def test_source_receipt_ancestor_symlink_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "stage"
+            root.mkdir()
+            self.make_root(root)
+            actual = Path(d) / "receipt-dir"
+            actual.mkdir()
+            (actual / "source.json").write_text("{}")
+            alias = Path(d) / "receipt-alias"
+            alias.symlink_to(actual, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_ANCESTOR_SYMLINK"):
+                mod.produce(root, Path(d) / "out", alias / "source.json")
+
     def test_output_requires_verified_source_receipt(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
