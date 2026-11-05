@@ -91,6 +91,8 @@ def check_tree(root):
 
 def produce(root, output, source_receipt):
     require(not root.is_symlink(), "ROOTFS_SYMLINK")
+    require(all(not parent.is_symlink() for parent in root.parents),
+            "ROOTFS_ANCESTOR_SYMLINK")
     root = root.resolve(strict=True)
     # Never write output inside the input tree: mksquashfs would ingest its
     # own output, and an ancestor symlink could conceal that relationship.
