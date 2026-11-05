@@ -1,0 +1,17 @@
+# 再発防止：公開本線の失敗パターン辞書（2026-11-05）
+
+分類: **source-onlyのトリアージ索引**。ここには調査結果やログを複製しない。元の正本は[PR #128の履歴・最短実行手順](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/128)の[§5/§8](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/p25-p26-reuse-workflow-audit-20261105/docs/MAINLINE-WORKFLOW-GOLDEN-REPLAY-20261105.ja.md)、[PR #127](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/127)と[正式ポリシー](MAINLINE-P25-P26-POLICY.md)。作業状態は[機械可読作業台帳](WORK-LEDGER-20261105.json)を参照。
+
+**使用条件:** 最初に最新HEADと対応run/jobを確認。古い失敗を現行HEADの失敗と断定しない。失敗原因・影響範囲・最小変更点を特定し、同じHEADの同じ検査だけを再実施。別の失敗になったら辞書を追加する。
+
+| コード | 検出の手掛かり | 再発防止と最小再開条件 | 一次証拠 |
+| --- | --- | --- | --- |
+| `PUB-CATALOG-IDENTITY` | `SOURCE CATALOG BLOCKED: input#43: source bytes differ from catalog identity` | 最新HEADの該当パスとsource catalog blob/hashを照合。正当なソース変更の出典・ライセンスと記録を修正後、**catalog verifier単独**で確認。形だけの値合わせは禁止 | [PR128 §8](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/p25-p26-reuse-workflow-audit-20261105/docs/MAINLINE-WORKFLOW-GOLDEN-REPLAY-20261105.ja.md)、[失敗run #42014814965](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42014814965) |
+| `PUB-UNCATALOGUED-NEW-VERIFY` | `uncatalogued source/test: tools/build/verify_p26_partition.py` | 実ファイルの出典/SPDX/公開権利を確認し既存catalogへ正しく登録、verificationだけ先に回す。kernel/rootfsフルビルドで隠さない | [PR128 §8](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/p25-p26-reuse-workflow-audit-20261105/docs/MAINLINE-WORKFLOW-GOLDEN-REPLAY-20261105.ja.md)、[run #42014814721](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42014814721) |
+| `PUB-CROSS-HEAD-PASS` | PR #118のwpadとPR #127のpackerの**別SHA**で各々CI SUCCESS | **同一checkout**のworkflow blob SHA、package manifest、rootfsとpackerの生成記録が揃うまで統合PASSを宣言しない | [PR128](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/128)、[PR118](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/118)、[PR127](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/127) |
+| `PUB-STAGE-LOST` | `rootfs-stage.tar.gz`が前ジョブで作られたが次の実行に存在しない | 同一jobで実`package/install`→実rootfs directory→既存p26 packerへ手渡す。public artifact/cacheを新設しない | [PR128 §3-A](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/p25-p26-reuse-workflow-audit-20261105/docs/MAINLINE-WORKFLOW-GOLDEN-REPLAY-20261105.ja.md)、[native workflow](../.github/workflows/mt6990-native-subtarget.yml) |
+| `PUB-METADATA-LOSS` | `tar --owner=0 --group=0` / `mksquashfs -no-xattrs`でUID/GID・xattr・capabilityが不確か | 実rootfsを同じjobでpack、別プロセスの`unsquashfs`とファイルメタデータ比較で証明。暫定/疑似PASSにしない | [PR127 p26契約](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/work/p26-rootfs-unsigned-packer-20261104/docs/P26-ROOTFS-MANUFACTURE.md) |
+| `PUB-KERNEL-NOT-P25` | ARM64 Image、DTS、FDTのソースQAのみ成功 | 正しいboot-v2構造を備える**32MiB unsigned p25そのもの**の独立readbackまでP25_BUILD=BLOCKED | [PR128 §3-B](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/p25-p26-reuse-workflow-audit-20261105/docs/MAINLINE-WORKFLOW-GOLDEN-REPLAY-20261105.ja.md) |
+| `PUB-CI-SCOPE-CONFUSION` | source-only / synthetic / QEMU / defconfigの緑を実物p26・実機成功と誤読 | 検証した対象、環境、出力SHA、独立receipt、行われなかったstep（SKIPPED）を別記。未実証をnullにする | [公開索引](EVIDENCE-WORKFLOW-INDEX-20261105.md)、[PR128](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/128) |
+
+**変更しないもの:** 現行の12分cron、Actions YAML、ビルド器、signer、release/flash方針。これは検索・引継ぎ資料のみ。新しい失敗を加える際は既存の正本runへのリンクを追加し、重複した原因説明の長文は増やさない。
