@@ -69,7 +69,14 @@ def check_tree(root):
                     for i in range(1, len(parts))),
                 "FIRMWARE_PARENT_SYMLINK")
         item = root / directory
-        require(not item.exists() and not item.is_symlink(), "FIRMWARE_RIGHTS_UNPROVEN")
+        # A stock OpenWrt package/install may create an empty firmware
+        # directory. Only reject real entries, not that harmless directory.
+        # Symlinks (including dangling ones) and any nested payload are
+        # never accepted without separate rights review.
+        require(not item.is_symlink(), "FIRMWARE_RIGHTS_UNPROVEN")
+        if item.exists():
+            require(item.is_dir(), "FIRMWARE_RIGHTS_UNPROVEN")
+            require(not any(item.iterdir()), "FIRMWARE_RIGHTS_UNPROVEN")
     # The staging root itself can carry capabilities or other xattrs too.
     # Checking only descendants would silently discard root-directory metadata.
     if hasattr(os, "listxattr"):
