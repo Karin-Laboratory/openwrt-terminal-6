@@ -286,7 +286,7 @@ jobs:
               "provenance_scope": "SAME_RUN_EPHEMERAL_NATIVE_PACKAGE_INSTALL",
           }
           (work / "p26-source-receipt.json").write_text(
-              json.dumps(record, sort_keys=True, indent=2) + "\\n")
+              json.dumps(record, sort_keys=True, indent=2) + "\n")
           print("P26_SAME_RUN_PACKAGE_INSTALL_RECEIPT_READY",
                 len(packages), record["installed_db_sha256"])
           PY
