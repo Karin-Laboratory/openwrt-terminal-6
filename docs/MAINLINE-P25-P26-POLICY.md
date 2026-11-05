@@ -31,10 +31,13 @@ These are engineering artifacts, **not an announcement of signed, safe-to-flash 
 ## Next-work selection for automated development
 
 At every existing scheduled trigger, if public mainline is the chosen workstream:
-1. Read this policy and current main/PR/build evidence.
-2. Choose the highest-impact **unblocked** p25 or p26 blocker, preferably independently editable.
-3. Backport or implement, validate, and put the change on an existing appropriate PR/branch or open a focused PR. Report concrete files, test evidence and the next blocker.
-4. If rights or provenance are uncertain, isolate the component and use a known licensed alternative or observation-based independent implementation. Continue other unblocked engineering; do not stop the whole project to finish the inventory.
-5. Keep signing keys, proprietary dumps, device identifiers and install/flash procedures out of the public tree.
+1. **Mandatory: read and execute [the incremental-build runbook](MAINLINE-INCREMENTAL-BUILD-RUNBOOK-20261106.md)** before any long build. Check the exact previous successful artifact and build provenance; classify the current change; decide which verified inputs can be reused. Log `REBUILD_SCOPE`, `REUSE_PROOF`, `CACHE_DECISION`, exact HEAD/run IDs and reason for any full rebuild. Never equate a historical green workflow with available binary bytes.
+2. Read this policy and current main/PR/build evidence.
+3. Choose the highest-impact **unblocked** p25 or p26 blocker, preferably independently editable.
+4. Backport or implement, validate, and put the change on an existing appropriate PR/branch or open a focused PR. Report concrete files, test evidence and the next blocker.
+5. If rights or provenance are uncertain, isolate the component and use a known licensed alternative or observation-based independent implementation. Continue other unblocked engineering; do not stop the whole project to finish the inventory.
+6. Keep signing keys, proprietary dumps, device identifiers and install/flash procedures out of the public tree.
+
+**Speed audit required:** after a build, record elapsed seconds, changed/reused source and binary hashes, exact acceptance proof or first blocker, and compare to the 2026-11-05 baseline. Reuse verified unchanged layers rather than recompile by habit. Do not cache or publish firmware/intermediates through public GitHub Actions artifacts, caches, Releases or registries; use controlled owner-private workspaces for lawful binary reuse. This is a mandatory decision-and-receipt procedure, not permission to skip any correctness or rights gate. Existing 12-minute cron schedules are unchanged.
 
 **Done means:** reproducible complete unsigned p25 and complete p26 produced from redistributable inputs, with build records and normal OSS license compliance. Independent rights/security review and general-public flashable release approval remain separate steps.
