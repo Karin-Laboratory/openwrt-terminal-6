@@ -132,6 +132,17 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "ROOTFS_SYMLINK"):
                 mod.produce(alias, Path(d) / "out", Path(d) / "missing.json")
 
+    def test_rootfs_ancestor_symlink_rejected_before_receipt(self):
+        with tempfile.TemporaryDirectory() as d:
+            actual = Path(d) / "actual"
+            root = actual / "stage"
+            root.mkdir(parents=True)
+            self.make_root(root)
+            alias = Path(d) / "alias"
+            alias.symlink_to(actual, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "ROOTFS_ANCESTOR_SYMLINK"):
+                mod.produce(alias / "stage", Path(d) / "out", Path(d) / "missing.json")
+
     def test_output_symlink_into_rootfs_rejected_before_receipt(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
