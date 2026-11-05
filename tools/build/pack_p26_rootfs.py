@@ -101,6 +101,8 @@ def produce(root, output, source_receipt):
     # Reject linked output ancestors before inspecting source receipts.
     require(all(not parent.is_symlink() for parent in output.parents),
             "OUTPUT_ANCESTOR_SYMLINK")
+    require(all(not parent.is_symlink() for parent in source_receipt.parents),
+            "SOURCE_RECEIPT_ANCESTOR_SYMLINK")
     require(source_receipt.is_file() and not source_receipt.is_symlink(),
             "SOURCE_RECEIPT_REQUIRED")
     record = json.loads(source_receipt.read_text())
