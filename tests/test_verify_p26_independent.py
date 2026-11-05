@@ -68,6 +68,15 @@ class IndependentP26Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
                 mod.verify(self.root, self.p26, self.raw)
 
+    def test_root_directory_mode_mismatch_rejected(self):
+        def changed_root(command, **kwargs):
+            self.fake_unsquashfs(command, **kwargs)
+            dest = Path(command[command.index("-d") + 1])
+            dest.chmod(0o700 if (self.root.stat().st_mode & 0o777) != 0o700 else 0o755)
+        with patch.object(mod.subprocess, "run", side_effect=changed_root):
+            with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
+                mod.verify(self.root, self.p26, self.raw)
+
     def test_symlink_input_rejected(self):
         alias = self.base / "alias"
         alias.symlink_to(self.p26)
