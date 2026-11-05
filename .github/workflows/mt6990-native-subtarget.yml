@@ -293,10 +293,18 @@ jobs:
           # Produce an ephemeral real p26 from THIS job's actual package/install
           # root, then independently read back its full 128 MiB and filesystem.
           # No Actions artifact, cache, release, signing, or device interaction.
-          command -v mksquashfs >/dev/null || {
-            sudo apt-get update -qq
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq squashfs-tools
-          }
+          # Extract Ubuntu's packaged squashfs-tools without root privileges.
+          # Reuse native tools if present; keep all binaries inside this job.
+          if ! command -v mksquashfs >/dev/null || ! command -v unsquashfs >/dev/null; then
+            mkdir -p "$work/squashfs-deb" "$work/squashfs-tools"
+            (cd "$work/squashfs-deb" && apt download squashfs-tools)
+            deb="$(find "$work/squashfs-deb" -maxdepth 1 -name 'squashfs-tools_*.deb' -print -quit)"
+            test -n "$deb" && test -s "$deb"
+            dpkg-deb -x "$deb" "$work/squashfs-tools"
+            export PATH="$work/squashfs-tools/usr/bin:$PATH"
+          fi
+          command -v mksquashfs
+          command -v unsquashfs
           test -x "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py" || \
             test -f "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py"
           install -d -m 0700 "$work/private-p26"
