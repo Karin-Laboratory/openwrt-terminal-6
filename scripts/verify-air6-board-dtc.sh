@@ -183,3 +183,21 @@ get_pinned "$BASE/target/linux/mediatek/files-6.18/drivers/phy/mediatek/phy-mtk-
   fi
 )
 echo 'AIR6_SGMII_PHY_RESET_SOURCE_PATCH_PASS (NO KERNEL BUILD)'
+
+# The follow-on PLL error propagation patch must apply to the already
+# reset-safe donor source, not to the unpatched original. This catches
+# patch drift before any native kernel build is attempted.
+(
+  cd "$TEMP/phy-source"
+  git apply --check "$ROOT/patches/mt6990/0003-air6-check-sgmii-pll-errors.patch"
+  git apply "$ROOT/patches/mt6990/0003-air6-check-sgmii-pll-errors.patch"
+  python3 - <<'PY'
+from pathlib import Path
+src = Path("drivers/phy/mediatek/phy-mtk-mt6990-sgmii.c").read_text()
+if "return regmap_update_bits(priv->pll" not in src:
+    raise SystemExit("PLL power-on error propagation missing")
+if "if (ret)\n\t\treturn ret;" not in src:
+    raise SystemExit("PLL configuration error propagation missing")
+print("AIR6_SGMII_PLL_ERROR_PATCH_PASS (SOURCE ONLY; NO KERNEL BUILD)")
+PY
+)
