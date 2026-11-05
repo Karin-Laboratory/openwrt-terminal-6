@@ -70,7 +70,7 @@ def check_tree(root):
                 "FIRMWARE_PARENT_SYMLINK")
         item = root / directory
         require(not item.exists() and not item.is_symlink(), "FIRMWARE_RIGHTS_UNPROVEN")
-    for path in root.rglob("*"):
+    # The staging root itself can carry capabilities or other xattrs too.\n    # Checking only descendants would silently discard root-directory metadata.\n    if hasattr(os, "listxattr"):\n        try:\n            root_attrs = os.listxattr(root, follow_symlinks=False)\n        except OSError as exc:\n            raise ValueError("P26_BLOCKED_XATTR_INSPECTION_FAILED") from exc\n        require(not root_attrs, "XATTR_WOULD_BE_DROPPED")\n    for path in root.rglob("*"):
         # OpenWrt legitimately uses in-filesystem absolute links such as /var -> /tmp.
         # Preserve them; the filesystem is not mounted or dereferenced by this validator.
         if not path.is_symlink():
