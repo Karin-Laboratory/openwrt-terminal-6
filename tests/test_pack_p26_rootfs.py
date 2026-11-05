@@ -21,6 +21,20 @@ class P26PackerTests(unittest.TestCase):
             p.write_text("test")
         (root / "etc/shadow").write_text("root:!:0:0:99999:7:::\n")
 
+    def test_xattr_cannot_be_silently_dropped(self):
+        import os
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            if not hasattr(os, "setxattr"):
+                self.skipTest("xattr API unavailable")
+            try:
+                os.setxattr(root / "bin/busybox", "user.p26_test", b"1")
+            except OSError:
+                self.skipTest("filesystem does not permit user xattrs")
+            with self.assertRaisesRegex(ValueError, "XATTR_WOULD_BE_DROPPED"):
+                mod.check_tree(root)
+
     def test_missing_service_fails(self):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaisesRegex(ValueError, "MISSING_"):
