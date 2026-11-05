@@ -35,7 +35,7 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "XATTR_WOULD_BE_DROPPED"):
                 mod.check_tree(root)
 
-    def test_missing_service_fails(self):
+    def test_root_directory_xattr_cannot_be_silently_dropped(self):\n        import os\n        with tempfile.TemporaryDirectory() as d:\n            root = Path(d)\n            self.make_root(root)\n            if not hasattr(os, "setxattr"):\n                self.skipTest("xattr API unavailable")\n            try:\n                os.setxattr(root, "user.p26_test", b"1")\n            except OSError:\n                self.skipTest("filesystem does not permit user xattrs")\n            with self.assertRaisesRegex(ValueError, "XATTR_WOULD_BE_DROPPED"):\n                mod.check_tree(root)\n\n    def test_missing_service_fails(self):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaisesRegex(ValueError, "MISSING_"):
                 mod.check_tree(Path(d))
