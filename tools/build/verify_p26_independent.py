@@ -24,6 +24,16 @@ def sha(path):
 
 def inventory(root):
     result = {}
+    # The SquashFS root inode also carries ownership, mode and xattrs.
+    # Omitting it can falsely accept a rootfs whose / permissions differ.
+    root_stat = root.lstat()
+    try:
+        root_attrs = {key: os.getxattr(root, key, follow_symlinks=False).hex()
+                      for key in os.listxattr(root, follow_symlinks=False)}
+    except OSError as exc:
+        raise ValueError("XATTR_INSPECTION_FAILED: .") from exc
+    result["."] = ("dir", "", stat.S_IMODE(root_stat.st_mode),
+                   root_stat.st_uid, root_stat.st_gid, root_attrs)
     for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
         for name in dirs + files:
             p = Path(base) / name
