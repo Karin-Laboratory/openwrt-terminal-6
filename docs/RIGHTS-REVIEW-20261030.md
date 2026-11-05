@@ -22,7 +22,7 @@ The summary is a **2026-11-05 source-catalog snapshot**. Changes to catalog entr
 | linux-v6.18-derived / GPL-2.0-only | 2 | `patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch` | pending; verify Linux upstream provenance |
 | modified-gpl-parent-derived / GPL-2.0-only | 3 | `patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch`; GPL-derived PHY fixes | pending; check exact parent and licensing |
 | research-transformer / GPL-2.0-only | 1 | `scripts/research/sba6d_stage10_clean_patch.py` | pending; distinguish transform from original |
-| independent-original / MIT | 64 | `tools/boot/slot_observation.py`; source build/tests | pending; verify actual authorship |
+| independent-original / MIT | 68 | `tools/boot/slot_observation.py`; source build/tests | pending; verify actual authorship |
 | research-board-overlay / GPL-2.0-only | 1 | `board/mt6990-air-terminal-6-sgmii1-experimental.dtso` | pending; check wiring evidence |
 | independent-original / GPL-2.0-only | 4 | `board/mt6990-air-terminal-6.dts`, ethernet test DTS | pending; verify authorship |
 | **Total** | **79** | Catalog entries; additional `missing_dependencies` are not source files | **79 pending** |
