@@ -21,6 +21,17 @@ class P26PackerTests(unittest.TestCase):
             p.write_text("test")
         (root / "etc/shadow").write_text("root:!:0:0:99999:7:::\n")
 
+    def test_runner_owned_target_files_rejected(self):
+        from types import SimpleNamespace
+        with patch.object(mod.Path, "stat", return_value=SimpleNamespace(st_uid=1001, st_gid=1001)):
+            with self.assertRaisesRegex(ValueError, "TARGET_ROOT_OWNERSHIP_UNPROVEN_ETC_SHADOW"):
+                mod.check_target_ownership(Path("/synthetic-root"))
+
+    def test_root_owned_target_files_accepted(self):
+        from types import SimpleNamespace
+        with patch.object(mod.Path, "stat", return_value=SimpleNamespace(st_uid=0, st_gid=0)):
+            self.assertTrue(mod.check_target_ownership(Path("/synthetic-root")))
+
     def test_xattr_cannot_be_silently_dropped(self):
         import os
         with tempfile.TemporaryDirectory() as d:
