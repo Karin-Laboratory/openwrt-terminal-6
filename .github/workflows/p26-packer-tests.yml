@@ -55,7 +55,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          # The packer intentionally requires target UID/GID 0 for system files.
+          # Run only this synthetic fixture in an isolated root-owned temp tree;
+          # never relax the production ownership check to match the hosted runner.
+          sudo -E env PATH="$PATH" python3 - <<'PY'
           import json
           import os
           from pathlib import Path
