@@ -2,6 +2,14 @@
 
 This **public, source-only locator** is the fast starting point for the current unsigned p25/p26 goal. It is not a production manifest, flash guide, public binary archive, signer index or claim of successful hardware boot from this repository. For active priorities, [read the current policy first](MAINLINE-P25-P26-POLICY.md).
 
+## One entrypoint, three authorities (no copied histories)
+
+- **Navigation and triage: this document, PR [#129](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/129).** Start here to locate work. Current manual [work ledger](WORK-LEDGER-20261105.json) tracks owners, blockers and return conditions; the [failure-mode dictionary](FAILURE-MODES-20261105.ja.md) maps errors to the minimal correction.
+- **Historical runs and minimal replay: PR [#128](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/128).** The fixed [648-run snapshot](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/p25-p26-reuse-workflow-audit-20261105/docs/evidence/WORKFLOW-RUNS-SNAPSHOT-20261105.json) and [Japanese replay guide](https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/p25-p26-reuse-workflow-audit-20261105/docs/MAINLINE-WORKFLOW-GOLDEN-REPLAY-20261105.ja.md) remain the **sole source** for that historical analysis; do not copy the data into PR #129.
+- **Private originals and Alpha3 history: access-restricted PR [#109](https://github.com/Karin-Laboratory/SBAT6A-Offline-Archive/pull/109).** This public repository does not embed its raw evidence, owner-only binaries, private paths or security-sensitive content.
+
+These are **separate, unmerged PR branches** at the time of writing; links to a branch do not establish the file is on main. Do not update automation/cron based on the dated ledger without reviewing newer runs.
+
 ## Find the right evidence without rebuilding solved work
 
 | Question | Go to | Evidence and limitations |
