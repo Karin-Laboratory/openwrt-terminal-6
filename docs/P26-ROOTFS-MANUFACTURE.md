@@ -40,6 +40,21 @@ python3 tools/build/pack_p26_rootfs.py \
 
 The output is `rootfs.squashfs`, `rootfs_a.p26`, and `p26-receipt.json`, all confined to the caller's private output directory. Never commit, cache, upload as an Actions artifact, or publish them. The receipt records a preliminary full-file SHA and partition size but explicitly states **AWAIT_INDEPENDENT_FS_READBACK**.
 
+
+## PR #118 to PR #127 handoff (not yet executed)
+
+PR #118 is an **unmerged Draft** and its workflow is a separate branch. A passing native package-build job on PR #127 does **not** prove that the PR #118 `wpad-basic-mbedtls` changes were in that job's checkout. Before claiming AP userspace readiness, verify the exact workflow blob and the checkout commit from the same run; do not combine success statuses from unrelated PR heads.
+
+For an owner-controlled offline replay, use this fail-closed sequence:
+
+1. Record the exact source checkout SHA, OpenWrt pin, workflow SHA, `make defconfig` output, installed package manifest and successful `package/install` log from **one** run. Check whether `wpad-basic-mbedtls` is actually selected and present, rather than inferring it from the PR title.
+2. Extract the staged `rootfs-stage.tar.gz` into a new, private directory without following archive symlinks outside that directory; inspect its members and numeric ownership first. Do not reuse a synthetic CI fixture as the input. The archive is an intermediate rootfs, not a p26 image.
+3. Verify the extracted tree contains the executables named in the packer contract, has a locked root account, has no unprovisioned SSH/radio autostart, and contains neither credentials nor firmware/calibration. For an AP-enabled candidate, additionally check `/usr/sbin/wpad` and the `hostapd` symlink; those are **not** required to establish the LAN-only p26 milestone.
+4. Construct the JSON source receipt from the **observed** run and installed package manifest. Do not copy the illustrative receipt above with `source_built: true` without independent evidence. Keep the receipt and output directory private.
+5. Run the unsigned packer, then perform a separate full-tree `unsquashfs` comparison and independent 128 MiB readback, including zero-padding and full SHA. Keep `P26_BUILD=BLOCKED` until the ownership/xattr and provenance gates below are satisfied.
+
+No signing, device flashing, boot-slot changes, reboot, or artifact publication is part of this handoff. This section is a procedure, **not** a record that the steps have run.
+
 ## Remaining hard acceptance requirements
 
 1. Rebuild from the pinned public OpenWrt source and inspect actual package versions/dependency closure, package licenses, feed use, and first-boot service policy. The existing hosted CI is a credible source of *package* evidence, but its `rootfs-stage.tar.gz` is not a p26.
