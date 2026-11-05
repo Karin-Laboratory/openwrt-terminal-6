@@ -49,6 +49,13 @@ def check_tree(root):
         item = root / name
         require(item.is_file() and not item.is_symlink() and item.stat().st_size > 0,
                 "MISSING_" + name.replace("/", "_").upper())
+    # OpenWrt system binaries and shadow must retain target root ownership.
+    # A hosted runner may create a uniformly uid=1001 staging tree; matching
+    # that tree in unsquashfs is not proof of faithful target metadata.
+    for name in ("etc/shadow", "sbin/procd", "sbin/netifd", "sbin/ubusd"):
+        metadata = (root / name).stat(follow_symlinks=False)
+        require(metadata.st_uid == 0 and metadata.st_gid == 0,
+                "TARGET_ROOT_OWNERSHIP_UNPROVEN_" + name.replace("/", "_").upper())
     shadow = (root / "etc/shadow").read_text()
     rows = [line for line in shadow.splitlines() if line.startswith("root:")]
     require(len(rows) == 1 and rows[0].split(":")[1].startswith(("!", "*")),
