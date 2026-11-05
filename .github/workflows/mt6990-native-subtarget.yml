@@ -252,6 +252,44 @@ jobs:
           test -s "$work/sbat6-rootfs-stage.tar.gz"
           sha256sum "$work/sbat6-rootfs-stage.tar.gz"
           echo 'PUBLIC_MT6990_NONINSTALLABLE_ROOTFS_STAGE_BUILD_PASS'
+          # Same-run provenance is generated from the actual installed APK database.
+          # This is a private intermediate receipt, not proof of p26 manufacture.
+          python3 - "$rootfs" "$work" "$pin" <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import sys
+          root, work, pin = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+          database = root / "lib/apk/db/installed"
+          if not database.is_file() or database.is_symlink():
+              raise SystemExit("P26_BLOCKED_REAL_INSTALLED_PACKAGE_DB_MISSING")
+          raw = database.read_bytes()
+          if not raw:
+              raise SystemExit("P26_BLOCKED_EMPTY_INSTALLED_PACKAGE_DB")
+          packages = sorted(set(
+              line[2:].strip() for line in raw.decode("utf-8").splitlines()
+              if line.startswith("P:") and line[2:].strip()
+          ))
+          required = {"base-files", "busybox", "procd", "ubus", "uci",
+                      "netifd", "dropbear"}
+          if not required.issubset(packages):
+              raise SystemExit("P26_BLOCKED_INSTALLED_PACKAGE_INVENTORY_INCOMPLETE:"
+                               + ",".join(sorted(required - set(packages))))
+          record = {
+              "openwrt_commit": pin,
+              "source_built": True,
+              "package_install": True,
+              "packages": packages,
+              "feeds": {},
+              "installed_db_sha256": hashlib.sha256(raw).hexdigest(),
+              "workflow_checkout_sha": __import__("os").environ["GITHUB_SHA"],
+              "provenance_scope": "SAME_RUN_EPHEMERAL_NATIVE_PACKAGE_INSTALL",
+          }
+          (work / "p26-source-receipt.json").write_text(
+              json.dumps(record, sort_keys=True, indent=2) + "\\n")
+          print("P26_SAME_RUN_PACKAGE_INSTALL_RECEIPT_READY",
+                len(packages), record["installed_db_sha256"])
+          PY
           # Build an external diagnostic PID1 cpio with the SAME pinned
           # OpenWrt cross-toolchain as the native MT6990 kernel Image.
           # It is not a procd boot test or a device-installable image.
