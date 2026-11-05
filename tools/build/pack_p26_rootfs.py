@@ -49,13 +49,6 @@ def check_tree(root):
         item = root / name
         require(item.is_file() and not item.is_symlink() and item.stat().st_size > 0,
                 "MISSING_" + name.replace("/", "_").upper())
-    # OpenWrt system binaries and shadow must retain target root ownership.
-    # A hosted runner may create a uniformly uid=1001 staging tree; matching
-    # that tree in unsquashfs is not proof of faithful target metadata.
-    for name in ("etc/shadow", "sbin/procd", "sbin/netifd", "sbin/ubusd"):
-        metadata = (root / name).stat(follow_symlinks=False)
-        require(metadata.st_uid == 0 and metadata.st_gid == 0,
-                "TARGET_ROOT_OWNERSHIP_UNPROVEN_" + name.replace("/", "_").upper())
     shadow = (root / "etc/shadow").read_text()
     rows = [line for line in shadow.splitlines() if line.startswith("root:")]
     require(len(rows) == 1 and rows[0].split(":")[1].startswith(("!", "*")),
@@ -119,6 +112,17 @@ def check_tree(root):
     return True
 
 
+def check_target_ownership(root):
+    # OpenWrt system binaries and shadow must retain target root ownership.
+    # A hosted runner may create a uniformly uid=1001 staging tree; matching
+    # that tree in unsquashfs is not proof of faithful target metadata.
+    for name in ("etc/shadow", "sbin/procd", "sbin/netifd", "sbin/ubusd"):
+        metadata = (root / name).stat(follow_symlinks=False)
+        require(metadata.st_uid == 0 and metadata.st_gid == 0,
+                "TARGET_ROOT_OWNERSHIP_UNPROVEN_" + name.replace("/", "_").upper())
+    return True
+
+
 def produce(root, output, source_receipt):
     require(not root.is_symlink(), "ROOTFS_SYMLINK")
     require(all(not parent.is_symlink() for parent in root.parents),
@@ -147,6 +151,7 @@ def produce(root, output, source_receipt):
             "INCOMPLETE_PACKAGE_INVENTORY")
     require(isinstance(record.get("feeds"), dict), "PINNED_FEEDS_RECEIPT_REQUIRED")
     check_tree(root)
+    check_target_ownership(root)
     require(output.is_absolute() and not output.exists() and
             output.parent.is_dir() and not output.parent.is_symlink() and
             stat.S_IMODE(output.parent.stat().st_mode) & 0o077 == 0,
