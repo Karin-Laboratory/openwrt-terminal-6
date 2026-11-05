@@ -124,11 +124,39 @@ class P26PackerTests(unittest.TestCase):
             (root / "var").symlink_to("/tmp")
             self.assertTrue(mod.check_tree(root))
 
-    def test_forbidden_firmware_fails(self):
+    def test_empty_firmware_directories_are_safe(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             self.make_root(root)
             (root / "lib/firmware").mkdir(parents=True)
+            (root / "usr/lib/firmware").mkdir(parents=True)
+            self.assertTrue(mod.check_tree(root))
+
+    def test_forbidden_firmware_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            firmware = root / "lib/firmware"
+            firmware.mkdir(parents=True)
+            (firmware / "radio.bin").write_bytes(b"unreviewed")
+            with self.assertRaisesRegex(ValueError, "FIRMWARE_RIGHTS_UNPROVEN"):
+                mod.check_tree(root)
+
+    def test_firmware_symlink_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "root"
+            root.mkdir()
+            self.make_root(root)
+            (root / "lib/firmware").parent.mkdir(parents=True, exist_ok=True)
+            (root / "lib/firmware").symlink_to("../missing-firmware")
+            with self.assertRaisesRegex(ValueError, "FIRMWARE_RIGHTS_UNPROVEN"):
+                mod.check_tree(root)
+
+    def test_nested_firmware_directory_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            (root / "usr/lib/firmware/vendor").mkdir(parents=True)
             with self.assertRaisesRegex(ValueError, "FIRMWARE_RIGHTS_UNPROVEN"):
                 mod.check_tree(root)
 
