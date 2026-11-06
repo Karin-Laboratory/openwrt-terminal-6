@@ -264,7 +264,13 @@ jobs:
                   found += 1
           if found != 1:
               raise SystemExit("Expected exactly one root shadow record")
-          path.write_text("\n".join(lines) + "\n")
+          # Preserve the installed inode: pathlib.write_text() truncates in place,
+          # but use an explicit descriptor to avoid accidental replacement during
+          # future refactors. Fakeroot metadata is keyed to this inode.
+          with path.open("r+", encoding="utf-8") as handle:
+              handle.seek(0)
+              handle.write("\n".join(lines) + "\n")
+              handle.truncate()
           print("SBAT6_ROOT_PASSWORD_LOCKED_IN_EPHEMERAL_STAGE")
           PY
           find "$rootfs/etc/rc.d" -maxdepth 1 -name '*dropbear*' \
