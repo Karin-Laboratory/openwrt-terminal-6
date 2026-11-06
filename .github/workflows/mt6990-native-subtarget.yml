@@ -194,7 +194,7 @@ jobs:
           # OpenWrt package/install populates only a staging root directory.
           # Unlike target/install it cannot produce a device boot/flash image.
           # CONFIG_SIGNED_PACKAGES=n prevents package-index signing.
-          make -C "$work/openwrt" -j1 package/install
+          # OpenWrt package ownership must be captured at install time, not\n          # reconstructed by blanket chown after staging. Keep fakeroot's\n          # inode metadata in this ephemeral job for packing and verification.\n          command -v fakeroot >/dev/null || { echo 'P26_BLOCKED_FAKEROOT_UNAVAILABLE' >&2; exit 1; }\n          fakeroot -s "$work/p26-fakeroot.state" -- make -C "$work/openwrt" -j1 package/install\n          test -s "$work/p26-fakeroot.state"
           rootfs="$(find "$work/openwrt/build_dir" -maxdepth 3 \
             -type d -name 'root-mediatek' -print -quit)"
           test -n "$rootfs" && test -d "$rootfs"
@@ -312,12 +312,12 @@ jobs:
           test -x "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py" || \
             test -f "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py"
           install -d -m 0700 "$work/private-p26"
-          python3 "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py" \
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py" \
             --rootfs "$rootfs" \
             --source-receipt "$work/p26-source-receipt.json" \
             --output "$work/private-p26/packed"
           test "$(stat -c %s "$work/private-p26/packed/rootfs_a.p26")" -eq 134217728
-          python3 "$GITHUB_WORKSPACE/tools/build/verify_p26_independent.py" \
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 "$GITHUB_WORKSPACE/tools/build/verify_p26_independent.py" \
             --rootfs "$rootfs" \
             --p26 "$work/private-p26/packed/rootfs_a.p26" \
             --squashfs "$work/private-p26/packed/rootfs.squashfs"
