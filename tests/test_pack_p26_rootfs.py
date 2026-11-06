@@ -21,6 +21,34 @@ class P26PackerTests(unittest.TestCase):
             p.write_text("test")
         (root / "etc/shadow").write_text("root:!:0:0:99999:7:::\n")
 
+    def test_fakeroot_state_survives_separate_install_and_pack_processes(self):
+        # Native CI uses separate fakeroot invocations for package/install and
+        # p26 packing. Verify the recorded target ownership survives that
+        # boundary rather than silently becoming runner-owned.
+        import os
+        import shutil
+        import subprocess
+        import sys
+        if not shutil.which("fakeroot"):
+            self.skipTest("fakeroot unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shadow = root / "shadow"
+            shadow.write_text("root:!:0:0:99999:7:::\\n")
+            state = root / "fakeroot.state"
+            install = subprocess.run(
+                ["fakeroot", "-s", str(state), "--", sys.executable, "-c",
+                 "import os,sys; os.chown(sys.argv[1],0,0); os.chmod(sys.argv[1],0o600)",
+                 str(shadow)], capture_output=True, text=True, timeout=30)
+            self.assertEqual(install.returncode, 0, install.stderr)
+            self.assertTrue(state.is_file())
+            pack = subprocess.run(
+                ["fakeroot", "-i", str(state), "--", sys.executable, "-c",
+                 "import os,sys; s=os.stat(sys.argv[1]); "
+                 "assert (s.st_uid,s.st_gid,s.st_mode & 0o777)==(0,0,0o600)",
+                 str(shadow)], capture_output=True, text=True, timeout=30)
+            self.assertEqual(pack.returncode, 0, pack.stderr)
+
     def test_runner_owned_target_files_rejected(self):
         from types import SimpleNamespace
         with patch.object(mod.Path, "stat", return_value=SimpleNamespace(st_uid=1001, st_gid=1001)):
