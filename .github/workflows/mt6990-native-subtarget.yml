@@ -198,7 +198,10 @@ jobs:
           # reconstructed by blanket chown after staging. Keep fakeroot's
           # inode metadata in this ephemeral job for packing and verification.
           command -v fakeroot >/dev/null || { echo 'P26_BLOCKED_FAKEROOT_UNAVAILABLE' >&2; exit 1; }
-          fakeroot -s "$work/p26-fakeroot.state" -- make -C "$work/openwrt" -j1 package/install
+          # The previous native run failed inside package/install with only
+          # OpenWrt's generic make error. Preserve the real first failing
+          # command and stderr in this same run; do not retry a blind build.
+          fakeroot -s "$work/p26-fakeroot.state" -- make -C "$work/openwrt" -j1 V=s package/install
           test -s "$work/p26-fakeroot.state"
           rootfs="$(find "$work/openwrt/build_dir" -maxdepth 3 \
             -type d -name 'root-mediatek' -print -quit)"
