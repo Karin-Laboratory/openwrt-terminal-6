@@ -201,7 +201,21 @@ jobs:
           # The previous native run failed inside package/install with only
           # OpenWrt's generic make error. Preserve the real first failing
           # command and stderr in this same run; do not retry a blind build.
+          # OpenWrt invokes host fakeroot inside package/install. Reuse the
+          # outer fakeroot daemon so APK ownership metadata survives for p26.
+          host_fakeroot="$work/openwrt/staging_dir/host/bin/fakeroot"
+          test -x "$host_fakeroot"
+          mv "$host_fakeroot" "$host_fakeroot.original"
+          cat > "$host_fakeroot" <<'FAKEROOT_WRAPPER'
+          #!/bin/sh
+          if [ -n "${FAKEROOTKEY:-}" ]; then
+            exec "$@"
+          fi
+          exec "${0}.original" "$@"
+          FAKEROOT_WRAPPER
+          chmod 0755 "$host_fakeroot"
           fakeroot -s "$work/p26-fakeroot.state" -- make -C "$work/openwrt" -j1 V=s package/install
+          mv "$host_fakeroot.original" "$host_fakeroot"
           test -s "$work/p26-fakeroot.state"
           rootfs="$(find "$work/openwrt/build_dir" -maxdepth 3 \
             -type d -name 'root-mediatek' -print -quit)"
