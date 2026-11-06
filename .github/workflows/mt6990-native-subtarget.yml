@@ -209,6 +209,19 @@ jobs:
           cat > "$host_fakeroot" <<'FAKEROOT_WRAPPER'
           #!/bin/sh
           if [ -n "${FAKEROOTKEY:-}" ]; then
+            # OpenWrt may invoke fakeroot with -i/-s state options. The
+            # outer daemon already owns this metadata, so strip only known
+            # fakeroot options before executing the nested command.
+            while [ "$#" -gt 0 ]; do
+              case "$1" in
+                -i|-s|-b) [ "$#" -ge 2 ] || exit 2; shift 2 ;;
+                -u|-l) shift ;;
+                --) shift; break ;;
+                -*) echo "P26_BLOCKED_FAKEROOT_WRAPPER_UNKNOWN_OPTION: $1" >&2; exit 2 ;;
+                *) break ;;
+              esac
+            done
+            [ "$#" -gt 0 ] || { echo "P26_BLOCKED_FAKEROOT_WRAPPER_NO_COMMAND" >&2; exit 2; }
             exec "$@"
           fi
           exec "${0}.original" "$@"
