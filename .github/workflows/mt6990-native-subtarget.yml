@@ -243,7 +243,10 @@ jobs:
           # A generic OpenWrt root password may initially be empty. Lock it
           # in this ephemeral research stage; SSH must not autostart before
           # owner-specific public-key provisioning in a separate process.
-          python3 - "$rootfs/etc/shadow" <<'PY'
+          # Re-enter the saved package/install fakeroot metadata namespace for
+          # the shadow edit. Writing outside fakeroot can replace the inode and
+          # lose the target UID/GID tracked by the package installer.
+          fakeroot -i "$work/p26-fakeroot.state" -s "$work/p26-fakeroot.state" -- python3 - "$rootfs/etc/shadow" <<'PY'
           from pathlib import Path
           import sys
           path = Path(sys.argv[1])
