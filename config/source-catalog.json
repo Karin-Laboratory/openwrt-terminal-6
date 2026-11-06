@@ -391,6 +391,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_p26_fakeroot_handoff.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "2fc35b95721cf2f953b5507fa525bb598633e282",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_p26_nested_fakeroot_wrapper.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
