@@ -62,3 +62,36 @@ lsblk -f
 - 復旧に失敗した場合は追加書き込みを止め、UARTログと作業履歴を保存して相談する。
 
 参照：公開リポジトリ `docs/AB-FALLBACK-RESEARCH.md`、Discussions #50「はじめての方へ」、private実機runbook。最新のビルドで同じ起動・overlay構成が成立するかは別途確認が必要です。
+
+## 付録4-6．実例：A側テストビルドが起動しないときに純正Bへ戻す（2026年11月3日 C号機実証）
+
+以下はC号機で復帰に成功した**一例**。必ずUARTからLKの `]` プロンプトに入り、`bio list` で `mmc0p1` が `misc`（524288 bytes / 512-byte block）であること、`bio dump mmc0p1 2048 32` で `BCAB` およびA優先順位 `0f`、B優先順位 `0e` を確認する。相違がある場合は書き込まず中断する。以下に表示するRAM番地は**当時の実行結果**であり、他のセッションで固定使用してはいけない。
+
+LKで先にRAM領域を確保し、読み込みの成功を確認する。
+
+```text
+heap alloc 512 512
+# 当時の返値 0xda2a7c00
+bio read mmc0p1 0xda2a7c00 2048 512
+# 当時の返値 512
+heap alloc 4096 512
+# 当時の返値 0xda2a8000
+bio read mmc0p1 0xda2a8000 2065 1
+bio read mmc0p1 0xda2a8001 2060 1
+# それぞれ返値 1
+```
+
+**ここが実際の `bio write`：Bを先に15へ、続いてAを14へ。**
+
+```text
+bio write mmc0p1 0xda2a8001 2065 1
+bio dump mmc0p1 2048 32
+# この時点でA=0f, B=0fを確認
+bio write mmc0p1 0xda2a8000 2060 1
+bio dump mmc0p1 2048 32
+# A=0e, B=0fを確認
+```
+
+**RAMアドレスが上の実測値と異なる場合は、必ず今回の`heap alloc`が返したアドレスと、それに1を加えた値に置き換える。** `bio write` はRAM上のバイトをeMMCへ書き込むため、読み込み／検証を飛ばして実行しない。readbackに異常があれば次のwriteへ進まない。eMMC内部で512バイト書き込みが発生した実例があり、1バイトの原子的更新を保証しない。
+
+当時は電源を入れ直した後、純正Bが起動しroot SSHまで復帰した。復帰後はLinuxのrootシェルで `cat /proc/cmdline` と `uname -r` を確認する。LKに入れない、B側も破損している、`misc` の事前状態が異なる場合は、この手順の対象外。
