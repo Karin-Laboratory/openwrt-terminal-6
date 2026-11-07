@@ -10,34 +10,38 @@ import struct
 PARTITION_SIZE = 134217728
 SUPERBLOCK_SIZE = 96
 
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
 def verify(image: Path, receipt: Path):
     data = json.loads(receipt.read_text())
-    assert image.stat().st_size == PARTITION_SIZE, 'incorrect p26 size'
+    require(image.stat().st_size == PARTITION_SIZE, 'incorrect p26 size')
     sha = hashlib.sha256()
     with image.open('rb') as stream:
         header = stream.read(SUPERBLOCK_SIZE)
-        assert len(header) == SUPERBLOCK_SIZE and header[:4] == b'hsqs', 'invalid SquashFS magic'
+        require(len(header) == SUPERBLOCK_SIZE and header[:4] == b'hsqs', 'invalid SquashFS magic')
         # SquashFS v4 superblock: bytes_used is u64 at offset 40.
         major, minor = struct.unpack_from('<HH', header, 28)
-        assert (major, minor) == (4, 0), 'unsupported SquashFS version'
+        require((major, minor) == (4, 0), 'unsupported SquashFS version')
         used = struct.unpack_from('<Q', header, 40)[0]
-        assert SUPERBLOCK_SIZE <= used < PARTITION_SIZE, 'invalid SquashFS bytes_used'
-        assert used == data['squashfs_bytes'], 'receipt size mismatch'
+        require(SUPERBLOCK_SIZE <= used < PARTITION_SIZE, 'invalid SquashFS bytes_used')
+        require(used == data['squashfs_bytes'], 'receipt size mismatch')
         stream.seek(0)
         remaining = used
         fs_hash = hashlib.sha256()
         while remaining:
             chunk = stream.read(min(1 << 20, remaining))
-            assert chunk, 'truncated filesystem'
+            require(chunk, 'truncated filesystem')
             fs_hash.update(chunk)
             sha.update(chunk)
             remaining -= len(chunk)
-        assert fs_hash.hexdigest() == data['squashfs_sha256'], 'filesystem hash mismatch'
+        require(fs_hash.hexdigest() == data['squashfs_sha256'], 'filesystem hash mismatch')
         while chunk := stream.read(1 << 20):
-            assert not any(chunk), 'nonzero partition padding'
+            require(not any(chunk), 'nonzero partition padding')
             sha.update(chunk)
-    assert sha.hexdigest() == data['p26_sha256'], 'partition hash mismatch'
-    assert data.get('signed') is False, 'unexpected signing status'
+    require(sha.hexdigest() == data['p26_sha256'], 'partition hash mismatch')
+    require(data.get('signed') is False, 'unexpected signing status')
     print('P26_INDEPENDENT_BYTE_LAYOUT_PASS', sha.hexdigest())
     print('NOT_FS_METADATA_OR_SOURCE_PROVENANCE_ACCEPTANCE')
 
