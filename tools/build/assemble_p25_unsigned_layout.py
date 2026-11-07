@@ -52,16 +52,20 @@ def assemble(manifest, output, receipt):
     try:
         with output.open("xb") as dest:
             dest.truncate(SIZE)
-            for start, end, source, _ in spans:
+            for start, end, source, expected in spans:
                 dest.seek(start)
                 with source.open("rb") as stream:
                     remaining = end - start
+                    copied = hashlib.sha256()
                     while remaining:
                         block = stream.read(min(1 << 20, remaining))
                         if not block:
                             raise ValueError("source changed during assembly")
                         dest.write(block)
+                        copied.update(block)
                         remaining -= len(block)
+                    if copied.hexdigest() != expected or stream.read(1):
+                        raise ValueError("source changed during assembly")
             dest.flush()
             os.fsync(dest.fileno())
         record = {
