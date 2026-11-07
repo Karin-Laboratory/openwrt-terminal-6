@@ -62,7 +62,7 @@ class P25ReadbackTests(unittest.TestCase):
                 verifier.verify(image, manifest)
             alias = root / "alias.img"
             alias.symlink_to(image)
-            with self.assertRaisesRegex(ValueError, "regular 32 MiB"):
+            with self.assertRaisesRegex(ValueError, "exactly 32 MiB"):
                 verifier.verify(alias, manifest)
 
 if __name__ == "__main__":
