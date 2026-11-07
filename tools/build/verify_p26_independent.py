@@ -69,7 +69,13 @@ def inventory(root):
     return result
 
 def verify(root, p26, raw):
-    if root.is_symlink() or not root.is_dir() or p26.is_symlink() or raw.is_symlink():
+    # Reject symlinked ancestors as well as leaf symlinks. A staging root
+    # reached through an alias could otherwise point outside the verified
+    # workspace, while an image path could be swapped through a linked parent.
+    for candidate in (root, p26, raw):
+        if candidate.is_symlink() or any(parent.is_symlink() for parent in candidate.parents):
+            raise ValueError("INVALID_INPUT")
+    if not root.is_dir() or not p26.is_file() or not raw.is_file():
         raise ValueError("INVALID_INPUT")
     if p26.stat().st_size != SIZE:
         raise ValueError("PARTITION_SIZE")
