@@ -517,6 +517,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_verify_p26_optimized.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "057d08efb19e8199a1a83b7bdce5746edfec8d23",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_verify_p26_partition.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -665,7 +674,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "d08937c679df9ec3e090e4208bffb1b1bc7f2ed5",
+      "git_blob_sha1": "ec3e36f4d35b7adfc359a96b631830c703c92fa9",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
