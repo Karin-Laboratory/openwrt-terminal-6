@@ -580,6 +580,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/build/assemble_p25_unsigned_layout.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "ad7110b221beb278a2647de5cc190076ecd5b1af",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/build/check_air6_userspace_source.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
