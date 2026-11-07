@@ -48,7 +48,7 @@ class P25ReadbackTests(unittest.TestCase):
             payload = b"TEST"
             with image.open("wb") as stream:
                 stream.write(payload)
-                stream.write(b"\\0" * (verifier.P25_SIZE - len(payload) - 1))
+                stream.write(b"\0" * (verifier.P25_SIZE - len(payload) - 1))
                 stream.write(b"X")
             record = {
                 "format": "air6-p25-unsigned-sections-v1",
