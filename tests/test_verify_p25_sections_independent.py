@@ -60,6 +60,13 @@ class P25ReadbackTests(unittest.TestCase):
             manifest.write_text(json.dumps(record))
             with self.assertRaisesRegex(ValueError, "nonzero unaccounted trailing bytes"):
                 verifier.verify(image, manifest)
+            # A zero-filled implicit tail is checked, not skipped.
+            with image.open("r+b") as stream:
+                stream.seek(verifier.P25_SIZE - 1)
+                stream.write(b"\0")
+            record["sha256"] = hashlib.sha256(image.read_bytes()).hexdigest()
+            manifest.write_text(json.dumps(record))
+            self.assertEqual(verifier.verify(image, manifest)["padding"], "PASS")
             alias = root / "alias.img"
             alias.symlink_to(image)
             with self.assertRaisesRegex(ValueError, "exactly 32 MiB"):
