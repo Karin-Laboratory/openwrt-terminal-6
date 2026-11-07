@@ -34,6 +34,7 @@ def inventory(root):
         raise ValueError("XATTR_INSPECTION_FAILED: .") from exc
     result["."] = ("dir", "", stat.S_IMODE(root_stat.st_mode),
                    root_stat.st_uid, root_stat.st_gid, root_attrs)
+    hardlink_groups = {}
     for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
         for name in dirs + files:
             p = Path(base) / name
@@ -46,6 +47,8 @@ def inventory(root):
                 kind, value = "dir", ""
             elif stat.S_ISREG(st.st_mode):
                 kind, value = "file", sha(p)
+                if st.st_nlink > 1:
+                    hardlink_groups.setdefault((st.st_dev, st.st_ino), []).append(rel)
             else:
                 raise ValueError("SPECIAL_FILE: " + rel)
             try:
@@ -56,6 +59,13 @@ def inventory(root):
             result[rel] = (kind, value, mode, st.st_uid, st.st_gid, attrs)
             if kind == "link" and name in dirs:
                 dirs.remove(name)
+    # Compare hardlink equivalence classes, never raw inode numbers (which
+    # differ between staging and a separately extracted SquashFS image).
+    for paths in hardlink_groups.values():
+        if len(paths) > 1:
+            group = tuple(sorted(paths))
+            for rel in group:
+                result[rel] += (group,)
     return result
 
 def verify(root, p26, raw):
