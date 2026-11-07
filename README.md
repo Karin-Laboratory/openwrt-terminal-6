@@ -6,6 +6,8 @@ Public-source community development for the SoftBank Air Terminal 6 (SBAT6 serie
 
 > **Public distribution remains source-only today. Local and ephemeral unsigned p25/p26 builds are engineering work, not downloadable or supported firmware. No signing keys, install instructions, or confirmed safe recovery procedure are supplied. Do not flash images based on this repository.**
 
+**Evidence/asset lookup (2026-11-05):** [p25/p26 workflow and evidence index](docs/EVIDENCE-WORKFLOW-INDEX-20261105.md) is the single navigation entrypoint; see its [manual work ledger](docs/WORK-LEDGER-20261105.json) and [known failure patterns](docs/FAILURE-MODES-20261105.ja.md). Historical run snapshots and minimal replay procedures remain in [PR #128](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/128), not duplicated here. All of these are documentation on PR branches; no build or cron behavior is changed.
+
 ## Current mainline priority (2026-11-04)
 
 **Build complete, redistributable unsigned p25 (boot_a) and p26 (rootfs_a) from auditable OpenWrt-compatible source inputs.** Reuse implementation and build knowledge from already boot-successful research builds wherever legally reusable; independently written code based on device observations and ordinary upstream GPL/MIT reuse are welcome. Focus this public mainline on backporting, source/licensing cleanup, and reproducible image construction, **not new feature exploration**. File-level review flags are not a prerequisite for implementing or testing; actual public binary distribution has its own compliance checks.
