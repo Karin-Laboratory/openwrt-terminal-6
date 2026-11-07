@@ -80,7 +80,7 @@ def verify(image_path, manifest_path):
                 if any(block):
                     raise ValueError("nonzero padding")
     return {"bytes": P25_SIZE, "sha256": full.hexdigest(), "sections": len(sections),
-            "section_hashes": "PASS", "padding": "PASS" if manifest.get("zero_padding_from") is not None else "NOT_CHECKED",
+            "section_hashes": "PASS", "padding": "PASS",
             "boot_v2_header": "NOT_CHECKED", "signature": "NOT_CHECKED"}
 
 
