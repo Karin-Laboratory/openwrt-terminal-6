@@ -115,6 +115,17 @@ class IndependentP26Tests(unittest.TestCase):
         with patch.object(mod.subprocess, "run", side_effect=preserve):
             self.assertEqual(mod.verify(self.root, self.p26, self.raw), mod.sha(self.p26))
 
+    def test_symlinked_input_parent_rejected(self):
+        # A linked directory must not bypass the verifier input boundary.
+        alias = self.base / "linked-parent"
+        alias.symlink_to(self.base, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "INVALID_INPUT"):
+            mod.verify(alias / "root", self.p26, self.raw)
+        with self.assertRaisesRegex(ValueError, "INVALID_INPUT"):
+            mod.verify(self.root, alias / "p26.img", self.raw)
+        with self.assertRaisesRegex(ValueError, "INVALID_INPUT"):
+            mod.verify(self.root, self.p26, alias / "root.squashfs")
+
     def test_symlink_input_rejected(self):
         alias = self.base / "alias"
         alias.symlink_to(self.p26)
