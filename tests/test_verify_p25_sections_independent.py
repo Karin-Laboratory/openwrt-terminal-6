@@ -40,5 +40,30 @@ class P25ReadbackTests(unittest.TestCase):
                 verifier.verify(image, manifest)
 
 
+    def test_undeclared_nonzero_tail_and_symlink_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            image = root / "p25.img"
+            manifest = root / "manifest.json"
+            payload = b"TEST"
+            with image.open("wb") as stream:
+                stream.write(payload)
+                stream.write(b"\\0" * (verifier.P25_SIZE - len(payload) - 1))
+                stream.write(b"X")
+            record = {
+                "format": "air6-p25-unsigned-sections-v1",
+                "image_size": verifier.P25_SIZE,
+                "sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
+                "sections": [{"name": "synthetic", "offset": 0,
+                              "length": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}],
+            }
+            manifest.write_text(json.dumps(record))
+            with self.assertRaisesRegex(ValueError, "nonzero unaccounted trailing bytes"):
+                verifier.verify(image, manifest)
+            alias = root / "alias.img"
+            alias.symlink_to(image)
+            with self.assertRaisesRegex(ValueError, "regular 32 MiB"):
+                verifier.verify(alias, manifest)
+
 if __name__ == "__main__":
     unittest.main()
