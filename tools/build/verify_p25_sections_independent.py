@@ -60,7 +60,14 @@ def verify(image_path, manifest_path):
                     if not block or any(block):
                         raise ValueError("nonzero unaccounted gap")
                     remaining -= len(block)
-        if manifest.get("zero_padding_from") is None:\n            # Every byte outside declared sections must be zero, including the tail.\n            tail_start = ranges[-1][1]\n            stream.seek(tail_start)\n            while block := stream.read(1024 * 1024):\n                if any(block):\n                    raise ValueError("nonzero unaccounted trailing bytes")\n        if manifest.get("zero_padding_from") is not None:
+        if manifest.get("zero_padding_from") is None:
+            # Every byte outside declared sections must be zero, including the tail.
+            tail_start = ranges[-1][1]
+            stream.seek(tail_start)
+            while block := stream.read(1024 * 1024):
+                if any(block):
+                    raise ValueError("nonzero unaccounted trailing bytes")
+        if manifest.get("zero_padding_from") is not None:
             pad = manifest["zero_padding_from"]
             if not isinstance(pad, int) or isinstance(pad, bool) or not (0 <= pad <= P25_SIZE):
                 raise ValueError("invalid padding offset")
