@@ -97,6 +97,24 @@ class IndependentP26Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
                 mod.verify(self.root, self.p26, self.raw)
 
+    def test_hardlink_relationship_mismatch_rejected(self):
+        # Same bytes and permissions are insufficient when the image silently
+        # turns two hardlinked files into independent regular files.
+        (self.root / "hardlink").hardlink_to(self.root / "etc" / "test")
+        with patch.object(mod.subprocess, "run", side_effect=self.fake_unsquashfs):
+            with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
+                mod.verify(self.root, self.p26, self.raw)
+
+    def test_hardlink_relationship_preserved(self):
+        (self.root / "hardlink").hardlink_to(self.root / "etc" / "test")
+        def preserve(command, **kwargs):
+            self.fake_unsquashfs(command, **kwargs)
+            dest = Path(command[command.index("-d") + 1])
+            (dest / "hardlink").unlink()
+            (dest / "hardlink").hardlink_to(dest / "etc" / "test")
+        with patch.object(mod.subprocess, "run", side_effect=preserve):
+            self.assertEqual(mod.verify(self.root, self.p26, self.raw), mod.sha(self.p26))
+
     def test_symlink_input_rejected(self):
         alias = self.base / "alias"
         alias.symlink_to(self.p26)
