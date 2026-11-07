@@ -52,6 +52,14 @@ def verify(image_path, manifest_path):
         for previous, current in zip(ranges, ranges[1:]):
             if previous[1] > current[0]:
                 raise ValueError("overlapping sections")
+            if previous[1] < current[0]:
+                stream.seek(previous[1])
+                remaining = current[0] - previous[1]
+                while remaining:
+                    block = stream.read(min(1024 * 1024, remaining))
+                    if not block or any(block):
+                        raise ValueError("nonzero unaccounted gap")
+                    remaining -= len(block)
         if manifest.get("zero_padding_from") is not None:
             pad = manifest["zero_padding_from"]
             if not isinstance(pad, int) or isinstance(pad, bool) or not (0 <= pad <= P25_SIZE):
