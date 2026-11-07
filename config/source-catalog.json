@@ -499,6 +499,24 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_verify_p25_sections_independent.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b200597b903364ee75f90a73044ed1b8f5b23136",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_verify_p25_unsigned_layout.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "0f4cda506ea7caefeed12a030f5ad2e9292e18e4",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_workflow_policy.py",
       "component": "kernel",
       "origin": "independent-original",
@@ -612,6 +630,24 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "2ea166f1d870d96c0fb87fc55cc0e7ab981e5119",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/verify_p25_sections_independent.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "c4a61b9b354bd78b3e6fb48cbda6db695e818824",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/verify_p25_unsigned_layout.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b0d6df82d4fc64e5449ed8ee800d27c02cc69f4b",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
