@@ -1,0 +1,107 @@
+{
+  "schema": "openwrt-mainline-public-research-pair-evidence-v1",
+  "recorded_utc": "2026-11-08",
+  "evidence_status": "SUCCESSFUL_REAL_BYTES_VERIFIED_IN_CI_LOG_NOT_DURABLY_PRESERVED",
+  "repository": "Karin-Laboratory/openwrt-terminal-6",
+  "pr_number": 130,
+  "source_commit": "fe03f37df962876feddae6c056a59d279117a45d",
+  "source_branch": "work/public-p25-p26-unsigned-pair-20261108",
+  "source_files": [
+    {
+      "path": "tools/build/pack_p25_boot_v2.py",
+      "role": "p25_packer",
+      "git_blob_sha1": "ecfe865658fd680adbf1be311934cbfba338f18f",
+      "permalink": "https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/fe03f37df962876feddae6c056a59d279117a45d/tools/build/pack_p25_boot_v2.py"
+    },
+    {
+      "path": "tools/build/verify_p25_boot_v2.py",
+      "role": "p25_independent_readback",
+      "git_blob_sha1": "5992ef2eb2b054c3332a84f2a186ff86975fa8e6",
+      "permalink": "https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/fe03f37df962876feddae6c056a59d279117a45d/tools/build/verify_p25_boot_v2.py"
+    },
+    {
+      "path": "tests/test_pack_p25_boot_v2.py",
+      "role": "p25_regression_test",
+      "git_blob_sha1": "57cfedb2d026d20408b7283b387d23b36f1497bc",
+      "permalink": "https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/fe03f37df962876feddae6c056a59d279117a45d/tests/test_pack_p25_boot_v2.py"
+    },
+    {
+      "path": "tools/build/pack_p26_rootfs.py",
+      "role": "p26_packer",
+      "git_blob_sha1": "1e53e6d363415bf2c81b44eab5b0b01ec260f26b",
+      "permalink": "https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/fe03f37df962876feddae6c056a59d279117a45d/tools/build/pack_p26_rootfs.py"
+    },
+    {
+      "path": "tools/build/verify_p26_independent.py",
+      "role": "p26_independent_readback",
+      "git_blob_sha1": "4584d851c68125e2e69a5e18c5120fddb815ce60",
+      "permalink": "https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/fe03f37df962876feddae6c056a59d279117a45d/tools/build/verify_p26_independent.py"
+    },
+    {
+      "path": ".github/workflows/mt6990-native-subtarget.yml",
+      "role": "same_run_recipe",
+      "git_blob_sha1": "a2e1383c68056c58b35d758232414b574760f838",
+      "permalink": "https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/fe03f37df962876feddae6c056a59d279117a45d/.github/workflows/mt6990-native-subtarget.yml"
+    },
+    {
+      "path": "config/source-catalog.json",
+      "role": "source_catalog",
+      "git_blob_sha1": "32e95b426a5d9e8d5d5550150956c9e45130f84c",
+      "permalink": "https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/fe03f37df962876feddae6c056a59d279117a45d/config/source-catalog.json"
+    }
+  ],
+  "build": {
+    "workflow_run_id": 42479875903,
+    "native_job_id": 128729467133,
+    "run_url": "https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42479875903",
+    "workflow_conclusion": "success",
+    "completed_utc": "2026-11-08T13:30:40Z",
+    "host_checks_run_id": 42479875847,
+    "host_job_id": 128729293042,
+    "host_tests_main": 251,
+    "host_tests_supplemental": 14,
+    "source_catalog": "PASS",
+    "real_source_built_openwrt": true,
+    "p25_p26_same_native_run": true,
+    "rootfs_installed_packages": 37,
+    "installed_package_db_sha256": "2606151c6f0b2f27f09f392cf01f8c5e0b87f068c77e9fba9b7750e7e9c9525a",
+    "input_image_uncompressed_sha256": "07d39c7479898b59b57495da8f645b25a3a5df9f7aa268c5d10d29c751874cb9",
+    "input_initramfs_data_object_sha256": "e058117ebc6494010448e067da72ef795387b35341bc4a8b10eb7250915ed513",
+    "input_image_gz_sha256": null,
+    "input_air6_dtb_sha256": null,
+    "inputs_note": "Final Image SHA is proven by the job stdout. Image.gz and DTB hashes were not emitted in the inspected retained log; do not infer or claim values."
+  },
+  "images": {
+    "p25": {
+      "bytes": 33554432,
+      "sha256": "2b45b36ad4dd5469e59cf216a60435658e01c89ba6239eaa2d98cd6ce7f46288",
+      "format": "AOSP boot header v2 research candidate",
+      "producer_marker": "2026-11-08T13:27:22.4159537Z PUBLIC_AOSP_V2_P25_32M_RESEARCH_IMAGE_SHA256 2b45b36ad4dd5469e59cf216a60435658e01c89ba6239eaa2d98cd6ce7f46288",
+      "independent_readback_marker": "2026-11-08T13:27:22.5577041Z PUBLIC_AOSP_V2_P25_32M_INDEPENDENT_READBACK_PASS 2b45b36ad4dd5469e59cf216a60435658e01c89ba6239eaa2d98cd6ce7f46288",
+      "readback_pass_utc": "2026-11-08T13:27:22.5577041Z",
+      "header_metadata": "synthetic-research-only; zero addresses",
+      "oem_vendor64_present": false,
+      "lk_accepted": false,
+      "device_boot_proven": false,
+      "release_rights_approved": false
+    },
+    "p26": {
+      "bytes": 134217728,
+      "sha256": "df14b3d42785329f6523d29523e365467e0a180730cd2889159babf67c9ef6f5",
+      "format": "OpenWrt source-built SquashFS rootfs_a partition",
+      "producer_marker": "2026-11-08T13:21:07.8838427Z P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK 134217728 df14b3d42785329f6523d29523e365467e0a180730cd2889159babf67c9ef6f5",
+      "independent_readback_marker": "2026-11-08T13:21:08.5353867Z P26_INDEPENDENT_READBACK_PASS df14b3d42785329f6523d29523e365467e0a180730cd2889159babf67c9ef6f5",
+      "readback_pass_utc": "2026-11-08T13:21:08.5353867Z",
+      "installed_package_count": 37,
+      "release_rights_approved": false,
+      "device_boot_proven": false
+    }
+  },
+  "same_run_pair_marker": "2026-11-08T13:27:22.5801302Z PUBLIC_MT6990_NATIVE_EPHEMERAL_P25_P26_SAME_RUN_PAIR p25=2b45b36ad4dd5469e59cf216a60435658e01c89ba6239eaa2d98cd6ce7f46288 p26=df14b3d42785329f6523d29523e365467e0a180730cd2889159babf67c9ef6f5",
+  "raw_evidence_log": "docs/evidence/2026-11-08-pr130-readback-success.log",
+  "original_actions_logs_limited_retention": true,
+  "persisted_git_evidence": true,
+  "persisted_binary_bytes": false,
+  "ci_cleanup": "mktemp -d with trap 'rm -rf -- \"$work\"' EXIT; no Actions artifact uploaded",
+  "scope_limits": "Research-quality real bytes and full SHA/readback verified. Not a durable binary copy. p25 header/device acceptance and p26 redistribution review remain blocked."
+}
