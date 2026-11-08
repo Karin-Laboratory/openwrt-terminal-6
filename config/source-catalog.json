@@ -283,6 +283,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_air6_ap_contract.py",
+      "component": "wifi7",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "371cb81a30000474df0a8bf82dd1dd15f887df36",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_air6_board_source.py",
       "component": "board-dt",
       "origin": "independent-original",
@@ -846,6 +855,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "f549fa4ebf28a18b8c53ce7dda5848990fcdda8d",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/wifi/air6_ap_contract.py",
+      "component": "wifi7",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "4b9d5b423aa4b1bef1c1a8b04ee8f19dba30f357",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
