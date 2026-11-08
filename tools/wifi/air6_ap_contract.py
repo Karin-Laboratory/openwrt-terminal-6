@@ -40,7 +40,7 @@ def validate(profile, kernel_config, module_symvers):
     if not all(isinstance(x, str) and x.startswith("CONFIG_") for x in profile.get("kernel_config_symbols", ())):
         raise ValueError("AP_KCONFIG_SYMBOLS")
     for symbol in profile["kernel_config_symbols"]:
-        if not any(line in kernel_config.splitlines() for line in
+        if not any(line.encode("ascii") in kernel_config.splitlines() for line in
                    (symbol + "=y", symbol + "=m")):
             raise ValueError("AP_KCONFIG_MISSING_" + symbol)
     bands = profile.get("radios")

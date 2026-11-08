@@ -863,7 +863,7 @@
       "component": "wifi7",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "4b9d5b423aa4b1bef1c1a8b04ee8f19dba30f357",
+      "git_blob_sha1": "10d5af53fadd57415b609782187f6e5ab87c430d",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
