@@ -283,6 +283,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_air6_boot_contract.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "44c6c49e35ddfbd11a9145dc42e40e82faacfe21",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_air6_compiled_scope.py",
       "component": "board-dt",
       "origin": "independent-original",
@@ -589,6 +598,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/boot/air6_boot_contract.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b0a683424b132a0cc93cd8dcad107ba703c97aec",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/boot/slot_observation.py",
       "component": "ab-recovery",
       "origin": "independent-original",
@@ -638,7 +656,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "ecfe865658fd680adbf1be311934cbfba338f18f",
+      "git_blob_sha1": "ad75fac24d49068962bb21868c0a2bd641b585d2",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -683,7 +701,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "f5658208952a2e08ad5cfa84202db2911d694889",
+      "git_blob_sha1": "a0400b170ad58a6d997cfffb80c19dd4ecda352e",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },

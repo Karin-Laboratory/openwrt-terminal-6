@@ -73,6 +73,14 @@ def build(kernel, dtb, metadata, output, receipt):
             raise ValueError("missing or invalid header field: " + key)
         fields[key] = v
     board, cmdline = cfg.get("board"), cfg.get("cmdline")
+    extra_cmdline = cfg.get("extra_cmdline", "")
+    if not isinstance(extra_cmdline, str) or len(extra_cmdline.encode("ascii")) >= 1024:
+        raise ValueError("extra cmdline must be ASCII and shorter than 1024 bytes")
+    if cfg["metadata_provenance"] == "owner-reviewed-public-metadata":
+        source = cfg.get("public_observation_source")
+        if not isinstance(source, str) or not source.startswith("https://"):
+            raise ValueError("reviewed metadata requires a public observation source")
+    # Source locator and field values remain unverified until LK/device testing.
     if not isinstance(board, str) or len(board.encode("ascii")) >= 16:
         raise ValueError("board must be ASCII and shorter than 16 bytes")
     if not isinstance(cmdline, str) or len(cmdline.encode("ascii")) >= 512:
@@ -97,6 +105,7 @@ def build(kernel, dtb, metadata, output, receipt):
     header[48:64] = board.encode("ascii").ljust(16, b"\x00")
     header[64:576] = cmdline.encode("ascii").ljust(512, b"\x00")
     header[576:608] = sha1.digest().ljust(32, b"\x00")
+    header[608:1632] = extra_cmdline.encode("ascii").ljust(1024, b"\x00")
     struct.pack_into("<IQIIQ", header, 1632, 0, 0, HEADER_SIZE, dsize, fields["dtb_addr"])
     created = False
     try:
@@ -115,6 +124,10 @@ def build(kernel, dtb, metadata, output, receipt):
             "format": "aosp-boot-v2-p25-research-receipt-v1",
             "status": "REAL_32M_BYTES_AOSP_V2_STRUCTURE_ONLY_NOT_LK_ACCEPTED",
             "metadata_provenance": cfg["metadata_provenance"],
+            "header_fields": {"kernel_addr": fields["kernel_addr"],
+                "tags_addr": fields["tags_addr"], "dtb_addr": fields["dtb_addr"],
+                "os_version": fields["os_version"], "board": board,
+                "cmdline": cmdline, "extra_cmdline": extra_cmdline},
             "partition_bytes": PARTITION, "header_bytes": HEADER_SIZE,
             "page_size": PAGE, "kernel": {"offset": koff, "bytes": ksize,
                 "sha256": file_sha(kernel)},
