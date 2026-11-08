@@ -121,6 +121,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "scripts/air6-p26-p44-init.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "8361834b1086aec88fd05b36153613f74318b806",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "scripts/apply-public-rfc-series.sh",
       "component": "ethernet",
       "origin": "independent-original",
@@ -454,6 +463,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_p26_p44_bootstrap.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "882a63c43dcb63a6bc2891c3a67ccce5f2a7b976",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_p44_promotion_guard.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -661,6 +679,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/boot/build_p26_p44_initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "562bc59fb46197eaa6524509d9479d3a5035c035",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/boot/slot_observation.py",
       "component": "ab-recovery",
       "origin": "independent-original",
@@ -675,6 +702,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "093175bb5cc1f3d959329ea18ec48d41c2635f15",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/verify_p26_p44_initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "defabf63f76319c88dc7d40507675705584d8da6",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },

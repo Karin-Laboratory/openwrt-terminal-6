@@ -12,6 +12,10 @@ on:
       - tools/build/pack_p25_boot_v2.py
       - tools/build/verify_p25_boot_v2.py
       - tests/test_pack_p25_boot_v2.py
+      - scripts/air6-p26-p44-init.sh
+      - tools/boot/build_p26_p44_initramfs.py
+      - tools/boot/verify_p26_p44_initramfs.py
+      - tests/test_p26_p44_bootstrap.py
       - tools/build/verify_p26_independent.py
       - tests/test_pack_p26_rootfs.py
       - tests/test_verify_p26_independent.py
@@ -369,6 +373,24 @@ jobs:
             --p26 "$work/private-p26/packed/rootfs_a.p26" \
             --squashfs "$work/private-p26/packed/rootfs.squashfs"
           echo 'PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS'
+          # Alternative *complete* initramfs from THIS exact OpenWrt package
+          # rootfs and independently read-back 128MiB p26. Keep current known
+          # QEMU/procd initramfs unchanged; the owner P44 RW consent and exact
+          # P44 partition label are NEVER embedded by this public workflow.
+          python3 -m tools.boot.build_p26_p44_initramfs \
+            --rootfs "$rootfs" \
+            --p26-file "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --output "$work/air6-p26-p44-alternative.cpio" \
+            --receipt "$work/air6-p26-p44-alternative.json"
+          python3 -m tools.boot.verify_p26_p44_initramfs \
+            --rootfs "$rootfs" \
+            --p26-file "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --cpio "$work/air6-p26-p44-alternative.cpio" \
+            --receipt "$work/air6-p26-p44-alternative.json"
+          echo 'PUBLIC_MT6990_REAL_ROOTFS_P26_P44_ALTERNATIVE_CPIO_READBACK_PASS'
+          echo 'LIMIT: separate unused initramfs; no P44 owner go, physical boot or signing'
           echo 'LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution'
           # Build an external diagnostic PID1 cpio with the SAME pinned
           # OpenWrt cross-toolchain as the native MT6990 kernel Image.
