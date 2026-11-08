@@ -1,0 +1,113 @@
+# PR #130 immutable source-log excerpts captured 2026-11-08
+# Exact text from GitHub Actions job log stdout; line numbers are 1-based as returned by the connector.
+# No proprietary image bytes, signer/private header, credentials or license approvals are included.
+# Source native log: https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42479875903/job/128729467133
+# Source host log:   https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42479875847/job/128729293042
+# Lines below are preserved verbatim (UTC timestamps). Missing ranges are deliberately omitted.
+
+## p26 full readback and source-built rootfs metadata (native lines 7170-7219)
+2026-11-08T13:21:06.6447302Z SBAT6_ROOT_PASSWORD_LOCKED_IN_EPHEMERAL_STAGE
+2026-11-08T13:21:06.7628897Z PUBLIC_MT6990_NATIVE_QEMU_NETIFD_BRIDGE_BOOT_POLICY_STAGED
+2026-11-08T13:21:06.9108454Z e6f5f25afa86db8537249335659295ad380762cdca2254b437e238bc34742c5e  /tmp/tmp.R9vH0SDv89/sbat6-rootfs-stage.tar.gz
+2026-11-08T13:21:06.9111297Z PUBLIC_MT6990_NONINSTALLABLE_ROOTFS_STAGE_BUILD_PASS
+2026-11-08T13:21:06.9268502Z P26_SAME_RUN_PACKAGE_INSTALL_RECEIPT_READY 37 2606151c6f0b2f27f09f392cf01f8c5e0b87f068c77e9fba9b7750e7e9c9525a
+2026-11-08T13:21:06.9298398Z /usr/bin/mksquashfs
+2026-11-08T13:21:06.9298643Z /usr/bin/unsquashfs
+2026-11-08T13:21:07.5958458Z Parallel mksquashfs: Using 1 processor
+2026-11-08T13:21:07.5958843Z Creating 4.0 filesystem on /tmp/tmp.R9vH0SDv89/private-p26/packed/rootfs.squashfs, block size 262144.
+2026-11-08T13:21:07.5959064Z 
+2026-11-08T13:21:07.5959181Z Exportable Squashfs 4.0 filesystem, xz compressed, data block size 262144
+2026-11-08T13:21:07.5959437Z 	compressed data, compressed metadata, compressed fragments,
+2026-11-08T13:21:07.5959631Z 	no xattrs, compressed ids
+2026-11-08T13:21:07.5959772Z 	duplicates are removed
+2026-11-08T13:21:07.5959917Z Filesystem size 1299.98 Kbytes (1.27 Mbytes)
+2026-11-08T13:21:07.5960150Z 	35.31% of uncompressed filesystem size (3681.33 Kbytes)
+2026-11-08T13:21:07.5960338Z Inode table size 3478 bytes (3.40 Kbytes)
+2026-11-08T13:21:07.5960513Z 	20.56% of uncompressed inode table size (16915 bytes)
+2026-11-08T13:21:07.5960695Z Directory table size 4908 bytes (4.79 Kbytes)
+2026-11-08T13:21:07.5961101Z 	53.08% of uncompressed directory table size (9247 bytes)
+2026-11-08T13:21:07.5961285Z Number of duplicate files found 3
+2026-11-08T13:21:07.5961429Z Number of inodes 501
+2026-11-08T13:21:07.5961546Z Number of files 269
+2026-11-08T13:21:07.5961661Z Number of fragments 13
+2026-11-08T13:21:07.5961791Z Number of symbolic links 171
+2026-11-08T13:21:07.5961927Z Number of device nodes 0
+2026-11-08T13:21:07.5962055Z Number of fifo nodes 0
+2026-11-08T13:21:07.5962177Z Number of socket nodes 0
+2026-11-08T13:21:07.5962303Z Number of directories 61
+2026-11-08T13:21:07.5962429Z Number of hard-links 0
+2026-11-08T13:21:07.5962713Z Number of ids (unique uids + gids) 1
+2026-11-08T13:21:07.5962866Z Number of uids 1
+2026-11-08T13:21:07.5962981Z 	root (0)
+2026-11-08T13:21:07.5963086Z Number of gids 1
+2026-11-08T13:21:07.5963195Z 	root (0)
+2026-11-08T13:21:07.8838427Z P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK 134217728 df14b3d42785329f6523d29523e365467e0a180730cd2889159babf67c9ef6f5
+2026-11-08T13:21:08.3497376Z Parallel unsquashfs: Using 4 processors
+2026-11-08T13:21:08.3497651Z 440 inodes (270 blocks) to write
+2026-11-08T13:21:08.3497757Z 
+2026-11-08T13:21:08.3497760Z 
+2026-11-08T13:21:08.3497808Z created 269 files
+2026-11-08T13:21:08.3497932Z created 61 directories
+2026-11-08T13:21:08.3498063Z created 171 symlinks
+2026-11-08T13:21:08.3498183Z created 0 devices
+2026-11-08T13:21:08.3498305Z created 0 fifos
+2026-11-08T13:21:08.3498416Z created 0 sockets
+2026-11-08T13:21:08.3498531Z created 0 hardlinks
+2026-11-08T13:21:08.5353867Z P26_INDEPENDENT_READBACK_PASS df14b3d42785329f6523d29523e365467e0a180730cd2889159babf67c9ef6f5
+2026-11-08T13:21:08.5424348Z PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS
+2026-11-08T13:21:08.5424910Z LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution
+
+## p25 source Image fingerprint, production and independent readback (native lines 10913-10924)
+2026-11-08T13:27:21.8013570Z   OBJCOPY arch/arm64/boot/Image
+2026-11-08T13:27:21.8191387Z make: Leaving directory '/tmp/tmp.R9vH0SDv89/openwrt/build_dir/target-aarch64_cortex-a55_musl/linux-mediatek_mt6990/linux-6.18.60'
+2026-11-08T13:27:21.8262242Z PUBLIC_MT6990_NATIVE_PHY_IFRAO_SAME_PROCD_IMAGE_KBUILD_PASS
+2026-11-08T13:27:21.8389982Z e058117ebc6494010448e067da72ef795387b35341bc4a8b10eb7250915ed513  /tmp/tmp.R9vH0SDv89/openwrt/build_dir/target-aarch64_cortex-a55_musl/linux-mediatek_mt6990/linux-6.18.60/usr/initramfs_data.o
+2026-11-08T13:27:21.8456628Z 07d39c7479898b59b57495da8f645b25a3a5df9f7aa268c5d10d29c751874cb9  /tmp/tmp.R9vH0SDv89/openwrt/build_dir/target-aarch64_cortex-a55_musl/linux-mediatek_mt6990/linux-6.18.60/arch/arm64/boot/Image
+2026-11-08T13:27:21.8460416Z PUBLIC_MT6990_SAME_KERNEL_EMBEDDED_PROCD_PID1_IMAGE_BUILD_PASS
+2026-11-08T13:27:22.4159537Z PUBLIC_AOSP_V2_P25_32M_RESEARCH_IMAGE_SHA256 2b45b36ad4dd5469e59cf216a60435658e01c89ba6239eaa2d98cd6ce7f46288
+2026-11-08T13:27:22.4159993Z LIMIT: not Air6 LK acceptance, unsigned, unapproved for distribution
+2026-11-08T13:27:22.5577041Z PUBLIC_AOSP_V2_P25_32M_INDEPENDENT_READBACK_PASS 2b45b36ad4dd5469e59cf216a60435658e01c89ba6239eaa2d98cd6ce7f46288
+2026-11-08T13:27:22.5577459Z LIMIT: LK vendor64/header semantics not proven; no device boot/signing/release
+2026-11-08T13:27:22.5801302Z PUBLIC_MT6990_NATIVE_EPHEMERAL_P25_P26_SAME_RUN_PAIR p25=2b45b36ad4dd5469e59cf216a60435658e01c89ba6239eaa2d98cd6ce7f46288 p26=df14b3d42785329f6523d29523e365467e0a180730cd2889159babf67c9ef6f5
+2026-11-08T13:27:22.5802012Z LIMIT: p25 synthetic header addresses/vendor64 not LK-verified; p26 rights pending; neither image distributable or flashable
+
+## QEMU virt procd/network evidence and scope limits (native lines 11391-11407)
+2026-11-08T13:29:36.7736578Z [    5.767138] procd: - early -
+2026-11-08T13:29:36.7736711Z [    6.324595] procd: - ubus -
+2026-11-08T13:29:36.7736844Z [    6.497177] procd: - init -
+2026-11-08T13:29:36.7736988Z Please press Enter to activate this console.
+2026-11-08T13:29:36.7737186Z [    7.018315] kmodloader: loading kernel modules from /etc/modules.d/*
+2026-11-08T13:29:36.7737429Z [    7.019265] kmodloader: done loading kernel modules from /etc/modules.d/*
+2026-11-08T13:29:36.7737629Z SBAT6_PROCD_NETIFD_REGISTERED
+2026-11-08T13:29:36.7737771Z SBAT6_NETIFD_PROCESS_STABLE_RUNTIME_PASS
+2026-11-08T13:29:36.7737921Z SBAT6_QEMU_BRIDGE_GATE_ENABLED
+2026-11-08T13:29:36.7738071Z SBAT6_QEMU_BRIDGE_UCI_COMMIT_OK
+2026-11-08T13:29:36.7738209Z SBAT6_NETIFD_EMPTY_BRIDGE_RUNTIME_PASS
+2026-11-08T13:29:36.7738399Z qemu-system-aarch64: terminating on signal 15 from pid 7 (timeout)
+2026-11-08T13:29:36.7738647Z PUBLIC_MT6990_NATIVE_SAME_IMAGE_QEMU_PROCD_PID1_BOOT_PASS
+2026-11-08T13:29:36.7738854Z PUBLIC_MT6990_NATIVE_SAME_IMAGE_QEMU_NETIFD_BRIDGE_RUNTIME_PASS
+2026-11-08T13:29:36.7739115Z LIMIT: QEMU virt empty bridge only; no NIC, Air6 DTB, Ethernet traffic, radio or hardware proof
+2026-11-08T13:29:36.8080513Z LIMIT: QEMU virt cannot establish Air6 bootloader/DTB/AP compatibility
+2026-11-08T13:29:36.8081005Z LIMIT: native procd QEMU virt boot only; Air6 device boot not tested
+
+## host unit suite result (host lines 502-507)
+2026-11-08T12:21:50.7253395Z test_ephemeral_compilation_is_still_allowed (test_workflow_policy.WorkflowPolicyTests.test_ephemeral_compilation_is_still_allowed) ... ok
+2026-11-08T12:21:50.7255162Z test_expected_safe_workflow (test_workflow_policy.WorkflowPolicyTests.test_expected_safe_workflow) ... ok
+2026-11-08T12:21:50.7257727Z test_explicit_hosted_arm64_runner_is_allowed (test_workflow_policy.WorkflowPolicyTests.test_explicit_hosted_arm64_runner_is_allowed) ... ok
+2026-11-08T12:21:50.7259439Z 
+2026-11-08T12:21:50.7260087Z ----------------------------------------------------------------------
+2026-11-08T12:21:50.7261102Z Ran 251 tests in 5.100s
+
+## host supplemental suite result (host lines 527-530)
+2026-11-08T12:21:50.7983425Z test_untrusted_completion_types_cannot_alias_pending_request (test_transport_model.TransportTests.test_untrusted_completion_types_cannot_alias_pending_request) ... ok
+2026-11-08T12:21:50.7984292Z 
+2026-11-08T12:21:50.7984549Z ----------------------------------------------------------------------
+2026-11-08T12:21:50.7984947Z Ran 14 tests in 0.001s
+
+## host source catalog validation (host lines 900-904)
+2026-11-08T12:21:59.4735624Z shell: /usr/bin/bash -e {0}
+2026-11-08T12:21:59.4735951Z ##[endgroup]
+2026-11-08T12:21:59.5235607Z SOURCE CATALOG PASS (checks declared source-rights status only; requires independent
+2026-11-08T12:21:59.5237187Z  copyright/license, Git history, issue/log and security reviews)
+2026-11-08T12:21:59.5330215Z ##[group]Run python3 tools/security/check_workflows.py
+
