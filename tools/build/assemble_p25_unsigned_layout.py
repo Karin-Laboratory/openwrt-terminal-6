@@ -31,13 +31,13 @@ def validate_payload_role(source, role, length):
         header = stream.read(64 if role == "arm64-image" else 40)
     if role == "arm64-image":
         # Linux arm64 Image header: text_offset @8, image_size @16, magic @56.
-        if len(header) < 64 or header[56:60] != b"ARM\\x64":
+        if len(header) < 64 or header[56:60] != b"ARM\x64":
             raise ValueError("invalid ARM64 Image magic")
         image_size = struct.unpack_from("<Q", header, 16)[0]
         if image_size and image_size > length:
             raise ValueError("ARM64 Image declared size exceeds segment")
     else:
-        if len(header) < 40 or header[:4] != b"\\xd0\\x0d\\xfe\\xed":
+        if len(header) < 40 or header[:4] != b"\xd0\x0d\xfe\xed":
             raise ValueError("invalid FDT magic")
         total, off_struct, off_strings, off_reserve = struct.unpack_from(">IIII", header, 4)
         size_strings, size_struct = struct.unpack_from(">II", header, 32)
