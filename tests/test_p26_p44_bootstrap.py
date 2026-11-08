@@ -82,11 +82,11 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn("P44_EXPLICIT_RW_GO", res.stdout)
         body = script.read_text()
         self.assertNotIn("mkfs", "\n".join(
-            line for line in body.splitlines() if not line.startswith("#")))
+            line for line in body.splitlines() if not line.lstrip().startswith("#")))
         self.assertNotIn("bootctrl", "\n".join(
-            line for line in body.splitlines() if not line.startswith("#")))
+            line for line in body.splitlines() if not line.lstrip().startswith("#")))
         self.assertNotIn("reboot", "\n".join(
-            line for line in body.splitlines() if not line.startswith("#")))
+            line for line in body.splitlines() if not line.lstrip().startswith("#")))
 
 
 if __name__ == "__main__":
