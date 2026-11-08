@@ -70,7 +70,8 @@ log P26_RO_VERIFIED
 
 mount -t squashfs -o ro "$P26" "$ROM" ||
     halt_boot P26_SQUASHFS_RO_MOUNT
-[ -x "$ROM/sbin/init" ] && [ -f "$ROM/etc/preinit" ] ||
+[ -x "$ROM/sbin/procd" ] && [ -f "$ROM/etc/preinit" ] &&
+    [ ! -L "$ROM/etc/preinit" ] ||
     halt_boot P26_INIT_PREINIT_MISSING
 log P26_ROM_MOUNT_PASS
 
@@ -93,15 +94,45 @@ log P44_RO_NOLOAD_PASS
 umount "$UPPER" || halt_boot P44_RO_UMOUNT_FAILED
 mount -t ext4 -o rw,noatime "$P44" "$UPPER" ||
     halt_boot P44_RW_MOUNT_FAILED
+# Journal replay must not silently invalidate the read-only preflight.
+[ -d "$UPPER/upper" ] && [ ! -L "$UPPER/upper" ] &&
+    [ -d "$UPPER/work" ] && [ ! -L "$UPPER/work" ] ||
+    halt_boot P44_POST_JOURNAL_LAYOUT
+[ ! -e "$UPPER/upper/etc/preinit" ] &&
+    [ ! -L "$UPPER/upper/etc/preinit" ] &&
+    [ ! -e "$UPPER/upper/sbin/init" ] &&
+    [ ! -L "$UPPER/upper/sbin/init" ] ||
+    halt_boot P44_POST_JOURNAL_BOOT_SHADOW
 mount -t overlay overlay -o "lowerdir=$ROM,upperdir=$UPPER/upper,workdir=$UPPER/work" \
     "$NEWROOT" || halt_boot P44_OVERLAY_MOUNT_FAILED
-[ -f "$NEWROOT/etc/preinit" ] && [ -x "$NEWROOT/sbin/init" ] ||
+[ -f "$NEWROOT/etc/preinit" ] && [ ! -L "$NEWROOT/etc/preinit" ] &&
+    [ -x "$NEWROOT/sbin/procd" ] && [ -x "$NEWROOT/sbin/init" ] ||
     halt_boot OVERLAY_BOOT_FILES_MISSING
-# Verify that opaque xattrs/whiteouts did not mask the critical entrypoints.
+# A symlinked /sbin/init can resolve relative to the WRONG root. Compare
+# link text and actual procd object within each explicitly rooted tree.
 cmp -s "$ROM/etc/preinit" "$NEWROOT/etc/preinit" ||
     halt_boot OVERLAY_PREINIT_CONTENT_CHANGED
-cmp -s "$ROM/sbin/init" "$NEWROOT/sbin/init" ||
-    halt_boot OVERLAY_INIT_CONTENT_CHANGED
+if [ -L "$ROM/sbin/init" ]; then
+    [ -L "$NEWROOT/sbin/init" ] ||
+        halt_boot OVERLAY_INIT_LINK_TYPE
+    original_link="$(readlink "$ROM/sbin/init")" ||
+        halt_boot ROM_INIT_LINK_READ
+    merged_link="$(readlink "$NEWROOT/sbin/init")" ||
+        halt_boot OVERLAY_INIT_LINK_READ
+    [ "$original_link" = "$merged_link" ] ||
+        halt_boot OVERLAY_INIT_LINK_CHANGED
+    case "$original_link" in
+        procd|sbin/procd|/sbin/procd) : ;;
+        *) halt_boot OVERLAY_INIT_LINK_UNREVIEWED ;;
+    esac
+else
+    [ ! -L "$NEWROOT/sbin/init" ] ||
+        halt_boot OVERLAY_INIT_LINK_INJECTED
+    cmp -s "$ROM/sbin/init" "$NEWROOT/sbin/init" ||
+        halt_boot OVERLAY_INIT_CONTENT_CHANGED
+fi
+cmp -s "$ROM/sbin/procd" "$NEWROOT/sbin/procd" ||
+    halt_boot OVERLAY_PROCD_BINARY_CHANGED
 log OVERLAY_MOUNT_PASS
 
 mkdir -p "$NEWROOT/rom" "$NEWROOT/overlay" \

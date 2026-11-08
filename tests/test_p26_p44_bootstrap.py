@@ -71,6 +71,14 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
             self.build()
         self.assertFalse(self.cpio.exists())
 
+    def test_symlinked_init_checks_real_procd_and_journal_replay(self):
+        script = maker.BOOT_SCRIPT.read_text()
+        self.assertIn('readlink "$ROM/sbin/init"', script)
+        self.assertIn('readlink "$NEWROOT/sbin/init"', script)
+        self.assertIn('cmp -s "$ROM/sbin/procd" "$NEWROOT/sbin/procd"', script)
+        self.assertIn("P44_POST_JOURNAL_BOOT_SHADOW", script)
+        self.assertIn('if [ -L "$ROM/sbin/init" ]; then', script)
+
     def test_shell_syntax_and_non_operational_capabilities_only(self):
         script = maker.BOOT_SCRIPT
         check = subprocess.run(["sh", "-n", str(script)], capture_output=True)
