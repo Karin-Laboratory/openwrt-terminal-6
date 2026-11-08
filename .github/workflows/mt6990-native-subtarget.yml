@@ -9,6 +9,9 @@ on:
       - patches/mt6990/0003-air6-check-sgmii-pll-errors.patch
       - tests/test_mt6990_native_subtarget.py
       - tools/build/pack_p26_rootfs.py
+      - tools/build/pack_p25_boot_v2.py
+      - tools/build/verify_p25_boot_v2.py
+      - tests/test_pack_p25_boot_v2.py
       - tools/build/verify_p26_independent.py
       - tests/test_pack_p26_rootfs.py
       - tests/test_verify_p26_independent.py
@@ -637,6 +640,46 @@ jobs:
           sha256sum "$kernel/usr/initramfs_data.o" \
             "$kernel/arch/arm64/boot/Image"
           echo 'PUBLIC_MT6990_SAME_KERNEL_EMBEDDED_PROCD_PID1_IMAGE_BUILD_PASS'
+          # Same-run pair: real p26 is already independently checked above;
+          # pack this exact native Kbuild Image/DTB as ephemeral AOSP v2 p25.
+          # Header metadata synthetic; no LK/vendor64 acceptance.
+          gzip -n -c "$kernel/arch/arm64/boot/Image" > "$work/public-Image.gz"
+          python3 - "$work/public-p25-metadata.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          Path(sys.argv[1]).write_text(json.dumps({
+              "format": "aosp-boot-v2-metadata-v1",
+              "metadata_provenance": "synthetic-research-only",
+              "page_size": 2048, "kernel_addr": 0,
+              "tags_addr": 0, "dtb_addr": 0, "os_version": 0,
+              "board": "research", "cmdline": ""
+          }) + "\n")
+          PY
+          python3 "$GITHUB_WORKSPACE/tools/build/pack_p25_boot_v2.py" \
+            --kernel "$work/public-Image.gz" \
+            --dtb "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb" \
+            --metadata "$work/public-p25-metadata.json" \
+            --output "$work/p25-AOSP-v2-research-unsigned.img" \
+            --receipt "$work/p25-AOSP-v2-research.json"
+          python3 "$GITHUB_WORKSPACE/tools/build/verify_p25_boot_v2.py" \
+            --p25 "$work/p25-AOSP-v2-research-unsigned.img" \
+            --receipt "$work/p25-AOSP-v2-research.json" \
+            --kernel "$work/public-Image.gz" \
+            --dtb "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
+          python3 - "$work/p25-AOSP-v2-research.json" \
+            "$work/private-p26/packed/p26-receipt.json" <<'PY'
+          import json,sys
+          from pathlib import Path
+          p25,p26=(json.loads(Path(p).read_text()) for p in sys.argv[1:])
+          assert p25["partition_bytes"] == 33554432
+          assert p26["partition_bytes"] == 134217728
+          assert p25["signed"] is False and p25["device_boot_proven"] is False
+          print("PUBLIC_MT6990_NATIVE_EPHEMERAL_P25_P26_SAME_RUN_PAIR",
+                "p25=" + p25["p25_sha256"],
+                "p26=" + p26["p26_sha256"])
+          print("LIMIT: p25 synthetic header addresses/vendor64 not LK-verified;",
+                "p26 rights pending; neither image distributable or flashable")
+          PY
           # Boot this exact native OpenWrt Image (with its real procd rootfs)
           # under QEMU virt. No Air6 DTB is passed: virt uses QEMU-generated
           # DT and PL011 console. Require real PID1, netifd and bridge runtime.
