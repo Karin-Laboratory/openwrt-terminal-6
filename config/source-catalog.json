@@ -427,6 +427,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_p25_receipt_race.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "99901320525472b1aa66642cb7aa60cdbb37441b",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_procd_image_stage.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
