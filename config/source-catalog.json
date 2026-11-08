@@ -292,6 +292,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_air6_boot_sequence.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "0d38ef97ce913734f9a06370b0bd38d8b9d9d940",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_air6_compiled_scope.py",
       "component": "board-dt",
       "origin": "independent-original",
@@ -603,6 +612,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "b0a683424b132a0cc93cd8dcad107ba703c97aec",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/air6_boot_sequence.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "d7889d2d04b873a9c43159927dc4b88e5edc7bc2",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
