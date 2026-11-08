@@ -12,6 +12,8 @@ def verify(image, receipt):
     spec = json.loads(Path(receipt).read_text())
     if spec.get("format") != "unsigned-p25-layout-v1" or spec.get("partition_bytes") != SIZE:
         raise ValueError("unrecognized unsigned p25 receipt")
+    if spec.get("boot_v2_verified") is not False or spec.get("status") != "LAYOUT_CANDIDATE_ONLY_NOT_BOOTABLE":
+        raise ValueError("receipt must explicitly deny boot-v2 verification")
     image = Path(image)
     if image.is_symlink() or not image.is_file() or image.stat().st_size != SIZE:
         raise ValueError("p25 image must be a regular 32MiB file")
