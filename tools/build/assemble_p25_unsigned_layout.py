@@ -77,7 +77,18 @@ def assemble(manifest, output, receipt):
             "boot_v2_verified": False,
             "status": "LAYOUT_CANDIDATE_ONLY_NOT_BOOTABLE",
         }
-        receipt.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
+        # Exclusive creation prevents concurrent receipt replacement.
+        receipt_created = False
+        try:
+            with receipt.open("x", encoding="utf-8") as stream:
+                receipt_created = True
+                stream.write(json.dumps(record, indent=2, sort_keys=True) + "\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+        except BaseException:
+            if receipt_created:
+                receipt.unlink(missing_ok=True)
+            raise
         return record
     except BaseException:
         output.unlink(missing_ok=True)
