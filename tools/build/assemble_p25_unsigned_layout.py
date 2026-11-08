@@ -9,6 +9,7 @@ import argparse
 import hashlib
 import json
 import os
+import struct
 from pathlib import Path
 
 SIZE = 33_554_432
@@ -19,6 +20,31 @@ def sha256(path):
         for chunk in iter(lambda: stream.read(1 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+def validate_payload_role(source, role, length):
+    """Validate public ARM64 Image/FDT container identities, not Air6 boot-v2 offsets."""
+    if role is None:
+        return
+    if role not in ("arm64-image", "fdt"):
+        raise ValueError("unsupported segment role")
+    with source.open("rb") as stream:
+        header = stream.read(64 if role == "arm64-image" else 40)
+    if role == "arm64-image":
+        # Linux arm64 Image header: text_offset @8, image_size @16, magic @56.
+        if len(header) < 64 or header[56:60] != b"ARM\\x64":
+            raise ValueError("invalid ARM64 Image magic")
+        image_size = struct.unpack_from("<Q", header, 16)[0]
+        if image_size and image_size > length:
+            raise ValueError("ARM64 Image declared size exceeds segment")
+    else:
+        if len(header) < 40 or header[:4] != b"\\xd0\\x0d\\xfe\\xed":
+            raise ValueError("invalid FDT magic")
+        total, off_struct, off_strings, off_reserve = struct.unpack_from(">IIII", header, 4)
+        size_strings, size_struct = struct.unpack_from(">II", header, 32)
+        if total != length or any(x >= total for x in (off_struct, off_strings, off_reserve)):
+            raise ValueError("FDT total size/offset mismatch")
+        if off_struct + size_struct > total or off_strings + size_strings > total:
+            raise ValueError("FDT structure/string bounds mismatch")
 
 def assemble(manifest, output, receipt):
     spec = json.loads(Path(manifest).read_text())
@@ -43,6 +69,7 @@ def assemble(manifest, output, receipt):
             raise ValueError("invalid source SHA")
         if sha256(source) != expected:
             raise ValueError("source SHA mismatch")
+        validate_payload_role(source, item.get("role"), length)
         spans.append((offset, offset + length, source, expected))
     spans.sort(key=lambda s: s[0])
     if any(left[1] > right[0] for left, right in zip(spans, spans[1:])):
@@ -75,6 +102,7 @@ def assemble(manifest, output, receipt):
             "segments": [{"offset": start, "length": end-start, "sha256": digest}
                          for start, end, _, digest in spans],
             "boot_v2_verified": False,
+            "payload_roles_validated": [item.get("role") for item in segments if item.get("role")],
             "status": "LAYOUT_CANDIDATE_ONLY_NOT_BOOTABLE",
         }
         # Exclusive creation prevents concurrent receipt replacement.
