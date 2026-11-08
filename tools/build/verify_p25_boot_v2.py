@@ -50,6 +50,12 @@ def verify(image, receipt, kernel, dtb):
             raise ValueError("nonzero address for absent payload")
         sections = [("kernel", kernel, PAGE, ksize),
                     ("dtb", dtb, (PAGE + ksize + PAGE - 1) // PAGE * PAGE, dsize)]
+        # Verify page-alignment padding independently of the receipt digest.
+        gap_start = PAGE + ksize
+        gap_end = sections[1][2]
+        src.seek(gap_start)
+        if any(src.read(gap_end - gap_start)):
+            raise ValueError("nonzero kernel-to-DTB alignment padding")
         image_id = hashlib.sha1(usedforsecurity=False)
         for label, path, offset, expected in sections:
             sect = record.get(label, {})

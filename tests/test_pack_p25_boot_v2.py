@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Public AOSP-v2 boot research packer regression tests, not hardware proof."""
 import gzip
+import hashlib
 import json
 from pathlib import Path
 import struct
@@ -35,6 +36,17 @@ class BootV2SpecTests(unittest.TestCase):
             self.assertEqual(out.stat().st_size, 33554432)
             self.assertEqual(reader.verify(out, receipt, k, dt), r["p25_sha256"])
             self.assertFalse(r["lk_header_and_vendor64_accepted"])
+            # A matching receipt digest cannot excuse nonzero page padding.
+            gap = 2048 + k.stat().st_size
+            self.assertLess(gap, r["dtb"]["offset"])
+            with out.open("r+b") as f:
+                f.seek(gap)
+                f.write(b"X")
+            tampered = json.loads(receipt.read_text())
+            tampered["p25_sha256"] = hashlib.sha256(out.read_bytes()).hexdigest()
+            receipt.write_text(json.dumps(tampered))
+            with self.assertRaisesRegex(ValueError, "alignment padding"):
+                reader.verify(out, receipt, k, dt)
             with out.open("r+b") as f:
                 f.seek(8192)
                 f.write(b"NO")
