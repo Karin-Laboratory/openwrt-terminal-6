@@ -18,10 +18,18 @@ class P25LayoutTests(unittest.TestCase):
             image.write_bytes(original)
             record = {"format": "unsigned-p25-layout-v1", "partition_bytes": 128,
                       "p25_sha256": hashlib.sha256(original).hexdigest(),
+                      "boot_v2_verified": False,
+                      "status": "LAYOUT_CANDIDATE_ONLY_NOT_BOOTABLE",
                       "segments": [{"offset": 8, "length": len(payload),
                                     "sha256": hashlib.sha256(payload).hexdigest()}]}
             receipt.write_text(json.dumps(record))
             self.assertEqual(verifier.verify(image, receipt), record["p25_sha256"])
+            record["boot_v2_verified"] = True
+            receipt.write_text(json.dumps(record))
+            with self.assertRaises(ValueError):
+                verifier.verify(image, receipt)
+            record["boot_v2_verified"] = False
+            receipt.write_text(json.dumps(record))
             for index in (0, 8, 127):
                 modified = bytearray(original)
                 modified[index] ^= 1
