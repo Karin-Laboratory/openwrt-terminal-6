@@ -112,6 +112,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "scripts/air6-ethernet-readonly.sh",
+      "component": "ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1e14dad26babab7b32d176ff55637c3fe4072b75",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "scripts/apply-public-rfc-series.sh",
       "component": "ethernet",
       "origin": "independent-original",
@@ -315,6 +324,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "d4b6b3abaecb947e3409db2fc2b25809a2a441fb",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_rx_boundary.py",
+      "component": "ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "51f3b32490f79d642d79c702af1ef0a22e503d4d",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -765,6 +783,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "af2b6bf3a854561c3acf27e09e114835954bc243",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/ethernet/air6_rx_boundary.py",
+      "component": "ethernet",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "9295b184c5b22b4c5601767743087df5ea2fee44",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
