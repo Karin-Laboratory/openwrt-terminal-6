@@ -571,6 +571,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_qemu_p26_ram_boot.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "7a0eb7187e18525105ddf0514d521aaea25ad06f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_sba6d_stage10_clean_patch.py",
       "component": "modem-ethernet",
       "origin": "independent-original",
@@ -729,6 +738,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "57fa607f968e9dcebd2665c46329885f56b6890b",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/check_qemu_p26_ram_boot.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3cb5f97b6e28108b405f8be609675b5db26a744d",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },

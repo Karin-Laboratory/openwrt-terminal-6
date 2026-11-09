@@ -82,3 +82,25 @@ synthetic CPIO and virtual kernel are never used as p25 inputs and are never
 published or uploaded. The original public production `/init` source is
 never rewritten; only an ephemeral QEMU CPIO is patched.
 
+
+## Observed serial transcript, ordering, and fail-closed corruption
+
+`tools/boot/check_qemu_p26_ram_boot.py` is an **independent** source-only
+serial-log validator with three explicit modes: missing P26 (no virtual block
+attached), SHA mismatch (a one-bit modified ephemeral P26 copy), and positive
+RAM-overlay boot. It accepts a mode only if the actual serial log contains
+exactly one kernel `Run /init as init process` marker and all mode-specific
+stages in strict order. It rejects duplicates, missing procd, incorrect
+transition order, panic, unexpected blockers and impossible post-rejection
+stages. Positive mode also independently re-hashes the full original
+128MiB P26 and verifies its original same-run receipt.
+
+Native CI logs are captured to transient files and separately inspected by
+this parser. The negative QEMU corruption test flips one bit in a temporary
+**copy** of the P26 and attaches the copy **read-only** under QEMU. The original
+P26 and CPIO remain unchanged. The expected result is
+`AIR6_BOOT_BLOCKED_P26_SHA_MISMATCH`, before any writable mount or
+`switch_root`. The positive QEMU acceptance additionally requires a procd
+early-start log *after* `switch_root` begins. None of these are treated as
+Air6 hardware acceptance, and passing source unit tests is not itself
+runtime success.
