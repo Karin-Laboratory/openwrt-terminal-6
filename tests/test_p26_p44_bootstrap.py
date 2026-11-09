@@ -101,12 +101,22 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
 
     def test_target_busybox_parses_ram_init_in_isolated_qemu(self):
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
-        self.assertIn("qemu-aarch64 -L /rootfs /rootfs/bin/busybox sh -n /air6-init.sh",
+        self.assertIn("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh -n /air6-init.sh",
                       workflow)
-        self.assertIn("qemu-aarch64 -L /rootfs /rootfs/bin/busybox sh /air6-init.sh --capabilities",
+        self.assertIn("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh /air6-init.sh --capabilities",
                       workflow)
         self.assertIn("PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_RAM_BOOT_SCRIPT_PARSE_PASS",
                       workflow)
+        self.assertIn("--cap-drop ALL --security-opt no-new-privileges", workflow)
+
+    def test_qemu_busybox_explicit_argv0_and_fail_closed(self):
+        # QEMU linux-user normally supplies its own argv[0]. BusyBox then
+        # interprets that as an applet name and can return status 127.
+        workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
+        self.assertEqual(workflow.count("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox"), 3)
+        self.assertNotIn("qemu-aarch64 -L /rootfs /rootfs/bin/busybox", workflow)
+        self.assertIn("BLOCKED_TARGET_BUSYBOX_QEMU_ARGV0_OR_APPLET_DISPATCH", workflow)
+        self.assertIn("--network none --read-only", workflow)
         self.assertIn("--cap-drop ALL --security-opt no-new-privileges", workflow)
 
     def test_shell_syntax_and_non_operational_capabilities_only(self):

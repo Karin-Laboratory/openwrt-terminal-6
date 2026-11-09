@@ -736,14 +736,20 @@ jobs:
           # Run the *actual native OpenWrt AArch64 BusyBox* with QEMU user
           # emulation, not the runner's BusyBox, before assessing /init
           # prerequisites. This is command availability only, not boot proof.
-          docker run --rm --network none --read-only \
+          # QEMU-user normally injects its own argv[0]. BusyBox dispatches
+          # applets on argv[0], so WITHOUT "-0 busybox" even --list returns 127
+          # with "busybox: applet not found"; never relax this flag.
+          if ! docker run --rm --network none --read-only \
             --cap-drop ALL --security-opt no-new-privileges \
             --pids-limit 64 --memory 512m --cpus 1 \
             --user 1001:1001 \
             --mount "type=bind,src=$rootfs,dst=/rootfs,readonly" \
             sbat6-native-procd-qemu:ci \
-            qemu-aarch64 -L /rootfs /rootfs/bin/busybox --list \
-            > "$work/target-openwrt-busybox-applets.txt"
+            qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox --list \
+            > "$work/target-openwrt-busybox-applets.txt"; then
+            echo 'BLOCKED_TARGET_BUSYBOX_QEMU_ARGV0_OR_APPLET_DISPATCH' >&2
+            exit 1
+          fi
           test -s "$work/target-openwrt-busybox-applets.txt"
           python3 "$GITHUB_WORKSPACE/tools/boot/verify_p26_p44_target_tools.py" \
             --rootfs "$rootfs" \
@@ -760,8 +766,8 @@ jobs:
             --mount "type=bind,src=$GITHUB_WORKSPACE/scripts/air6-p26-p44-init.sh,dst=/air6-init.sh,readonly" \
             sbat6-native-procd-qemu:ci bash -c '
               set -euo pipefail
-              qemu-aarch64 -L /rootfs /rootfs/bin/busybox sh -n /air6-init.sh
-              qemu-aarch64 -L /rootfs /rootfs/bin/busybox sh /air6-init.sh --capabilities \
+              qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh -n /air6-init.sh
+              qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh /air6-init.sh --capabilities \
                 | grep -Fq P26_RAM_OVERLAY_DEFAULT
               echo PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_RAM_BOOT_SCRIPT_PARSE_PASS
             '
