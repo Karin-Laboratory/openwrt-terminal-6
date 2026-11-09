@@ -12,6 +12,19 @@ on:
       - tools/build/pack_p25_boot_v2.py
       - tools/build/verify_p25_boot_v2.py
       - tests/test_pack_p25_boot_v2.py
+      - scripts/air6-p26-p44-init.sh
+      - tools/boot/build_p26_p44_initramfs.py
+      - tools/boot/verify_p26_p44_initramfs.py
+      - tests/test_p26_p44_bootstrap.py
+      - tools/boot/check_p26_p44_kernel.py
+      - tests/test_p26_p44_kernel.py
+      - tools/boot/verify_p26_p44_target_tools.py
+      - tests/test_p26_p44_target_tools.py
+      - tools/boot/build_p26_qemu_virt_fixture.py
+      - tools/boot/verify_p26_qemu_virt_fixture.py
+      - tests/test_p26_qemu_virt_fixture.py
+      - tools/boot/check_qemu_p26_ram_boot.py
+      - tests/test_qemu_p26_ram_boot.py
       - tools/build/verify_p26_independent.py
       - tests/test_pack_p26_rootfs.py
       - tests/test_verify_p26_independent.py
@@ -369,6 +382,24 @@ jobs:
             --p26 "$work/private-p26/packed/rootfs_a.p26" \
             --squashfs "$work/private-p26/packed/rootfs.squashfs"
           echo 'PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS'
+          # Alternative *complete* initramfs from THIS exact OpenWrt package
+          # rootfs and independently read-back 128MiB p26. Keep current known
+          # QEMU/procd initramfs unchanged; the owner P44 RW consent and exact
+          # P44 partition label are NEVER embedded by this public workflow.
+          python3 -m tools.boot.build_p26_p44_initramfs \
+            --rootfs "$rootfs" \
+            --p26-file "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --output "$work/air6-p26-p44-alternative.cpio" \
+            --receipt "$work/air6-p26-p44-alternative.json"
+          python3 -m tools.boot.verify_p26_p44_initramfs \
+            --rootfs "$rootfs" \
+            --p26-file "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --cpio "$work/air6-p26-p44-alternative.cpio" \
+            --receipt "$work/air6-p26-p44-alternative.json"
+          echo 'PUBLIC_MT6990_REAL_ROOTFS_P26_P44_ALTERNATIVE_CPIO_READBACK_PASS'
+          echo 'LIMIT: separate unused initramfs; no P44 owner go, physical boot or signing'
           echo 'LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution'
           # Build an external diagnostic PID1 cpio with the SAME pinned
           # OpenWrt cross-toolchain as the native MT6990 kernel Image.
@@ -592,7 +623,11 @@ jobs:
             --enable SERIAL_AMBA_PL011 --enable SERIAL_AMBA_PL011_CONSOLE \
             --enable DEVTMPFS --enable DEVTMPFS_MOUNT \
             --enable TMPFS --enable PROC_FS --enable SYSFS \
-            --enable BINFMT_ELF --enable UNIX
+            --enable BINFMT_ELF --enable UNIX \
+            --enable PARTITION_ADVANCED --enable EFI_PARTITION \
+            --enable MMC --enable MMC_BLOCK \
+            --enable EXT4_FS --enable SQUASHFS --enable SQUASHFS_XZ \
+            --enable XZ_DEC --enable OVERLAY_FS
           # Material kernel/userspace integration: rebuild this SAME native
           # MT6990 OpenWrt Image with the real procd PID1 cpio embedded by
           # Kbuild. This is a separate ephemeral research Image, never an
@@ -606,6 +641,10 @@ jobs:
           grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-procd-initramfs.cpio\"" \
             "$kernel/.config"
           grep -qx 'CONFIG_BLK_DEV_INITRD=y' "$kernel/.config"
+          python3 "$GITHUB_WORKSPACE/tools/boot/check_p26_p44_kernel.py" \
+            --kernel-config "$kernel/.config" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26"
+          echo 'PUBLIC_MT6990_KERNEL_P26_XZ_P44_EXT4_OVERLAYFS_BUILTIN_PASS'
           PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
             make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
           test -s "$kernel/usr/initramfs_data.o"
@@ -694,11 +733,49 @@ jobs:
           command -v docker >/dev/null
           cat > "$work/Dockerfile.native-qemu" <<'EOF'
           FROM ubuntu@sha256:80dd3c3b9c6cecb9f1667e9290b3bc61b78c2678c02cbdae5f0fea92cc6734ab
-          RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-arm bash coreutils grep && rm -rf /var/lib/apt/lists/*
+          RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-arm qemu-user bash coreutils grep && rm -rf /var/lib/apt/lists/*
           USER 1001:1001
           EOF
           docker build --pull --file "$work/Dockerfile.native-qemu" \
             --tag sbat6-native-procd-qemu:ci "$work"
+          # Run the *actual native OpenWrt AArch64 BusyBox* with QEMU user
+          # emulation, not the runner's BusyBox, before assessing /init
+          # prerequisites. This is command availability only, not boot proof.
+          # QEMU-user normally injects its own argv[0]. BusyBox dispatches
+          # applets on argv[0], so WITHOUT "-0 busybox" even --list returns 127
+          # with "busybox: applet not found"; never relax this flag.
+          if ! docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 64 --memory 512m --cpus 1 \
+            --user 1001:1001 \
+            --mount "type=bind,src=$rootfs,dst=/rootfs,readonly" \
+            sbat6-native-procd-qemu:ci \
+            qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox --list \
+            > "$work/target-openwrt-busybox-applets.txt"; then
+            echo 'BLOCKED_TARGET_BUSYBOX_QEMU_ARGV0_OR_APPLET_DISPATCH' >&2
+            exit 1
+          fi
+          test -s "$work/target-openwrt-busybox-applets.txt"
+          python3 "$GITHUB_WORKSPACE/tools/boot/verify_p26_p44_target_tools.py" \
+            --rootfs "$rootfs" \
+            --target-busybox-applets "$work/target-openwrt-busybox-applets.txt"
+          echo 'PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_BOOT_APPLETS_PASS'
+          # Execute only the non-operational parser/capabilities path of the
+          # *actual target AArch64 BusyBox shell*. No block device is mounted,
+          # no script runs as PID1, and the Docker guest has zero capabilities.
+          docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 64 --memory 512m --cpus 1 \
+            --user 1001:1001 \
+            --mount "type=bind,src=$rootfs,dst=/rootfs,readonly" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/scripts/air6-p26-p44-init.sh,dst=/air6-init.sh,readonly" \
+            sbat6-native-procd-qemu:ci bash -c '
+              set -euo pipefail
+              qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh -n /air6-init.sh
+              qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh /air6-init.sh --capabilities \
+                | grep -Fq P26_RAM_OVERLAY_DEFAULT
+              echo PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_RAM_BOOT_SCRIPT_PARSE_PASS
+            '
           docker run --rm --network none --read-only \
             --cap-drop ALL --security-opt no-new-privileges \
             --pids-limit 128 --memory 2g --cpus 2 \
@@ -745,6 +822,213 @@ jobs:
               echo PUBLIC_MT6990_NATIVE_SAME_IMAGE_QEMU_NETIFD_BRIDGE_RUNTIME_PASS
               echo "LIMIT: QEMU virt empty bridge only; no NIC, Air6 DTB, Ethernet traffic, radio or hardware proof"
             '
+          # The ALTERNATIVE P26/P44 /init was built and byte-verified above
+          # but is not in the normal p25. Rebuild a SECOND, scratch-only kernel
+          # with that alternative CPIO, after all original p25 and QEMU checks.
+          # First runtime gate: QEMU virt has NO /dev/mmcblk0p26. The guest
+          # must execute the actual /init as PID1 and fail closed *before*
+          # it can mount or write a device. This is NOT switch_root success.
+          known_image_sha="$(sha256sum "$kernel/arch/arm64/boot/Image" | cut -d' ' -f1)"
+          "$kernel/scripts/config" --file "$kernel/.config" \
+            --set-str INITRAMFS_SOURCE "$work/air6-p26-p44-alternative.cpio"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
+          grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-p26-p44-alternative.cpio\"" \
+            "$kernel/.config"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
+          alternate_image="$work/air6-p26-p44-alternative-Image"
+          cp -- "$kernel/arch/arm64/boot/Image" "$alternate_image"
+          test -s "$alternate_image"
+          test "$(sha256sum "$alternate_image" | cut -d' ' -f1)" != "$known_image_sha"
+          sha256sum "$alternate_image"
+          echo 'PUBLIC_MT6990_NATIVE_ALTERNATIVE_RAM_INITRAMFS_IMAGE_BUILD_PASS'
+          docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 128 --memory 2g --cpus 2 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --user 1001:1001 \
+            --mount "type=bind,src=$alternate_image,dst=/AlternativeImage,readonly" \
+            sbat6-native-procd-qemu:ci bash -c '
+              set -euo pipefail
+              status=0
+              timeout --signal=TERM --kill-after=5s 45s qemu-system-aarch64 \
+                -machine virt -cpu cortex-a57 -accel tcg -m 1024 -smp 2 \
+                -display none -serial stdio -monitor none -nic none -no-reboot \
+                -kernel /AlternativeImage \
+                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init" \
+                >/tmp/alternative-ram-boot.log 2>&1 || status=$?
+              cat /tmp/alternative-ram-boot.log
+              if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+                echo "ALTERNATIVE_QEMU_RAM_INIT_FAIL: QEMU exit $status" >&2
+                exit 1
+              fi
+              if grep -Eq "Kernel panic|Failed to execute /init" /tmp/alternative-ram-boot.log; then
+                echo "ALTERNATIVE_QEMU_RAM_INIT_FAIL: init not executable" >&2
+                exit 1
+              fi
+              grep -Fq "AIR6_RAM_INIT_ENTER" /tmp/alternative-ram-boot.log || {
+                echo "ALTERNATIVE_QEMU_RAM_INIT_FAIL: init entrypoint absent" >&2
+                exit 1
+              }
+              grep -Fq "AIR6_BOOT_BLOCKED_P26_NOT_BLOCK" /tmp/alternative-ram-boot.log || {
+                echo "ALTERNATIVE_QEMU_RAM_INIT_FAIL: missing-p26 rejection absent" >&2
+                exit 1
+              }
+              if grep -Eq "AIR6_P26_RO_VERIFIED|AIR6_OVERLAY_MOUNT_PASS|AIR6_SWITCH_ROOT_BEGIN" \
+                   /tmp/alternative-ram-boot.log; then
+                echo "ALTERNATIVE_QEMU_RAM_INIT_FAIL: forbidden post-p26 step" >&2
+                exit 1
+              fi
+              echo PUBLIC_MT6990_QEMU_VIRT_ALTERNATIVE_INIT_MISSING_P26_FAILCLOSED_PASS
+              echo "LIMIT: only PID1 entry/missing-block rejection; no p26, RAM mount, OverlayFS or switch_root"
+            ' | tee "$work/alternative-missing-p26-console.log"
+          python3 "$GITHUB_WORKSPACE/tools/boot/check_qemu_p26_ram_boot.py" \
+            --mode missing-p26 \
+            --log "$work/alternative-missing-p26-console.log"
+          # Positive virtual-block runtime gate: synthesize only an ephemeral
+          # guest CPIO from the verified same-run P26/P44 CPIO. The original
+          # Air6 /init remains unchanged and is never activated in p25.
+          # QEMU guest uses /dev/vda (virtio), NOT the real Air6 MMC partition.
+          python3 "$GITHUB_WORKSPACE/tools/boot/build_p26_qemu_virt_fixture.py" \
+            --source-cpio "$work/air6-p26-p44-alternative.cpio" \
+            --source-receipt "$work/air6-p26-p44-alternative.json" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --output "$work/air6-qemu-virtio-only.cpio" \
+            --receipt "$work/air6-qemu-virtio-only.json"
+          python3 "$GITHUB_WORKSPACE/tools/boot/verify_p26_qemu_virt_fixture.py" \
+            --source-cpio "$work/air6-p26-p44-alternative.cpio" \
+            --fixture "$work/air6-qemu-virtio-only.cpio" \
+            --receipt "$work/air6-qemu-virtio-only.json" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json"
+          echo 'PUBLIC_MT6990_QEMU_VIRTIO_P26_CPIO_INDEPENDENT_READBACK_PASS'
+          "$kernel/scripts/config" --file "$kernel/.config" \
+            --enable VIRTIO --enable VIRTIO_MMIO --enable VIRTIO_BLK \
+            --set-str INITRAMFS_SOURCE "$work/air6-qemu-virtio-only.cpio"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
+          for option in VIRTIO VIRTIO_MMIO VIRTIO_BLK SQUASHFS SQUASHFS_XZ \
+                        OVERLAY_FS TMPFS DEVTMPFS MMC_BLOCK; do
+            grep -qx "CONFIG_$option=y" "$kernel/.config" || {
+              echo "QEMU_VIRTIO_P26_KERNEL_MISSING_$option" >&2
+              exit 1
+            }
+          done
+          grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-qemu-virtio-only.cpio\"" \
+            "$kernel/.config"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
+          qemu_virtio_image="$work/air6-qemu-virtio-positive-Image"
+          cp -- "$kernel/arch/arm64/boot/Image" "$qemu_virtio_image"
+          test -s "$qemu_virtio_image"
+          echo 'PUBLIC_MT6990_QEMU_VIRTIO_SYNTHETIC_POSITIVE_IMAGE_BUILD_PASS'
+          # Negative runtime: one flipped bit in a disposable COPY of p26.
+          # The receipt-pinned original stays unchanged and never writable.
+          corrupted_p26="$work/air6-qemu-sha-mismatch.img"
+          cp -- "$work/private-p26/packed/rootfs_a.p26" "$corrupted_p26"
+          python3 - "$corrupted_p26" <<'PY'
+          from pathlib import Path
+          import sys
+          p = Path(sys.argv[1])
+          assert p.stat().st_size == 134217728
+          with p.open("r+b") as f:
+              f.seek(134217727)
+              original = f.read(1)
+              assert len(original) == 1
+              f.seek(134217727)
+              f.write(bytes([original[0] ^ 1]))
+          PY
+          test "$(sha256sum "$corrupted_p26" | cut -d' ' -f1)" != \
+            "$(sha256sum "$work/private-p26/packed/rootfs_a.p26" | cut -d' ' -f1)"
+          docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 128 --memory 2g --cpus 2 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --user 1001:1001 \
+            --mount "type=bind,src=$qemu_virtio_image,dst=/VirtioImage,readonly" \
+            --mount "type=bind,src=$corrupted_p26,dst=/CorruptP26,readonly" \
+            sbat6-native-procd-qemu:ci bash -c '
+              set -euo pipefail
+              status=0
+              timeout --signal=TERM --kill-after=5s 50s qemu-system-aarch64 \
+                -machine virt -cpu cortex-a57 -accel tcg -m 1024 -smp 2 \
+                -display none -serial stdio -monitor none -nic none -no-reboot \
+                -kernel /VirtioImage \
+                -drive file=/CorruptP26,if=none,id=testp26,format=raw,readonly=on \
+                -device virtio-blk-device,drive=testp26 \
+                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init" \
+                >/tmp/qemu-virtio-sha-mismatch.log 2>&1 || status=$?
+              cat /tmp/qemu-virtio-sha-mismatch.log
+              if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+                echo "QEMU_CORRUPT_P26_EXIT_$status" >&2
+                exit 1
+              fi
+              if grep -Eq "Kernel panic|Failed to execute /init" /tmp/qemu-virtio-sha-mismatch.log; then
+                echo "QEMU_CORRUPT_P26_PANIC" >&2
+                exit 1
+              fi
+              grep -Fq "AIR6_BOOT_BLOCKED_P26_SHA_MISMATCH" /tmp/qemu-virtio-sha-mismatch.log || {
+                echo "QEMU_CORRUPT_P26_NOT_REJECTED" >&2
+                exit 1
+              }
+              if grep -Eq "AIR6_P26_RO_VERIFIED|AIR6_P26_ROM_MOUNT_PASS|AIR6_OVERLAY_MOUNT_PASS|AIR6_SWITCH_ROOT_BEGIN" \
+                   /tmp/qemu-virtio-sha-mismatch.log; then
+                echo "QEMU_CORRUPT_P26_ADVANCED_BEYOND_VERIFY" >&2
+                exit 1
+              fi
+              echo PUBLIC_MT6990_QEMU_VIRTIO_CORRUPT_P26_SHA_FAILCLOSED_PASS
+            ' | tee "$work/qemu-virtio-sha-mismatch-console.log"
+          python3 "$GITHUB_WORKSPACE/tools/boot/check_qemu_p26_ram_boot.py" \
+            --mode sha-mismatch --log "$work/qemu-virtio-sha-mismatch-console.log" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json"
+          docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 128 --memory 2g --cpus 2 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --user 1001:1001 \
+            --mount "type=bind,src=$qemu_virtio_image,dst=/VirtioImage,readonly" \
+            --mount "type=bind,src=$work/private-p26/packed/rootfs_a.p26,dst=/SyntheticP26,readonly" \
+            sbat6-native-procd-qemu:ci bash -c '
+              set -euo pipefail
+              status=0
+              timeout --signal=TERM --kill-after=5s 90s qemu-system-aarch64 \
+                -machine virt -cpu cortex-a57 -accel tcg -m 1024 -smp 2 \
+                -display none -serial stdio -monitor none -nic none -no-reboot \
+                -kernel /VirtioImage \
+                -drive file=/SyntheticP26,if=none,id=testp26,format=raw,readonly=on \
+                -device virtio-blk-device,drive=testp26 \
+                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init" \
+                >/tmp/qemu-virtio-ram-positive.log 2>&1 || status=$?
+              cat /tmp/qemu-virtio-ram-positive.log
+              if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+                echo "QEMU_VIRTIO_POSITIVE_FAIL_EXIT_$status" >&2
+                exit 1
+              fi
+              if grep -Eq "Kernel panic|Failed to execute /init|AIR6_BOOT_BLOCKED_" \
+                   /tmp/qemu-virtio-ram-positive.log; then
+                echo "QEMU_VIRTIO_POSITIVE_FAIL_CLOSED_OR_PANIC" >&2
+                exit 1
+              fi
+              for marker in AIR6_RAM_INIT_ENTER AIR6_P26_RO_VERIFIED \
+                            AIR6_P26_ROM_MOUNT_PASS AIR6_P26_RAM_OVERLAY_DEFAULT \
+                            AIR6_OVERLAY_MOUNT_PASS AIR6_SWITCH_ROOT_BEGIN \
+                            "procd: - early -"; do
+                grep -Fq "$marker" /tmp/qemu-virtio-ram-positive.log || {
+                  echo "QEMU_VIRTIO_POSITIVE_MISSING_$marker" >&2
+                  exit 1
+                }
+              done
+              echo PUBLIC_MT6990_QEMU_VIRTIO_P26_RAM_OVERLAY_SWITCHROOT_PROCD_PID1_PASS
+              echo "LIMIT: QEMU virtio synthetic block path only; no Air6 MMC, P44 persistent or LK acceptance"
+            ' | tee "$work/qemu-virtio-ram-positive-console.log"
+          python3 "$GITHUB_WORKSPACE/tools/boot/check_qemu_p26_ram_boot.py" \
+            --mode positive --log "$work/qemu-virtio-ram-positive-console.log" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json"
+          echo 'PUBLIC_MT6990_QEMU_VIRTIO_POSITIVE_ORDERED_SHA_VERIFIED_PASS'
           echo 'LIMIT: QEMU virt cannot establish Air6 bootloader/DTB/AP compatibility'
           echo 'LIMIT: native procd QEMU virt boot only; Air6 device boot not tested'
           echo 'LIMIT: no device boot, signing, installable image, private material or rights approval'

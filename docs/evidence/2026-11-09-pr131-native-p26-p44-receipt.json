@@ -1,0 +1,79 @@
+{
+  "schema": "air6-public-pr131-native-early-p26-p44-cpio-evidence-v1",
+  "repo": "Karin-Laboratory/openwrt-terminal-6",
+  "source_commit": "8b1eb6266203e3d10c01624dce23eef27ebaa0e7",
+  "pr_number": 131,
+  "workflow_run_id": 42536886682,
+  "job_id": 128903215547,
+  "workflow_url": "https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42536886682",
+  "result": "success",
+  "claim": "SAME_RUN_REAL_SOURCE_BUILT_P26_P44_CPIO_AND_P25_P26_FULL_READBACK",
+  "images": {
+    "p25": {
+      "partition_bytes": 33554432,
+      "sha256": "d78f099248b3f87dbf13bb84e4149a65ccf7aa3eb19d40c4f4ad436d2ebe76b4",
+      "independent_readback": "PASS",
+      "header": "synthetic-Android-boot-v2-research",
+      "air6_boot_proven": false
+    },
+    "p26": {
+      "partition_bytes": 134217728,
+      "sha256": "2858fcfb866ee3243142a27c4ef6de7249f86e6b2aec262e063c46890486b2a5",
+      "independent_readback": "PASS",
+      "rights_approved": false
+    },
+    "p26_p44_alternative_cpio": {
+      "sha256": "7cc5c1aac9b489df9d24a4476d830ca95d832116b0b8a0f5c0aebeafe559fca9",
+      "independent_newc_full_readback": "PASS",
+      "embedded_into_p25": false,
+      "hardware_executed": false,
+      "policy_at_this_source_commit": "P44 owner gate required; volatile RAM default added only later in commit d1c08fa7"
+    }
+  },
+  "native_qemu_procd_netifd_bridge": "PASS_QEMU_VIRT_NO_AIR6_HARDWARE",
+  "verbatim_evidence": [
+    {
+      "line": 7223,
+      "stdout": "2026-11-09T00:47:53.4597030Z P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK 134217728 2858fcfb866ee3243142a27c4ef6de7249f86e6b2aec262e063c46890486b2a5"
+    },
+    {
+      "line": 7235,
+      "stdout": "2026-11-09T00:47:54.3119505Z P26_INDEPENDENT_READBACK_PASS 2858fcfb866ee3243142a27c4ef6de7249f86e6b2aec262e063c46890486b2a5"
+    },
+    {
+      "line": 7236,
+      "stdout": "2026-11-09T00:47:54.3201674Z PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS"
+    },
+    {
+      "line": 7237,
+      "stdout": "2026-11-09T00:47:54.5035869Z PUBLIC_AIR6_P26_P44_BOOTSTRAP_CPIO_BUILT 7cc5c1aac9b489df9d24a4476d830ca95d832116b0b8a0f5c0aebeafe559fca9"
+    },
+    {
+      "line": 7239,
+      "stdout": "2026-11-09T00:47:54.6683915Z {\"cpio_sha256\": \"7cc5c1aac9b489df9d24a4476d830ca95d832116b0b8a0f5c0aebeafe559fca9\", \"device_boot_proven\": false, \"p26_sha256\": \"2858fcfb866ee3243142a27c4ef6de7249f86e6b2aec262e063c46890486b2a5\", \"status\": \"P26_P44_CPIO_INDEPENDENT_FULL_READBACK_PASS\"}"
+    },
+    {
+      "line": 7240,
+      "stdout": "2026-11-09T00:47:54.6757076Z PUBLIC_MT6990_REAL_ROOTFS_P26_P44_ALTERNATIVE_CPIO_READBACK_PASS"
+    },
+    {
+      "line": 10944,
+      "stdout": "2026-11-09T00:55:37.1070105Z PUBLIC_AOSP_V2_P25_32M_INDEPENDENT_READBACK_PASS d78f099248b3f87dbf13bb84e4149a65ccf7aa3eb19d40c4f4ad436d2ebe76b4"
+    },
+    {
+      "line": 10946,
+      "stdout": "2026-11-09T00:55:37.1309271Z PUBLIC_MT6990_NATIVE_EPHEMERAL_P25_P26_SAME_RUN_PAIR p25=d78f099248b3f87dbf13bb84e4149a65ccf7aa3eb19d40c4f4ad436d2ebe76b4 p26=2858fcfb866ee3243142a27c4ef6de7249f86e6b2aec262e063c46890486b2a5"
+    },
+    {
+      "line": 11426,
+      "stdout": "2026-11-09T00:57:52.7671394Z PUBLIC_MT6990_NATIVE_SAME_IMAGE_QEMU_PROCD_PID1_BOOT_PASS"
+    },
+    {
+      "line": 11427,
+      "stdout": "2026-11-09T00:57:52.7673283Z PUBLIC_MT6990_NATIVE_SAME_IMAGE_QEMU_NETIFD_BRIDGE_RUNTIME_PASS"
+    }
+  ],
+  "binary_images_and_cpio_durably_preserved": false,
+  "license_approval": false,
+  "notes": "Job workspace was ephemeral. SHA/log source evidence is preserved here, not bytes. This run predates newer P26 XZ/EXT4/OverlayFS kernel gates, target BusyBox QEMU smoke and RAM-default /init; their outcomes must not be inferred."
+}

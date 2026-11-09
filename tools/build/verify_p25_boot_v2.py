@@ -48,6 +48,21 @@ def verify(image, receipt, kernel, dtb):
             raise ValueError("not expected AOSP v2 zero-optional-section header")
         if raddr or saddr:
             raise ValueError("nonzero address for absent payload")
+        def ascii_field(offset, width):
+            field = page[offset:offset + width]
+            if b"\x00" not in field:
+                raise ValueError("unterminated boot-v2 header string")
+            value, padding = field.split(b"\x00", 1)
+            if any(padding):
+                raise ValueError("nonzero boot-v2 string padding")
+            return value.decode("ascii")
+        actual_header = {"kernel_addr": kaddr, "tags_addr": tags,
+                         "dtb_addr": daddr, "os_version": osver,
+                         "board": ascii_field(48, 16),
+                         "cmdline": ascii_field(64, 512),
+                         "extra_cmdline": ascii_field(608, 1024)}
+        if actual_header != record.get("header_fields"):
+            raise ValueError("boot-v2 header metadata independent mismatch")
         sections = [("kernel", kernel, PAGE, ksize),
                     ("dtb", dtb, (PAGE + ksize + PAGE - 1) // PAGE * PAGE, dsize)]
         # Verify page-alignment padding independently of the receipt digest.
