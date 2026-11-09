@@ -30,7 +30,7 @@ Source attribution and evidence boundaries: [PROVENANCE.md](PROVENANCE.md).
 
 ## Actual public ARM64 build and QEMU runtime evidence (2026-11-01)
 
-<!-- source-catalog-inventory: inputs=109; pending=109 -->
+<!-- source-catalog-inventory: inputs=111; pending=111 -->
 
 The source catalog currently has **109 inputs**, all with **rights_review=pending**. The counts are checked against the machine-readable catalog by the host tests; passing those checks does **not** imply rights approval. See [rights review](RIGHTS-REVIEW-20261030.md).
 
