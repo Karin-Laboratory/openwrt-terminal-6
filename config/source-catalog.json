@@ -490,6 +490,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_p26_qemu_virt_fixture.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3429f75fa24256e0442bb17f5b1b356b8c96f4f4",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_p44_promotion_guard.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -706,6 +715,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/boot/build_p26_qemu_virt_fixture.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "57cceedeb0b2b6f1bf3394e1ccc0f84a4fc8b2b9",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/boot/check_p26_p44_kernel.py",
       "component": "kernel",
       "origin": "independent-original",
@@ -747,6 +765,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "90404d513775a6ce33712e74c6f883364e79581f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/verify_p26_qemu_virt_fixture.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "fed4ff6b885c0dbd561349448b7c3071c488dedc",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },

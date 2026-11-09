@@ -54,3 +54,31 @@ does not sign or upload it, and logs only SHA/acceptance boundaries.
 Code: scripts/air6-p26-p44-init.sh,
 tools/boot/build_p26_p44_initramfs.py,
 tools/boot/verify_p26_p44_initramfs.py.
+
+## QEMU virtio positive runtime gate (new, not Air6 hardware proof)
+
+The native CI now creates a **separate synthetic QEMU-only newc archive**
+derived from the same-run, independent-readback P26/P44 CPIO and **actual**
+128MiB p26 SquashFS. The synthetic archive replaces exactly two p26 device
+identifiers in `/init`: the hardware GPT path with `/dev/vda`, and the GPT
+PARTNAME check with a virtio `DEVNAME=vda` identity check. All other archive
+members and the embedded full p26 SHA remain byte-identical and are independently
+verified by `tools/boot/verify_p26_qemu_virt_fixture.py`.
+
+After the existing p25/p26 pair is manufactured and the known QEMU procd boot
+is checked, CI compiles a **third** ephemeral kernel Image with the synthetic
+newc, `CONFIG_VIRTIO_BLK=y` and `CONFIG_VIRTIO_MMIO=y`. QEMU's ARM64
+`virt` machine receives the real unsigned 128MiB p26 as a **read-only**
+virtio block device, with no NIC and no host device passthrough. The test
+requires observed `/init` PID1, full p26 SHA verification, readonly p26
+SquashFS mount, volatile RAM OverlayFS setup, actual `switch_root` and procd
+startup. If any marker fails, the CI job fails rather than presenting QEMU
+kernel boot as a positive rootfs acceptance.
+
+This is a **new test with no successful result implied by its source code**.
+It cannot establish Air6 MMC path/GPT compatibility, vendor64/LK boot acceptance,
+P44 ext4 persistence, device-specific network hardware or signing. The
+synthetic CPIO and virtual kernel are never used as p25 inputs and are never
+published or uploaded. The original public production `/init` source is
+never rewritten; only an ephemeral QEMU CPIO is patched.
+

@@ -20,6 +20,9 @@ on:
       - tests/test_p26_p44_kernel.py
       - tools/boot/verify_p26_p44_target_tools.py
       - tests/test_p26_p44_target_tools.py
+      - tools/boot/build_p26_qemu_virt_fixture.py
+      - tools/boot/verify_p26_qemu_virt_fixture.py
+      - tests/test_p26_qemu_virt_fixture.py
       - tools/build/verify_p26_independent.py
       - tests/test_pack_p26_rootfs.py
       - tests/test_verify_p26_independent.py
@@ -877,6 +880,84 @@ jobs:
               fi
               echo PUBLIC_MT6990_QEMU_VIRT_ALTERNATIVE_INIT_MISSING_P26_FAILCLOSED_PASS
               echo "LIMIT: only PID1 entry/missing-block rejection; no p26, RAM mount, OverlayFS or switch_root"
+            '
+          # Positive virtual-block runtime gate: synthesize only an ephemeral
+          # guest CPIO from the verified same-run P26/P44 CPIO. The original
+          # Air6 /init remains unchanged and is never activated in p25.
+          # QEMU guest uses /dev/vda (virtio), NOT the real Air6 MMC partition.
+          python3 "$GITHUB_WORKSPACE/tools/boot/build_p26_qemu_virt_fixture.py" \
+            --source-cpio "$work/air6-p26-p44-alternative.cpio" \
+            --source-receipt "$work/air6-p26-p44-alternative.json" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --output "$work/air6-qemu-virtio-only.cpio" \
+            --receipt "$work/air6-qemu-virtio-only.json"
+          python3 "$GITHUB_WORKSPACE/tools/boot/verify_p26_qemu_virt_fixture.py" \
+            --source-cpio "$work/air6-p26-p44-alternative.cpio" \
+            --fixture "$work/air6-qemu-virtio-only.cpio" \
+            --receipt "$work/air6-qemu-virtio-only.json" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json"
+          echo 'PUBLIC_MT6990_QEMU_VIRTIO_P26_CPIO_INDEPENDENT_READBACK_PASS'
+          "$kernel/scripts/config" --file "$kernel/.config" \
+            --enable VIRTIO --enable VIRTIO_MMIO --enable VIRTIO_BLK \
+            --set-str INITRAMFS_SOURCE "$work/air6-qemu-virtio-only.cpio"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
+          for option in VIRTIO VIRTIO_MMIO VIRTIO_BLK SQUASHFS SQUASHFS_XZ \
+                        OVERLAY_FS TMPFS DEVTMPFS MMC_BLOCK; do
+            grep -qx "CONFIG_$option=y" "$kernel/.config" || {
+              echo "QEMU_VIRTIO_P26_KERNEL_MISSING_$option" >&2
+              exit 1
+            }
+          done
+          grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-qemu-virtio-only.cpio\"" \
+            "$kernel/.config"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
+          qemu_virtio_image="$work/air6-qemu-virtio-positive-Image"
+          cp -- "$kernel/arch/arm64/boot/Image" "$qemu_virtio_image"
+          test -s "$qemu_virtio_image"
+          echo 'PUBLIC_MT6990_QEMU_VIRTIO_SYNTHETIC_POSITIVE_IMAGE_BUILD_PASS'
+          docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 128 --memory 2g --cpus 2 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --user 1001:1001 \
+            --mount "type=bind,src=$qemu_virtio_image,dst=/VirtioImage,readonly" \
+            --mount "type=bind,src=$work/private-p26/packed/rootfs_a.p26,dst=/SyntheticP26,readonly" \
+            sbat6-native-procd-qemu:ci bash -c '
+              set -euo pipefail
+              status=0
+              timeout --signal=TERM --kill-after=5s 90s qemu-system-aarch64 \
+                -machine virt -cpu cortex-a57 -accel tcg -m 1024 -smp 2 \
+                -display none -serial stdio -monitor none -nic none -no-reboot \
+                -kernel /VirtioImage \
+                -drive file=/SyntheticP26,if=none,id=testp26,format=raw,readonly=on \
+                -device virtio-blk-device,drive=testp26 \
+                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init" \
+                >/tmp/qemu-virtio-ram-positive.log 2>&1 || status=$?
+              tail -n 160 /tmp/qemu-virtio-ram-positive.log
+              if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+                echo "QEMU_VIRTIO_POSITIVE_FAIL_EXIT_$status" >&2
+                exit 1
+              fi
+              if grep -Eq "Kernel panic|Failed to execute /init|AIR6_BOOT_BLOCKED_" \
+                   /tmp/qemu-virtio-ram-positive.log; then
+                echo "QEMU_VIRTIO_POSITIVE_FAIL_CLOSED_OR_PANIC" >&2
+                exit 1
+              fi
+              for marker in AIR6_RAM_INIT_ENTER AIR6_P26_RO_VERIFIED \
+                            AIR6_P26_ROM_MOUNT_PASS AIR6_P26_RAM_OVERLAY_DEFAULT \
+                            AIR6_OVERLAY_MOUNT_PASS AIR6_SWITCH_ROOT_BEGIN \
+                            "procd: - early -"; do
+                grep -Fq "$marker" /tmp/qemu-virtio-ram-positive.log || {
+                  echo "QEMU_VIRTIO_POSITIVE_MISSING_$marker" >&2
+                  exit 1
+                }
+              done
+              echo PUBLIC_MT6990_QEMU_VIRTIO_P26_RAM_OVERLAY_SWITCHROOT_PROCD_PID1_PASS
+              echo "LIMIT: QEMU virtio synthetic block path only; no Air6 MMC, P44 persistent or LK acceptance"
             '
           echo 'LIMIT: QEMU virt cannot establish Air6 bootloader/DTB/AP compatibility'
           echo 'LIMIT: native procd QEMU virt boot only; Air6 device boot not tested'
