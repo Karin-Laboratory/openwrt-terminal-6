@@ -445,6 +445,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_p25_p26_presign.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "cf6c9c5c648bd399a657b6c73ec7b429fa78db65",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_p26_fakeroot_handoff.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -801,6 +810,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "a3225a2d3500b3c581c53d551f4d0dabca4f52bf",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/check_p25_p26_presign.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "652f671dff0d370efa55306f94bb6af43e1fc810",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
