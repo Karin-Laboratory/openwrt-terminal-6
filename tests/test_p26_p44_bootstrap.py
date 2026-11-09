@@ -79,6 +79,26 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn("P44_POST_JOURNAL_BOOT_SHADOW", script)
         self.assertIn('if [ -L "$ROM/sbin/init" ]; then', script)
 
+    def test_default_ram_overlay_does_not_probe_p44(self):
+        source = maker.BOOT_SCRIPT.read_text()
+        self.assertIn('P26_RAM_OVERLAY_DEFAULT', source)
+        self.assertIn('mount -t tmpfs -o mode=0700,size=64m,nosuid,nodev', source)
+        self.assertIn('BACKING="$RAM"', source)
+        self.assertIn('mount --move "$BACKING" "$NEWROOT/overlay"', source)
+        owner_guard = source.index('if [ ! -e "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ]; then')
+        p44_mount = source.index('mount -t ext4 -o ro,noload "$P44" "$UPPER"')
+        self.assertLess(owner_guard, p44_mount)
+        self.assertLess(source.index('[ "$observed" = "$expected" ]'),
+                        source.index('mount -t tmpfs -o mode=0700,size=64m,nosuid,nodev'))
+
+    def test_invalid_owner_marker_still_fails_closed(self):
+        source = maker.BOOT_SCRIPT.read_text()
+        self.assertIn('halt_boot P44_RW_TOKEN_NOT_MATCHED', source)
+        self.assertIn('halt_boot P44_GPT_PARTNAME', source)
+        self.assertIn('halt_boot P44_POST_JOURNAL_BOOT_SHADOW', source)
+        self.assertIn('log P44_OWNER_APPROVED', source)
+        self.assertIn('if [ ! -e "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ]; then', source)
+
     def test_shell_syntax_and_non_operational_capabilities_only(self):
         script = maker.BOOT_SCRIPT
         check = subprocess.run(["sh", "-n", str(script)], capture_output=True)

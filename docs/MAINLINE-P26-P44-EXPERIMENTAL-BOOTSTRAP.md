@@ -14,10 +14,13 @@ AP success follows from its successful construction and readback.
 
 ## Runtime design (not hardware accepted)
 
-- Require PID1 and the real GPT p26=rootfs_a; require a separate
-  owner-provided valid P44 PARTNAME in the initramfs (no guessed name).
-- Require explicit private owner P44 RW approval marker, deliberately
-  absent in all public-generated CPIOs.
+- Require PID1 and the real GPT p26=rootfs_a; only check the owner-provided P44 PARTNAME if persistent P44 mode is explicitly
+  authorized (never guess a name).
+- Default to a **64MiB tmpfs RAM upper/work OverlayFS**, with p26 as the
+  read-only SquashFS lower layer. This mode does **not** inspect, mount or
+  write P44. Changes are volatile and are lost on reboot.
+- Switch to P44 persistent ext4 upper/work only with an explicit private
+  owner P44 RW approval marker, deliberately absent in public CPIOs.
 - Hash the complete 134,217,728-byte p26 block partition and compare to
   the embedded full SHA before any writable mount.
 - Mount p26 read-only SquashFS; preflight P44 ext4 with ro,noload, verify
@@ -31,8 +34,10 @@ AP success follows from its successful construction and readback.
 ## Limits that still block physical use
 
 The public builder embeds neither /etc/air6-p44.partname nor
-/etc/air6-owner-p44-rw-go. Therefore the alternative CPIO will FAIL CLOSED
-if someone boots it without separate owner-specific admission.
+/etc/air6-owner-p44-rw-go. Therefore the alternative CPIO selects the
+**RAM-only, nonpersistent** OverlayFS mode by default. Only the P44 read-write
+branch fails closed unless separately authorized. This is a source-only runtime
+path, not an assertion of hardware boot.
 
 The exact P44 GPT PARTNAME, journal/read-write acceptance and physical
 OverlayFS compatibility are not proven by the source-only test. BusyBox
