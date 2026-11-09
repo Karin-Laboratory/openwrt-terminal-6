@@ -817,6 +817,67 @@ jobs:
               echo PUBLIC_MT6990_NATIVE_SAME_IMAGE_QEMU_NETIFD_BRIDGE_RUNTIME_PASS
               echo "LIMIT: QEMU virt empty bridge only; no NIC, Air6 DTB, Ethernet traffic, radio or hardware proof"
             '
+          # The ALTERNATIVE P26/P44 /init was built and byte-verified above
+          # but is not in the normal p25. Rebuild a SECOND, scratch-only kernel
+          # with that alternative CPIO, after all original p25 and QEMU checks.
+          # First runtime gate: QEMU virt has NO /dev/mmcblk0p26. The guest
+          # must execute the actual /init as PID1 and fail closed *before*
+          # it can mount or write a device. This is NOT switch_root success.
+          known_image_sha="$(sha256sum "$kernel/arch/arm64/boot/Image" | cut -d' ' -f1)"
+          "$kernel/scripts/config" --file "$kernel/.config" \
+            --set-str INITRAMFS_SOURCE "$work/air6-p26-p44-alternative.cpio"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
+          grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-p26-p44-alternative.cpio\"" \
+            "$kernel/.config"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
+          alternate_image="$work/air6-p26-p44-alternative-Image"
+          cp -- "$kernel/arch/arm64/boot/Image" "$alternate_image"
+          test -s "$alternate_image"
+          test "$(sha256sum "$alternate_image" | cut -d' ' -f1)" != "$known_image_sha"
+          sha256sum "$alternate_image"
+          echo 'PUBLIC_MT6990_NATIVE_ALTERNATIVE_RAM_INITRAMFS_IMAGE_BUILD_PASS'
+          docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 128 --memory 2g --cpus 2 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --user 1001:1001 \
+            --mount "type=bind,src=$alternate_image,dst=/AlternativeImage,readonly" \
+            sbat6-native-procd-qemu:ci bash -c '
+              set -euo pipefail
+              status=0
+              timeout --signal=TERM --kill-after=5s 45s qemu-system-aarch64 \
+                -machine virt -cpu cortex-a57 -accel tcg -m 1024 -smp 2 \
+                -display none -serial stdio -monitor none -nic none -no-reboot \
+                -kernel /AlternativeImage \
+                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init" \
+                >/tmp/alternative-ram-boot.log 2>&1 || status=$?
+              tail -n 100 /tmp/alternative-ram-boot.log
+              if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+                echo "ALTERNATIVE_QEMU_RAM_INIT_FAIL: QEMU exit $status" >&2
+                exit 1
+              fi
+              if grep -Eq "Kernel panic|Failed to execute /init" /tmp/alternative-ram-boot.log; then
+                echo "ALTERNATIVE_QEMU_RAM_INIT_FAIL: init not executable" >&2
+                exit 1
+              fi
+              grep -Fq "AIR6_RAM_INIT_ENTER" /tmp/alternative-ram-boot.log || {
+                echo "ALTERNATIVE_QEMU_RAM_INIT_FAIL: init entrypoint absent" >&2
+                exit 1
+              }
+              grep -Fq "AIR6_BOOT_BLOCKED_P26_NOT_BLOCK" /tmp/alternative-ram-boot.log || {
+                echo "ALTERNATIVE_QEMU_RAM_INIT_FAIL: missing-p26 rejection absent" >&2
+                exit 1
+              }
+              if grep -Eq "AIR6_P26_RO_VERIFIED|AIR6_OVERLAY_MOUNT_PASS|AIR6_SWITCH_ROOT_BEGIN" \
+                   /tmp/alternative-ram-boot.log; then
+                echo "ALTERNATIVE_QEMU_RAM_INIT_FAIL: forbidden post-p26 step" >&2
+                exit 1
+              fi
+              echo PUBLIC_MT6990_QEMU_VIRT_ALTERNATIVE_INIT_MISSING_P26_FAILCLOSED_PASS
+              echo "LIMIT: only PID1 entry/missing-block rejection; no p26, RAM mount, OverlayFS or switch_root"
+            '
           echo 'LIMIT: QEMU virt cannot establish Air6 bootloader/DTB/AP compatibility'
           echo 'LIMIT: native procd QEMU virt boot only; Air6 device boot not tested'
           echo 'LIMIT: no device boot, signing, installable image, private material or rights approval'

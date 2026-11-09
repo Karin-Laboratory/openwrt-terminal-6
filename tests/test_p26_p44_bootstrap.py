@@ -119,6 +119,21 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn("--network none --read-only", workflow)
         self.assertIn("--cap-drop ALL --security-opt no-new-privileges", workflow)
 
+    def test_qemu_virt_alternative_init_actual_pid1_missing_p26_gate(self):
+        # Native kernel must embed the alternate verified CPIO AFTER the
+        # known-good research p25/QEMU stages, without changing their receipts.
+        wf = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
+        self.assertIn('--set-str INITRAMFS_SOURCE "$work/air6-p26-p44-alternative.cpio"', wf)
+        self.assertIn('AIR6_RAM_INIT_ENTER', wf)
+        self.assertIn('AIR6_BOOT_BLOCKED_P26_NOT_BLOCK', wf)
+        self.assertIn('PUBLIC_MT6990_QEMU_VIRT_ALTERNATIVE_INIT_MISSING_P26_FAILCLOSED_PASS', wf)
+        self.assertIn('dst=/AlternativeImage,readonly', wf)
+        self.assertLess(wf.index('PUBLIC_MT6990_NATIVE_EPHEMERAL_P25_P26_SAME_RUN_PAIR'),
+                        wf.index('PUBLIC_MT6990_NATIVE_ALTERNATIVE_RAM_INITRAMFS_IMAGE_BUILD_PASS'))
+        self.assertIn('test "$(sha256sum "$alternate_image" | cut -d\' \' -f1)" != "$known_image_sha"', wf)
+        self.assertIn('-nic none -no-reboot', wf)
+        self.assertIn('--network none --read-only', wf)
+
     def test_shell_syntax_and_non_operational_capabilities_only(self):
         script = maker.BOOT_SCRIPT
         check = subprocess.run(["sh", "-n", str(script)], capture_output=True)
