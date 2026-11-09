@@ -30,9 +30,9 @@ Source attribution and evidence boundaries: [PROVENANCE.md](PROVENANCE.md).
 
 ## Actual public ARM64 build and QEMU runtime evidence (2026-11-01)
 
-<!-- source-catalog-inventory: inputs=102; pending=102 -->
+<!-- source-catalog-inventory: inputs=104; pending=104 -->
 
-The source catalog currently has **102 inputs**, all with **rights_review=pending**. The counts are checked against the machine-readable catalog by the host tests; passing those checks does **not** imply rights approval. See [rights review](RIGHTS-REVIEW-20261030.md).
+The source catalog currently has **104 inputs**, all with **rights_review=pending**. The counts are checked against the machine-readable catalog by the host tests; passing those checks does **not** imply rights approval. See [rights review](RIGHTS-REVIEW-20261030.md).
 
 | Run / PR | Observed PASS marker or step | What it establishes | Explicitly **not** proven |
 | --- | --- | --- | --- |

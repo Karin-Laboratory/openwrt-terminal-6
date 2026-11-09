@@ -18,6 +18,8 @@ on:
       - tests/test_p26_p44_bootstrap.py
       - tools/boot/check_p26_p44_kernel.py
       - tests/test_p26_p44_kernel.py
+      - tools/boot/verify_p26_p44_target_tools.py
+      - tests/test_p26_p44_target_tools.py
       - tools/build/verify_p26_independent.py
       - tests/test_pack_p26_rootfs.py
       - tests/test_verify_p26_independent.py
@@ -726,11 +728,27 @@ jobs:
           command -v docker >/dev/null
           cat > "$work/Dockerfile.native-qemu" <<'EOF'
           FROM ubuntu@sha256:80dd3c3b9c6cecb9f1667e9290b3bc61b78c2678c02cbdae5f0fea92cc6734ab
-          RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-arm bash coreutils grep && rm -rf /var/lib/apt/lists/*
+          RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-arm qemu-user bash coreutils grep && rm -rf /var/lib/apt/lists/*
           USER 1001:1001
           EOF
           docker build --pull --file "$work/Dockerfile.native-qemu" \
             --tag sbat6-native-procd-qemu:ci "$work"
+          # Run the *actual native OpenWrt AArch64 BusyBox* with QEMU user
+          # emulation, not the runner's BusyBox, before assessing /init
+          # prerequisites. This is command availability only, not boot proof.
+          docker run --rm --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --pids-limit 64 --memory 512m --cpus 1 \
+            --user 1001:1001 \
+            --mount "type=bind,src=$rootfs,dst=/rootfs,readonly" \
+            sbat6-native-procd-qemu:ci \
+            qemu-aarch64 -L /rootfs /rootfs/bin/busybox --list \
+            > "$work/target-openwrt-busybox-applets.txt"
+          test -s "$work/target-openwrt-busybox-applets.txt"
+          python3 "$GITHUB_WORKSPACE/tools/boot/verify_p26_p44_target_tools.py" \
+            --rootfs "$rootfs" \
+            --target-busybox-applets "$work/target-openwrt-busybox-applets.txt"
+          echo 'PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_BOOT_APPLETS_PASS'
           docker run --rm --network none --read-only \
             --cap-drop ALL --security-opt no-new-privileges \
             --pids-limit 128 --memory 2g --cpus 2 \
