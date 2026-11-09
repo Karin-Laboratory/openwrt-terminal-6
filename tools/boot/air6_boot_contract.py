@@ -55,7 +55,9 @@ def check_fdt(blob, lk_adds=()):
         raise ValueError("FDT_MEMRESERVE_TERMINATOR")
     names = blob[off_str:off_str + strings_len]
     pos, stop = off_struct, off_struct + struct_len
-    stack, paths, phandles = [], set(), set()
+    stack, paths, phandles = [], set(), {}
+    # phandle and linux,phandle may legitimately alias on ONE node.
+    node_handles = {}
     ended = False
     while pos < stop:
         token = _word(blob, pos)
@@ -90,9 +92,18 @@ def check_fdt(blob, lk_adds=()):
                 if size != 4:
                     raise ValueError("FDT_BAD_PHANDLE")
                 value = _word(blob, pos)
-                if value in (0, 0xffffffff) or value in phandles:
+                if value in (0, 0xffffffff):
                     raise ValueError("FDT_PHANDLE_COLLISION")
-                phandles.add(value)
+                node = stack[-1]
+                props = node_handles.setdefault(node, {})
+                if name in props:
+                    raise ValueError("FDT_DUPLICATE_PHANDLE_PROPERTY")
+                if props and next(iter(props.values())) != value:
+                    raise ValueError("FDT_PHANDLE_ALIAS_MISMATCH")
+                if value in phandles and phandles[value] != node:
+                    raise ValueError("FDT_PHANDLE_COLLISION")
+                phandles[value] = node
+                props[name] = value
             pos = (pos + size + 3) & ~3
         elif token == TOK_NOP:
             continue

@@ -10,8 +10,8 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def fdt(nodes=("/chosen",), phandle=None):
-    strings = b"phandle\x00"
+def fdt(nodes=("/chosen",), phandle=None, phandle_alias=None):
+    strings = b"phandle\x00linux,phandle\x00"
     body = bytearray()
     body += struct.pack(">I", 1) + b"\x00\x00\x00\x00"
     for path in nodes:
@@ -19,6 +19,8 @@ def fdt(nodes=("/chosen",), phandle=None):
         body += struct.pack(">I", 1) + (name + b"\x00").ljust((len(name)+4)//4*4, b"\x00")
         if phandle is not None:
             body += struct.pack(">III", 3, 4, 0) + struct.pack(">I", phandle)
+        if phandle_alias is not None:
+            body += struct.pack(">III", 3, 4, 8) + struct.pack(">I", phandle_alias)
         body += struct.pack(">I", 2)
     body += struct.pack(">II", 2, 9)
     reserve = b"\x00" * 16
@@ -93,6 +95,19 @@ class P25ContractTests(unittest.TestCase):
         raw[40:56] = b"\xff" * 16
         self.assertRaisesRegex(ValueError, "FDT_MEMRESERVE_TERMINATOR",
                                gate.check_fdt, raw)
+
+    def test_same_node_phandle_linux_phandle_alias_is_valid(self):
+        observed = gate.check_fdt(fdt(("/a",), phandle=7, phandle_alias=7))
+        self.assertEqual(observed["phandles"], 1)
+        self.assertEqual(observed["nodes"], 2)
+
+    def test_same_node_phandle_alias_with_different_values_fails(self):
+        with self.assertRaisesRegex(ValueError, "FDT_PHANDLE_ALIAS_MISMATCH"):
+            gate.check_fdt(fdt(("/a",), phandle=7, phandle_alias=8))
+
+    def test_duplicate_phandle_alias_value_across_nodes_fails(self):
+        with self.assertRaisesRegex(ValueError, "FDT_PHANDLE_COLLISION"):
+            gate.check_fdt(fdt(("/a", "/b"), phandle=7, phandle_alias=7))
 
     def test_reject_unproven_external_observation(self):
         section = fdt()
