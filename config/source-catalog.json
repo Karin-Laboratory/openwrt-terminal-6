@@ -472,6 +472,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_p26_p44_kernel.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1bf909289ad0e83c52f62e25e7eaf30df6145e9a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_p44_promotion_guard.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -684,6 +693,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "562bc59fb46197eaa6524509d9479d3a5035c035",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/check_p26_p44_kernel.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "57fa607f968e9dcebd2665c46329885f56b6890b",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },

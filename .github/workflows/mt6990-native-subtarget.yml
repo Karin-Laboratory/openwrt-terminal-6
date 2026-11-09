@@ -16,6 +16,8 @@ on:
       - tools/boot/build_p26_p44_initramfs.py
       - tools/boot/verify_p26_p44_initramfs.py
       - tests/test_p26_p44_bootstrap.py
+      - tools/boot/check_p26_p44_kernel.py
+      - tests/test_p26_p44_kernel.py
       - tools/build/verify_p26_independent.py
       - tests/test_pack_p26_rootfs.py
       - tests/test_verify_p26_independent.py
@@ -614,7 +616,11 @@ jobs:
             --enable SERIAL_AMBA_PL011 --enable SERIAL_AMBA_PL011_CONSOLE \
             --enable DEVTMPFS --enable DEVTMPFS_MOUNT \
             --enable TMPFS --enable PROC_FS --enable SYSFS \
-            --enable BINFMT_ELF --enable UNIX
+            --enable BINFMT_ELF --enable UNIX \
+            --enable PARTITION_ADVANCED --enable EFI_PARTITION \
+            --enable MMC --enable MMC_BLOCK \
+            --enable EXT4_FS --enable SQUASHFS --enable SQUASHFS_XZ \
+            --enable XZ_DEC --enable OVERLAY_FS
           # Material kernel/userspace integration: rebuild this SAME native
           # MT6990 OpenWrt Image with the real procd PID1 cpio embedded by
           # Kbuild. This is a separate ephemeral research Image, never an
@@ -628,6 +634,10 @@ jobs:
           grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-procd-initramfs.cpio\"" \
             "$kernel/.config"
           grep -qx 'CONFIG_BLK_DEV_INITRD=y' "$kernel/.config"
+          python3 "$GITHUB_WORKSPACE/tools/boot/check_p26_p44_kernel.py" \
+            --kernel-config "$kernel/.config" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26"
+          echo 'PUBLIC_MT6990_KERNEL_P26_XZ_P44_EXT4_OVERLAYFS_BUILTIN_PASS'
           PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
             make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
           test -s "$kernel/usr/initramfs_data.o"
