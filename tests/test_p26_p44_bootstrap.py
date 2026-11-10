@@ -91,6 +91,21 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertLess(source.index('[ "$observed" = "$expected" ]'),
                         source.index('mount -t tmpfs -o mode=0700,size=64m,nosuid,nodev'))
 
+    def test_rc14_observed_p44_marker_fs_state_and_preinit_handoff(self):
+        source = maker.BOOT_SCRIPT.read_text()
+        self.assertIn("SBA6D_ROOTFS_DATA_V1", source)
+        self.assertIn('P44_MARKER_MISSING_OR_LINK', source)
+        self.assertIn('P44_MARKER_MISMATCH', source)
+        self.assertIn('P44_FS_STATE_NOT_SYMLINK', source)
+        self.assertIn('P44_FS_STATE_NOT_READY', source)
+        self.assertIn('P44_POST_JOURNAL_MARKER_CHANGED', source)
+        self.assertIn('P44_POST_JOURNAL_FS_STATE_CHANGED', source)
+        self.assertIn('export INITRAMFS=1', source)
+        self.assertLess(source.index("P44_MARKER_MISMATCH"),
+                        source.index('mount -t ext4 -o rw,noatime'))
+        self.assertLess(source.index('export INITRAMFS=1'),
+                        source.index('exec switch_root -c /dev/console'))
+
     def test_invalid_owner_marker_still_fails_closed(self):
         source = maker.BOOT_SCRIPT.read_text()
         self.assertIn('halt_boot P44_RW_TOKEN_NOT_MATCHED', source)
