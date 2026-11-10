@@ -800,8 +800,8 @@ jobs:
             --mount "type=bind,src=$GITHUB_WORKSPACE/scripts/air6-p26-p44-init.sh,dst=/air6-init.sh,readonly" \
             sbat6-native-procd-qemu:ci bash -c '
               set -euo pipefail
-              qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh -n /air6-init.sh
-              qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh /air6-init.sh --capabilities \
+              qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox sh -n /air6-init.sh
+              qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox sh /air6-init.sh --capabilities \
                 | grep -Fq P26_RAM_OVERLAY_DEFAULT
               echo PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_RAM_BOOT_SCRIPT_PARSE_PASS
             '
