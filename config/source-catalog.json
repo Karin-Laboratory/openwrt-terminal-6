@@ -319,6 +319,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_build_air6_first_stage.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "a5501ee7cde0eb5d6a2eb5b2fdccf6029944dad9",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_build_input_integrity.py",
       "component": "signing",
       "origin": "independent-original",
@@ -616,6 +625,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/boot/air6_first_stage.sh",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "df83c1ce759a910e6caf77386de7fd260a1bf5d6",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/boot/pack_p25_unsigned_v2.py",
       "component": "ab-recovery",
       "origin": "independent-original",
@@ -657,6 +675,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "a6b080db23fbc6ccd74e066463cb8bb2e0baf58f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/build_air6_first_stage.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "28d630703a2d18b2656f1dd7868cf26ae0a5f329",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
