@@ -902,9 +902,17 @@ jobs:
           native_dtb="$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
           test -s "$native_dtb"
           if test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}" && \
-             test -n "${SBAT6_P25_DTB_SECTION_PREFIX:-}"; then
+             test -n "${SBAT6_P25_DTB_SECTION_PREFIX:-}" && \
+             test -n "${SBAT6_P25_REFERENCE_AUDIT:-}"; then
             test -f "$SBAT6_P25_BOOT_V2_CONFIG"
             test -f "$SBAT6_P25_DTB_SECTION_PREFIX"
+            test -f "$SBAT6_P25_REFERENCE_AUDIT"
+            python3 "$GITHUB_WORKSPACE/tools/boot/verify_p25_profile_provenance.py" \
+              --config "$SBAT6_P25_BOOT_V2_CONFIG" \
+              --prefix "$SBAT6_P25_DTB_SECTION_PREFIX" \
+              --audit-receipt "$SBAT6_P25_REFERENCE_AUDIT" \
+              --public-dtb "$native_dtb"
+            echo 'PUBLIC_P25_REFERENCE_PROFILE_CONSISTENCY_ONLY_PASS'
             install -d -m 0700 "$work/private-p25"
             p25="$work/private-p25/boot_a.unsigned.p25"
             python3 "$GITHUB_WORKSPACE/tools/boot/pack_p25_unsigned_v2.py" \
@@ -932,6 +940,13 @@ jobs:
               --image "$kernel/arch/arm64/boot/Image" \
               --out "$work/private-p25/unsigned-p25-p26-pair.json"
             echo 'PUBLIC_AIR6_SOURCE_P25_P26_FIRST_STAGE_PAIR_BYTE_IDENTITY_PASS'
+          elif test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}" && \
+               test -n "${SBAT6_P25_DTB_SECTION_PREFIX:-}"; then
+            echo 'P25_BLOCKED_OWNER_REFERENCE_AUDIT_RECEIPT_UNAVAILABLE'
+            printf '%s\n' '## P25 manufacture status' '' \
+              'BLOCKED: reference boot-v2 evidence receipt is missing.' \
+              'Header observations and prefix rights remain separate gates.' \
+              >> "$GITHUB_STEP_SUMMARY"
           elif test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}"; then
             echo 'P25_BLOCKED_RC14_DTB_SECTION_PREFIX_UNAVAILABLE'
             printf '%s\n' '## P25 manufacture status' '' \
