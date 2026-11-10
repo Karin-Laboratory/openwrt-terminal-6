@@ -872,6 +872,42 @@ jobs:
           test "$(sha256sum "$alternate_image" | cut -d' ' -f1)" != "$known_image_sha"
           sha256sum "$alternate_image"
           echo 'PUBLIC_MT6990_NATIVE_ALTERNATIVE_RAM_INITRAMFS_IMAGE_BUILD_PASS'
+          # Bind the actual kernel containing the P26 SHA-aware /init to a
+          # separate unsigned 32MiB research P25. The earlier P25 uses the
+          # legacy QEMU procd initramfs, so it cannot test this boot path.
+          # Retain synthetic addresses: this is NOT signer/LK-ready.
+          gzip -n -c "$alternate_image" > "$work/air6-p26-aware-Image.gz"
+          python3 "$GITHUB_WORKSPACE/tools/build/pack_p25_boot_v2.py" \
+            --kernel "$work/air6-p26-aware-Image.gz" \
+            --dtb "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb" \
+            --metadata "$work/public-p25-metadata.json" \
+            --output "$work/p25-p26-aware-research-unsigned.img" \
+            --receipt "$work/p25-p26-aware-research.json"
+          python3 "$GITHUB_WORKSPACE/tools/build/verify_p25_boot_v2.py" \
+            --p25 "$work/p25-p26-aware-research-unsigned.img" \
+            --receipt "$work/p25-p26-aware-research.json" \
+            --kernel "$work/air6-p26-aware-Image.gz" \
+            --dtb "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
+          python3 "$GITHUB_WORKSPACE/tools/build/check_p25_p26_presign.py" \
+            --p25 "$work/p25-p26-aware-research-unsigned.img" \
+            --p25-receipt "$work/p25-p26-aware-research.json" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            > "$work/p26-aware-pair-intake.json"
+          python3 - "$work/p26-aware-pair-intake.json" \
+            "$work/air6-p26-p44-alternative.json" \
+            "$work/private-p26/packed/p26-receipt.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          pair, cpio, p26 = (json.loads(Path(p).read_text()) for p in sys.argv[1:])
+          assert pair["p26_sha256"] == cpio["p26_sha256"] == p26["p26_sha256"]
+          assert pair["pair_integrity"] == "PASS_RECEIPT_HASHES_ONLY"
+          assert pair["signing_readiness"] == "BLOCKED_SYNTHETIC_OR_UNREVIEWED_P25_METADATA"
+          assert pair["safe_to_flash"] is False and pair["hardware_boot_proven"] is False
+          print("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS",
+                "p25=" + pair["p25_sha256"], "p26=" + pair["p26_sha256"])
+          PY
+          echo 'LIMIT: alternative initramfs kernel packed into research P25 only; LK/vendor64/signing and real MMC boot unproven'
           docker run --rm --network none --read-only \
             --cap-drop ALL --security-opt no-new-privileges \
             --pids-limit 128 --memory 2g --cpus 2 \
