@@ -84,6 +84,17 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn('if [ "$BOOT_MODE" = ram-experimental ] &&', source)
         self.assertIn('if [ "$BOOT_MODE" = p44-required ]; then', source)
         self.assertIn('P44_ROOTFS_DATA_GPT_MISMATCH', source)
+        self.assertIn("P26_DUPLICATE_GPT_PARTNAME", source)
+        self.assertIn("P44_DUPLICATE_GPT_PARTNAME", source)
+        self.assertIn("REQUIRED_GPT_PARTITIONS_NOT_FOUND", source)
+        self.assertIn("REQUIRED_GPT_CROSS_DISK", source)
+        self.assertIn('P26="$found_p26"', source)
+        self.assertIn('P44="$found_p44"', source)
+        self.assertIn('"/sys/class/block/${P26##*/}/uevent"', source)
+        self.assertIn('"/sys/class/block/${P44##*/}/uevent"', source)
+        self.assertLess(source.index("REQUIRED_GPT_CROSS_DISK"),
+                        source.index('[ -b "$P26" ] || halt_boot P26_NOT_BLOCK'))
+
         self.assertIn("P44_MARKER_MISMATCH", source)
         self.assertIn("P44_FS_STATE_NOT_READY", source)
         self.assertIn("export INITRAMFS=1", source)
