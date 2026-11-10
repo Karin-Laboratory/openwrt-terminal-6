@@ -89,7 +89,7 @@ class SourceCatalogTests(unittest.TestCase):
         name = "config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh"
         path = self.root / name
         path.parent.mkdir(parents=True)
-        content = b"#!/bin/sh\\nexit 0\\n"
+        content = b"#!/bin/sh\nexit 0\n"
         path.write_bytes(content)
         issues = check.validate(self.root, self.catalog)
         self.assertTrue(any("uncatalogued source/test: " + name in p for p in issues))
@@ -97,7 +97,7 @@ class SourceCatalogTests(unittest.TestCase):
         entry.update(path=name, component="openwrt-userland",
                      origin="independent-original", license="MIT",
                      git_blob_sha1=hashlib.sha1(
-                         b"blob " + str(len(content)).encode() + b"\\x00" + content
+                         b"blob " + str(len(content)).encode() + b"\x00" + content
                      ).hexdigest())
         self.catalog["inputs"].append(entry)
         self.assertEqual(check.validate(self.root, self.catalog), [])
