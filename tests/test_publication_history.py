@@ -192,7 +192,10 @@ class HistoryScannerTests(unittest.TestCase):
         self.assertEqual(findings, set())
 
     def test_historical_waivers_are_exact_blob_identifiers_only(self):
-        self.assertEqual(len(gate.KNOWN_PUBLIC_FIXTURE_BLOBS), 2)
+        self.assertEqual(len(gate.KNOWN_PUBLIC_FIXTURE_BLOBS), 3)
+        self.assertIn(("docs/MAINLINE-P26-P44-EXPERIMENTAL-BOOTSTRAP.md",
+                       "d49ccd70fca3a782154ec2311a5c7893be7f7eb6"),
+                      gate.KNOWN_PUBLIC_FIXTURE_BLOBS)
         self.assertIn(("tools/security/check_publication.py",
                        "20339d624278a436450d35cd1ce0066713816bcc"),
                       gate.KNOWN_PUBLIC_FIXTURE_BLOBS)
