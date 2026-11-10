@@ -7,13 +7,13 @@
 
 ## Verified inventory facts (catalog refreshed 2026-11-10)
 
-- `config/source-catalog.json` currently contains **104** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
+- `config/source-catalog.json` currently contains **106** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
 - The clean Public repository is already visible. An older GitHub-hosted CI checkpoint passed source-only tests and reachable-history scanning. **This does not describe the current PR:** at commit `73ff119e` the source preflight failed on six patterns in older reachable commits, while the native package workflow succeeded. History-remediation and source-identity tests are independent of any later successful P25/P26 host test. Do not disable or bypass the scanner; do not publish the flagged values.
 - **Public distribution remains source-only**; unsigned p25/p26 image construction in private or ephemeral CI is the current goal. Signed/installable releases, vendor radio/EEPROM materials, signing and device operations remain outside routine public distribution.
 
 ## Inventory by declared origin/license (not legal conclusions)
 
-<!-- source-catalog-inventory: inputs=104; pending=104 -->
+<!-- source-catalog-inventory: inputs=106; pending=106 -->
 
 The summary is a **2026-11-10 source-catalog snapshot**. Changes to catalog entries must update this breakdown and pass the source-only inventory consistency test. Counts represent declared entries, not permission to redistribute.
 
@@ -22,10 +22,10 @@ The summary is a **2026-11-10 source-catalog snapshot**. Changes to catalog entr
 | linux-v6.18-derived / GPL-2.0-only | 2 | `patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch` | pending; verify Linux upstream provenance |
 | modified-gpl-parent-derived / GPL-2.0-only | 3 | `patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch`; GPL-derived PHY fixes | pending; check exact parent and licensing |
 | research-transformer / GPL-2.0-only | 1 | `scripts/research/sba6d_stage10_clean_patch.py` | pending; distinguish transform from original |
-| independent-original / MIT | 93 | `tools/boot/slot_observation.py`; source build/tests | pending; verify actual authorship |
+| independent-original / MIT | 95 | `tools/boot/slot_observation.py`; source build/tests | pending; verify actual authorship |
 | research-board-overlay / GPL-2.0-only | 1 | `board/mt6990-air-terminal-6-sgmii1-experimental.dtso` | pending; check wiring evidence |
 | independent-original / GPL-2.0-only | 4 | `board/mt6990-air-terminal-6.dts`, ethernet test DTS | pending; verify authorship |
-| **Total** | **104** | Catalog entries; additional `missing_dependencies` are not source files | **104 pending** |
+| **Total** | **106** | Catalog entries; additional `missing_dependencies` are not source files | **106 pending** |
 
 The labels are not a copyright ruling. New/modified source retains a catalog identity and **pending** status until supported by evidence, but pending does not prevent development or isolated builds. Public backports carry a short PR origin URL/revision (or self-authored observation basis), license and any unresolved concerns.
 
