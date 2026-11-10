@@ -6,6 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 import struct
+import zlib
 
 SIZE = 33_554_432
 PAGE = 2048
@@ -19,12 +20,47 @@ def sha256(path):
     return h.hexdigest()
 
 
+
+def inspect_single_gzip(path):
+    """Independent bounded readback of the exact compressed ARM64 Image."""
+    decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+    limit = 256 * 1024 * 1024
+    count = 0
+    fingerprint = hashlib.sha256()
+    head = bytearray()
+    with path.open("rb") as stream:
+        for data in iter(lambda: stream.read(1 << 20), b""):
+            if decoder.eof:
+                raise ValueError("gzip trailing data")
+            try:
+                decoded = decoder.decompress(data, limit - count + 1)
+            except zlib.error as exc:
+                raise ValueError("gzip CRC or stream invalid") from exc
+            count += len(decoded)
+            if count > limit or decoder.unconsumed_tail:
+                raise ValueError("gzip expanded size limit")
+            fingerprint.update(decoded)
+            if len(head) < 64:
+                head.extend(decoded[:64 - len(head)])
+            if decoder.unused_data:
+                raise ValueError("gzip trailing data")
+    if not decoder.eof:
+        raise ValueError("gzip truncated member")
+    if len(head) != 64 or head[56:60] != b"ARM\x64":
+        raise ValueError("gzip ARM64 Image signature invalid")
+    return count, fingerprint.hexdigest()
+
+
 def verify(image, receipt, kernel, dtb):
     image, receipt, kernel, dtb = map(Path, (image, receipt, kernel, dtb))
     for path in (image, receipt, kernel, dtb):
         if path.is_symlink() or not path.is_file():
             raise ValueError("regular non-symlink inputs required")
     record = json.loads(receipt.read_text())
+    expanded, expanded_sha = inspect_single_gzip(kernel)
+    if (record.get("kernel", {}).get("inflated_bytes") != expanded or
+            record.get("kernel", {}).get("inflated_sha256") != expanded_sha):
+        raise ValueError("gzip kernel readback length/SHA mismatch")
     if record.get("format") != "aosp-boot-v2-p25-research-receipt-v1":
         raise ValueError("incorrect receipt")
     if record.get("status") != "REAL_32M_BYTES_AOSP_V2_STRUCTURE_ONLY_NOT_LK_ACCEPTED":
