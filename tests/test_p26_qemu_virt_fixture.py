@@ -52,7 +52,7 @@ class SyntheticVirtioBootTests(unittest.TestCase):
         self.assertEqual(source.count(active), 1)
         self.assertEqual(source.count(b"BOOT_MODE='ram-experimental'"), 1)
         self.assertEqual(len(fixture.PATCHES), 2)
-        self.assertEqual(fixture.PATCHES[1][0], active)
+        self.assertEqual(fixture.PATCHES[1][0], active.removeprefix(b"grep -qx "))
         # The portable P44-required GPT scan stays in the source, but
         # cannot be activated by the virtio test's RAM-default fixture.
         self.assertIn(b'if [ "$BOOT_MODE" = p44-required ]; then', source)
