@@ -5,6 +5,8 @@ on:
     branches:
       - work/p26-rootfs-unsigned-packer-20261104
     paths:
+      - 'tools/build/install_p44_extension.py'
+      - 'tests/test_install_p44_extension.py'
       - 'tools/build/pack_p26_rootfs.py'
       - 'tests/test_pack_p26_rootfs.py'
       - 'tests/test_verify_p26_independent.py'
@@ -34,6 +36,10 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Compile Python modules
         run: python3 -m py_compile tools/build/pack_p26_rootfs.py tests/test_pack_p26_rootfs.py tools/build/verify_p26_independent.py tests/test_verify_p26_independent.py tools/build/verify_p26_partition.py tests/test_verify_p26_partition.py
+      - name: Test RC14-derived P44 hook staging
+        run: |
+          python3 -m unittest discover -s tests -p test_install_p44_extension.py -v
+          python3 -m py_compile tools/build/install_p44_extension.py
       - name: Run p26 packer unit tests
         run: python3 -m unittest discover -s tests -p test_pack_p26_rootfs.py -v
       - name: Run independent verifier regression tests
