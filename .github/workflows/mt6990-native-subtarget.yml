@@ -727,6 +727,15 @@ jobs:
               --ramdisk "$work/air6-native-initramfs.cpio.gz" --dtb "$native_dtb" \
               --config "$SBAT6_P25_BOOT_V2_CONFIG"
             echo 'PUBLIC_NATIVE_SOURCE_P25_UNSIGNED_FULL_BYTE_READBACK_PASS'
+            # Pair both same-run unsigned images only when independently verified.
+            python3 "$GITHUB_WORKSPACE/tools/build/verify_unsigned_pair.py" \
+              --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
+              --ramdisk "$work/air6-native-initramfs.cpio.gz" \
+              --dtb "$native_dtb" --config "$SBAT6_P25_BOOT_V2_CONFIG" \
+              --p26 "$work/private-p26/packed/rootfs_a.p26" \
+              --producer "$work/private-p26/packed/p26-receipt.json" \
+              --independent "$work/private-p26/packed/p26-independent-attestation.json" \
+              --out "$work/private-p25/unsigned-p25-p26-pair.json"
             echo 'LIMIT: no Air6 LK validation, vendor extension, signature or flash'
           else
             echo 'P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE'
