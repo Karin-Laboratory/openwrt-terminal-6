@@ -221,3 +221,31 @@ RC14's proven LAN hardware initialization. Successful boot, packet
 forwarding, multi-unit MAC assignment, per-unit calibration, Wi-Fi AP
 bring-up, and post-reboot management are all still unverified on the public
 image. Do not sign/flash this research P25/P26 based on these checks alone.
+
+## RC13/14 boot-safety and LAN receive evidence backport (2026-11-10)
+
+The private RC13's working startup script required `bootslot=a`,
+allowed a bounded 80 × 0.25-second eMMC/GPT enumeration period, checked
+unique `rootfs_a`, `rootfs_data`, and preserved `user_data` partition
+identities on the same disk, verified the layout, and used
+`rw,noatime,nosuid,nodev` for P44 after a read-only preflight.
+The public source now independently implements those conditions without
+copying private device image headers or hardcoding C-unit GPT sector offsets.
+It also requires the 128MiB manufactured P26 target size before full SHA
+readback. These checks are fail-closed, not a positive hardware boot proof.
+
+The private RC14 cold-boot observations also showed a false-positive
+management readiness case: LAN2 carrier 1000/full and TCP/22 listening while
+the SoC MAC1 RX statistic remained at zero; host ARP/SSH failed.
+The P26-embedded manual management entry therefore reports
+`PREFLIGHT_PASS_LINK_ONLY` from `--check`, whereas `--start` requires
+a nonzero MAC1 RX counter and refuses startup otherwise. This observation
+only establishes receive activity, not bidirectional reachability or
+verified host-key SSH. No automatic network probing, register writes, SSH
+key distribution, or live target changes were added.
+
+The isolated QEMU virt tests explicitly supply synthetic `bootslot=a`,
+preserving the full P26 hash-corruption and RAM-positive assertions after
+the new real-device slot preflight. These QEMU tests are not a substitute
+for source-built Air6 DTB MMC enablement, LK acceptance or a cold-boot test.
+
