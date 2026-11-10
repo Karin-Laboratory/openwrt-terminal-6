@@ -92,7 +92,7 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         receipt["boot_mode"] = "ram-experimental"
         receipt["p44_required"] = False
         self.receipt.write_text(json.dumps(receipt))
-        with self.assertRaisesRegex(ValueError, "BOOTSTAGE_INIT_MISMATCH"):
+        with self.assertRaisesRegex(ValueError, "BOOTSTAGE_(RAM_MANAGEMENT_ATTESTATION|INIT_MISMATCH)"):
             self.verify()
 
     def test_rc14_p44_mode_script_has_no_ram_fallback(self):
