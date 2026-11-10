@@ -76,6 +76,9 @@ KNOWN_PUBLIC_FIXTURE_BLOBS = {
     ("tools/security/check_publication.py",
      "20339d624278a436450d35cd1ce0066713816bcc"):
         frozenset({"private network endpoint"}),
+    ("docs/MAINLINE-P26-P44-EXPERIMENTAL-BOOTSTRAP.md",
+     "d49ccd70fca3a782154ec2311a5c7893be7f7eb6"):
+        frozenset({"private network endpoint"}),
     ("tests/test_publication_history.py",
      "bef753648c68721448bdd83d73e0b79cf3082efa"):
         frozenset({"private network endpoint", "device login endpoint"}),
