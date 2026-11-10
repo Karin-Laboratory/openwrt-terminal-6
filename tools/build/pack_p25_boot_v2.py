@@ -7,7 +7,7 @@ No Air6 LK addresses, vendor64 DTB wrapper, signer, flash or release approval
 is inferred. Synthetic header metadata yields a NONBOOTABLE research candidate.
 """
 import argparse
-import gzip
+import zlib
 import hashlib
 import json
 import os
@@ -34,12 +34,31 @@ def validate_inputs(kernel, dtb, layout="bare-fdt", prefix_sha=None):
     with kernel.open("rb") as src:
         if src.read(2) != b"\x1f\x8b":
             raise ValueError("kernel must be Image.gz, not uncompressed Image")
-    with gzip.open(kernel, "rb") as src:
-        header = src.read(64)
-        if len(header) != 64 or header[56:60] != b"ARM\x64":
-            raise ValueError("gzip payload is not an ARM64 Linux Image")
-        while src.read(1 << 20):
-            pass
+    # LK's inflate path is not equivalent to Python gzip.open(), which
+    # accepts concatenated members. Require exactly ONE CRC-valid gzip
+    # member, no trailing bytes, and a bounded real ARM64 Image payload.
+    decoder = zlib.decompressobj(wbits=16 + zlib.MAX_WBITS)
+    limit = 256 * 1024 * 1024
+    expanded, header = 0, bytearray()
+    with kernel.open("rb") as src:
+        for chunk in iter(lambda: src.read(1 << 20), b""):
+            if decoder.eof:
+                raise ValueError("trailing bytes after gzip member")
+            try:
+                decoded = decoder.decompress(chunk, limit - expanded + 1)
+            except zlib.error as exc:
+                raise ValueError("invalid gzip member or CRC") from exc
+            expanded += len(decoded)
+            if expanded > limit or decoder.unconsumed_tail:
+                raise ValueError("gzip Image exceeds expanded size limit")
+            if len(header) < 64:
+                header.extend(decoded[:64 - len(header)])
+            if decoder.unused_data:
+                raise ValueError("trailing bytes after gzip member")
+    if not decoder.eof:
+        raise ValueError("truncated gzip Image member")
+    if len(header) != 64 or header[56:60] != b"ARM\x64":
+        raise ValueError("gzip payload is not an ARM64 Linux Image")
     if layout not in ("bare-fdt", "opaque-64-prefix-plus-fdt"):
         raise ValueError("unrecognized DTB section layout")
     if layout == "bare-fdt" and prefix_sha is not None:
