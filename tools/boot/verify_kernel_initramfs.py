@@ -9,6 +9,10 @@ from pathlib import Path
 import struct
 
 ELF64_SHDR = struct.Struct("<IIQQQQIIQQ")
+ELF64_SYM = struct.Struct("<IBBHQQ")
+SHF_ALLOC = 0x2
+SHT_NOBITS = 8
+SHT_SYMTAB = 2
 
 
 def require(ok, code):
@@ -16,7 +20,7 @@ def require(ok, code):
         raise ValueError("INITRAMFS_LINK_VERIFY_FAIL_" + code)
 
 
-def section(data, wanted):
+def elf_sections(data):
     require(len(data) >= 64 and data[:4] == b"\x7fELF", "ELF_MAGIC")
     require(data[4] == 2 and data[5] == 1, "ELF64_LITTLE_ENDIAN")
     require(struct.unpack_from("<H", data, 18)[0] == 183, "ELF_NOT_AARCH64")
@@ -31,25 +35,94 @@ def section(data, wanted):
     names_off, names_size = shstr[4], shstr[5]
     require(names_off + names_size <= len(data), "ELF_NAMES_BOUNDS")
     names = data[names_off:names_off + names_size]
-    matches = []
-    for header in headers:
+    result = []
+    for index, header in enumerate(headers):
         nameoff, stype, flags, addr, offset, size, link, info, align, entsize = header
         require(nameoff < len(names), "ELF_SECTION_NAME")
         end = names.find(b"\0", nameoff)
         require(end >= 0, "ELF_SECTION_NAME_TERMINATOR")
-        if names[nameoff:end] == wanted.encode("ascii"):
-            require(stype != 8 and offset + size <= len(data),
-                    "ELF_TARGET_SECTION_BOUNDS")
-            matches.append(data[offset:offset + size])
+        require(stype == SHT_NOBITS or offset + size <= len(data),
+                "ELF_SECTION_BOUNDS")
+        result.append({"index": index, "name": names[nameoff:end].decode("ascii"),
+                       "type": stype, "flags": flags, "addr": addr,
+                       "offset": offset, "size": size, "link": link,
+                       "entsize": entsize})
+    return result
+
+
+def section(data, wanted):
+    matches = [data[item["offset"]:item["offset"] + item["size"]]
+               for item in elf_sections(data) if item["name"] == wanted]
     require(len(matches) == 1, "ELF_TARGET_SECTION_COUNT")
     return matches[0]
+
+
+def symbol_table(data, sections, wanted):
+    matches = []
+    for symtab in sections:
+        if symtab["type"] != SHT_SYMTAB:
+            continue
+        require(symtab["link"] < len(sections), "ELF_SYMBOL_STRTAB")
+        strings_section = sections[symtab["link"]]
+        strings = data[strings_section["offset"]:
+                       strings_section["offset"] + strings_section["size"]]
+        entsize = symtab["entsize"] or ELF64_SYM.size
+        require(entsize >= ELF64_SYM.size and symtab["size"] % entsize == 0,
+                "ELF_SYMBOL_TABLE_BOUNDS")
+        start = symtab["offset"]
+        for offset in range(start, start + symtab["size"], entsize):
+            nameoff, info, other, shndx, value, size = ELF64_SYM.unpack_from(data, offset)
+            if nameoff >= len(strings):
+                continue
+            end = strings.find(b"\0", nameoff)
+            require(end >= 0, "ELF_SYMBOL_NAME")
+            if strings[nameoff:end].decode("ascii", "replace") == wanted and shndx != 0:
+                matches.append({"value": value, "size": size, "shndx": shndx})
+    require(len(matches) == 1, "ELF_SYMBOL_COUNT_" + wanted.upper())
+    return matches[0]
+
+
+def linked_initramfs(data):
+    """Extract .init.ramfs input bytes from the final linker output section.
+
+    Linux keeps the input .init.ramfs section inside the output .init.data
+    section. The linker symbol __initramfs_start marks its first byte and the
+    64-bit __initramfs_size object records its exact length.
+    """
+    sections = elf_sections(data)
+    start = symbol_table(data, sections, "__initramfs_start")
+    size_symbol = symbol_table(data, sections, "__initramfs_size")
+    require(start["size"] == 0, "ELF_INITRAMFS_START_SYMBOL_SIZE")
+    require(size_symbol["size"] == 8, "ELF_INITRAMFS_SIZE_SYMBOL_SIZE")
+    containing_start = [s for s in sections if s["flags"] & SHF_ALLOC and
+                        s["type"] != SHT_NOBITS and s["addr"] <= start["value"] <
+                        s["addr"] + s["size"]]
+    require(len(containing_start) == 1, "ELF_INITRAMFS_START_MAPPING")
+    section_start = containing_start[0]
+    require(section_start["name"] == ".init.data" and
+            start["shndx"] == section_start["index"],
+            "ELF_INITRAMFS_OUTPUT_SECTION")
+    start_offset = section_start["offset"] + start["value"] - section_start["addr"]
+    size_offset = size_symbol["value"]
+    size_owner = [s for s in sections if s["flags"] & SHF_ALLOC and
+                  s["type"] != SHT_NOBITS and s["addr"] <= size_offset and
+                  size_offset + 8 <= s["addr"] + s["size"]]
+    require(len(size_owner) == 1 and size_owner[0]["index"] == section_start["index"] and
+            size_symbol["shndx"] == section_start["index"],
+            "ELF_INITRAMFS_SIZE_MAPPING")
+    length = struct.unpack_from("<Q", data,
+                                size_owner[0]["offset"] + size_offset - size_owner[0]["addr"])[0]
+    require(length > 0 and start_offset + length <=
+            section_start["offset"] + section_start["size"],
+            "ELF_INITRAMFS_LINKED_BOUNDS")
+    return data[start_offset:start_offset + length]
 
 
 def verify(obj, vmlinux, image, kernel_gz, cpio, compression="xz"):
     paths = (obj, vmlinux, image, kernel_gz, cpio)
     require(all(p.is_file() and not p.is_symlink() for p in paths), "INPUT")
     object_data = section(obj.read_bytes(), ".init.ramfs")
-    linked_data = section(vmlinux.read_bytes(), ".init.ramfs")
+    linked_data = linked_initramfs(vmlinux.read_bytes())
     require(object_data and object_data == linked_data, "OBJECT_NOT_LINKED")
     if compression == "xz":
         try:

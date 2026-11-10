@@ -49,7 +49,7 @@ The packer checks the gzip stream and that its decompressed bytes are an ARM64 I
 
 ## Embedded initramfs check
 
-The native kernel build links the first-stage CPIO into `usr/initramfs_data.o` and `vmlinux`. `tools/boot/verify_kernel_initramfs.py` verifies the exact compressed `.init.ramfs` section in both ELF files, decompresses it to the expected CPIO, checks that the section occurs once in the ARM64 Image, and confirms the supplied gzip kernel decodes byte-for-byte to that Image. This proves source-build linkage and input identity, not that LK inflates or executes it on hardware.
+The native kernel build links the first-stage CPIO into `usr/initramfs_data.o` and `vmlinux`. `tools/boot/verify_kernel_initramfs.py` verifies the input `.init.ramfs` section in `usr/initramfs_data.o`, then uses `__initramfs_start` and the 64-bit `__initramfs_size` linker object to locate and compare the exact bytes folded into vmlinux `.init.data`. It decompresses those bytes to the expected CPIO, checks that the section occurs once in the ARM64 Image, and confirms the supplied gzip kernel decodes byte-for-byte to that Image. This proves source-build linkage and input identity, not that LK inflates or executes it on hardware.
 
 ## Same-run P25/P26 gate and CI
 

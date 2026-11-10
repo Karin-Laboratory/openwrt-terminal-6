@@ -41,6 +41,49 @@ def fake_elf64_aarch64_initramfs(section):
     return bytes(blob)
 
 
+def fake_vmlinux_with_linked_initramfs(payload):
+    # Model Linux's final linker output: input .init.ramfs is folded into
+    # .init.data and referenced by linker symbols. __initramfs_size is an
+    # eight-byte object inside that output section.
+    names = b"\0.shstrtab\0.strtab\0.symtab\0.init.data\0"
+    shoff = 64
+    shnum = 5
+    names_off = shoff + shnum * 64
+    strtab = b"\0__initramfs_start\0__initramfs_size\0"
+    str_off = names_off + len(names)
+    sym_off = str_off + len(strtab)
+    sym_size = 3 * 24
+    data_off = sym_off + sym_size
+    data_off += (-data_off) % 8
+    initramfs_start = 0x1000
+    size_addr = initramfs_start + len(payload)
+    init_data = payload + struct.pack("<Q", len(payload))
+    blob = bytearray(data_off + len(init_data))
+    blob[:4] = b"\x7fELF"
+    blob[4:6] = b"\x02\x01"
+    struct.pack_into("<HHIQQQIHHHHHH", blob, 16,
+                     1, 183, 1, 0, 0, shoff, 0, 64, 0, 0,
+                     64, shnum, 1)
+    headers = [
+        (0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (1, 3, 0, 0, names_off, len(names), 0, 0, 1, 0),
+        (11, 3, 0, 0, str_off, len(strtab), 0, 0, 1, 0),
+        (19, 2, 0, 0, sym_off, sym_size, 2, 1, 8, 24),
+        (27, 1, 2, initramfs_start, data_off, len(init_data), 0, 0, 8, 0),
+    ]
+    for i, header in enumerate(headers):
+        struct.pack_into("<IIQQQQIIQQ", blob, shoff + i * 64, *header)
+    # Null symbol, linker start symbol, and 64-bit size object.
+    struct.pack_into("<IBBHQQ", blob, sym_off + 24, 1, 0x10, 0, 4,
+                     initramfs_start, 0)
+    struct.pack_into("<IBBHQQ", blob, sym_off + 48, 19, 0x11, 0, 4,
+                     size_addr, 8)
+    blob[names_off:names_off + len(names)] = names
+    blob[str_off:str_off + len(strtab)] = strtab
+    blob[data_off:data_off + len(init_data)] = init_data
+    return bytes(blob)
+
+
 class BuiltinInitramfsTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
@@ -56,7 +99,7 @@ class BuiltinInitramfsTests(unittest.TestCase):
         self.compressed = lzma.compress(self.cpio_bytes, format=lzma.FORMAT_XZ)
         elf = fake_elf64_aarch64_initramfs(self.compressed)
         self.object.write_bytes(elf)
-        self.vmlinux.write_bytes(elf)
+        self.vmlinux.write_bytes(fake_vmlinux_with_linked_initramfs(self.compressed))
         image = bytearray(512)
         image[56:60] = b"ARM\x64"
         image.extend(self.compressed)
@@ -90,6 +133,26 @@ class BuiltinInitramfsTests(unittest.TestCase):
         struct.pack_into("<H", elf, 18, 62)
         self.object.write_bytes(elf)
         with self.assertRaisesRegex(ValueError, "ELF_NOT_AARCH64"):
+            verify_module.verify(self.object, self.vmlinux, self.image,
+                                 self.kernel_gz, self.cpio, "xz")
+
+    def test_rejects_mismatched_linked_initramfs_size(self):
+        malformed = bytearray(fake_vmlinux_with_linked_initramfs(self.compressed))
+        sections = verify_module.elf_sections(malformed)
+        init_data = next(s for s in sections if s["name"] == ".init.data")
+        struct.pack_into("<Q", malformed,
+                         init_data["offset"] + init_data["size"] - 8,
+                         len(self.compressed) + 1)
+        self.vmlinux.write_bytes(malformed)
+        with self.assertRaisesRegex(ValueError, "OBJECT_NOT_LINKED"):
+            verify_module.verify(self.object, self.vmlinux, self.image,
+                                 self.kernel_gz, self.cpio, "xz")
+
+    def test_rejects_missing_linker_symbol(self):
+        malformed = bytearray(fake_vmlinux_with_linked_initramfs(self.compressed))
+        malformed = malformed.replace(b"__initramfs_start", b"__initramfs_xxxxx")
+        self.vmlinux.write_bytes(malformed)
+        with self.assertRaisesRegex(ValueError, "ELF_SYMBOL_COUNT___INITRAMFS_START"):
             verify_module.verify(self.object, self.vmlinux, self.image,
                                  self.kernel_gz, self.cpio, "xz")
 
