@@ -136,6 +136,20 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
                         workflow.index("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS"))
 
 
+    def test_native_toolchain_is_real_and_precedes_kernel_build(self):
+        workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
+        self.assertIn('make -C "$work/openwrt" -j1 V=s toolchain/install', workflow)
+        self.assertIn('PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS', workflow)
+        self.assertIn('BLOCKED_NATIVE_TOOLCHAIN_GCC_NOT_INSTALLED', workflow)
+        self.assertIn('BLOCKED_NATIVE_TOOLCHAIN_LD_NOT_INSTALLED', workflow)
+        self.assertIn('aarch64-openwrt-linux-musl-gcc', workflow)
+        self.assertLess(workflow.index('make -C "$work/openwrt" -j1 V=s toolchain/install'),
+                        workflow.index('PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS'))
+        self.assertLess(workflow.index('PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS'),
+                        workflow.index('make -C "$work/openwrt" -j2 V=s target/linux/compile'))
+        # A shell line continuation after a comment can hide the make command.
+        self.assertNotIn('toolchain/install\\\\n', workflow)
+
     def test_qemu_busybox_direct_target_applet_dispatch(self):
         # OpenWrt BusyBox can omit the 'busybox' dispatcher while retaining
         # sh/mount/etc. Probe actual target applets by argv[0], and do not
