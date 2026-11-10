@@ -373,6 +373,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_install_p44_extension.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "6c1862c723f7165a6cf030cf2e2fe9238d7dbb7a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_minimal_arm64_initramfs.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -603,6 +612,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "a3225a2d3500b3c581c53d551f4d0dabca4f52bf",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/install_p44_extension.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "ac605e59f9f96bf1685130522bb1ed99d43245f7",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
