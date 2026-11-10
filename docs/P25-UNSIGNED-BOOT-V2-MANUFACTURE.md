@@ -51,7 +51,7 @@ A native source-built Image with an embedded initramfs **and** a separate
 ramdisk is an experimental handoff, not confirmation of the precise RC14 boot
 protocol. The signed vendor-specific header extensions, LK inflate format
 acceptance, real memory map, init transition and Air6 DTB compatibility must be
-proven separately. Do not treat the synthetic layout gate as an RK14/RC14 boot
+proven separately. Do not treat the synthetic layout gate as an RC14 boot
 reproduction.
 
 ## Acceptance still pending
