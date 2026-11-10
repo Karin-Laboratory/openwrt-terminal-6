@@ -17,12 +17,15 @@ P26 boots its normal services even when p44 is absent, unreadable or uninitializ
 After basic init, the late S99 unit checks for a mounted ext4 `/overlay`. It only
 executes `/overlay/air6/boot.sh` when `/overlay/air6/enabled` exists. Both files
 are owner-provisioned; no default active extension is shipped. A missing extension is
-the intentional no-op (`exit 0`) state.
+the intentional no-op (`exit 0`) state. Creating `/overlay/air6/disabled`
+(disallowed if it is a symlink) overrides `enabled` and prevents execution.
+Removing `enabled` also disables execution; neither action touches P26.
 
 To execute, directory, enabled marker and executable must be root:root and have one
 of the runner's conservative permission modes. The script must be executable,
-must not be a symlink, and is given a 15-second timeout. Failures are logged
-best-effort and never propagate to OpenWrt init. This is a development hook,
+must not be a symlink, and is given a 15-second timeout. The runner logs the start and exit status (including a timeout) best-effort,
+without copying script standard output into a public build log. Failures never
+propagate to OpenWrt init. This is a development hook,
 not an isolation boundary against a malicious root user.
 
 The provisioner must separately initialize an empty p44 filesystem and must never
@@ -35,9 +38,13 @@ tests and hardware verification remain **unproven**.
 - Private RC14 observation: A boot reached interactive UART with p26 SquashFS and
   p44 ext4 mounted read-write. This is not proof the new public p26 image boots.
 - Public checks: install script unit tests and shell syntax checks.
-- P25 boot-v2 section packing and full 32 MiB readback are separate unfinished gates.
-- P26 acceptance still requires successful actual source-built pack and independent
-  128 MiB SquashFS readback on exact branch HEAD. No signature, flash or RF action.
+- Public P25 boot-v2 section packing and full 32 MiB *synthetic* independent
+  readback tests exist; native Air6-compatible input configuration and boot
+  acceptance remain unfinished.
+- Base PR #127 recorded a genuine source-built 128 MiB p26 and independent
+  SquashFS readback PASS on 2026-11-07 (SHA-256 `c55884a21dddac40569689b90c3911d3400092d652278b9deb8a009145b23c35`).
+  The modified P44-hook tree requires a **new** exact-HEAD source-built pack and
+  independent readback; the base receipt cannot be reused as its result. No signature, flash or RF action.
 
 Provenance: independently authored MIT source from owner observations. OpenWrt
 init.d conventions are interface behavior; no private implementation copied.
