@@ -29,6 +29,9 @@ class PairTests(unittest.TestCase):
         self.producer = self.base / "producer.json"
         self.independent = self.base / "independent.json"
         self.out = self.base / "pair.json"
+        self.cpio = self.base / "initramfs.cpio"
+        self.cpio.write_bytes(b"newc" + pair.digest(self.p26).encode("ascii") +
+                              b"  /dev/mmcblk0p26" + b"TRAILER!!!")
         self.producer.write_text(json.dumps({
             "schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
             "signed": False, "hardware": "NONE",
@@ -61,7 +64,7 @@ class PairTests(unittest.TestCase):
     def run_pair(self):
         return pair.verify_pair(self.p25, *self.parts, self.p26,
                                 self.producer, self.independent,
-                                self.out, self.fake_p25)
+                                self.cpio, self.out, self.fake_p25)
 
     def test_pair_identity_pass_and_refuse_overwrite(self):
         evidence = self.run_pair()
@@ -70,6 +73,12 @@ class PairTests(unittest.TestCase):
                          pair.digest(self.p26))
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             self.run_pair()
+
+    def test_mismatched_initramfs_p26_hash_rejected(self):
+        self.cpio.write_bytes(b"newc" + b"0" * 64 + b"  /dev/mmcblk0p26")
+        with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
+            self.run_pair()
+        self.assertFalse(self.out.exists())
 
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
@@ -96,7 +105,7 @@ class PairTests(unittest.TestCase):
     def test_p25_identity_rejected(self):
         with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
             pair.verify_pair(self.p25, *self.parts, self.p26, self.producer,
-                             self.independent, self.out,
+                             self.independent, self.cpio, self.out,
                              lambda *args: {"partition_bytes": 64,
                                             "p25_sha256": "0" * 64})
 
