@@ -85,6 +85,23 @@ class SourceCatalogTests(unittest.TestCase):
         self.entry["rights_review"] = ""
         self.assertTrue(check.validate(self.root, self.catalog, source_public=True))
 
+    def test_p26_internal_staged_scripts_are_catalogued(self):
+        name = "config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh"
+        path = self.root / name
+        path.parent.mkdir(parents=True)
+        content = b"#!/bin/sh\\nexit 0\\n"
+        path.write_bytes(content)
+        issues = check.validate(self.root, self.catalog)
+        self.assertTrue(any("uncatalogued source/test: " + name in p for p in issues))
+        entry = dict(self.entry)
+        entry.update(path=name, component="openwrt-userland",
+                     origin="independent-original", license="MIT",
+                     git_blob_sha1=hashlib.sha1(
+                         b"blob " + str(len(content)).encode() + b"\\x00" + content
+                     ).hexdigest())
+        self.catalog["inputs"].append(entry)
+        self.assertEqual(check.validate(self.root, self.catalog), [])
+
     def test_unregistered_dtso_is_blocked(self):
         overlay = self.root / "board" / "unexpected.dtso"
         overlay.parent.mkdir()
