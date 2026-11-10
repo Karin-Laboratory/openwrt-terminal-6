@@ -422,7 +422,7 @@
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "70a7adaf93fb9bb212b77edda3baf6783230cfc2",
+      "git_blob_sha1": "8e47dbb4eb99b548adcd9637d4f9cb131fc8cce4",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -621,6 +621,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "093175bb5cc1f3d959329ea18ec48d41c2635f15",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/verify_p25_independent.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "82686ed9b37f5d606af0252113f95dd0aec046aa",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
