@@ -814,11 +814,13 @@ jobs:
           # The following must be available *built in*, not as unavailable
           # modules in the initial ramdisk (the first stage does not modprobe).
           "$kernel/scripts/config" --file "$kernel/.config" \
-            --enable EXT4_FS --enable SQUASHFS --enable OVERLAY_FS \
-            --enable CRYPTO_SHA256 --enable BLK_DEV_INITRD
+            --enable EXT4_FS --enable SQUASHFS --enable SQUASHFS_XZ \
+            --enable OVERLAY_FS --enable CRYPTO_SHA256 \
+            --enable MMC --enable MMC_BLOCK --enable BLK_DEV_INITRD
           PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
             make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
-          for option in EXT4_FS SQUASHFS OVERLAY_FS BLK_DEV_INITRD; do
+          for option in EXT4_FS SQUASHFS SQUASHFS_XZ OVERLAY_FS \
+                        MMC MMC_BLOCK BLK_DEV_INITRD; do
             grep -qx "CONFIG_$option=y" "$kernel/.config" || {
               echo "P25_BLOCKED_MISSING_FIRST_STAGE_BUILTIN_$option" >&2
               exit 1
