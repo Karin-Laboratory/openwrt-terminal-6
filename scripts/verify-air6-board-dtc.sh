@@ -162,6 +162,25 @@ if 'sgmii-pwr0' in parent or 'sgmii-pwr1' in parent:
 print('AIR6_NETSYS_SGMII1_DTC_PASS (SOURCE ONLY; NO COLD-BOOT CLAIM)')
 PY
 
+# A compiled DTB has more structure than the DTS textual smoke test can
+# establish. Run the SAME independent FDT tree/phandle/memreserve parser
+# used for P25 preflight, on both real, pinned-DTC output blobs.
+python3 - "$ROOT" "$TEMP/air6.dtbin" "$TEMP/air6-ethernet.dtbin" <<'PY'
+from pathlib import Path
+import sys
+root = Path(sys.argv[1])
+sys.path.insert(0, str(root))
+from tools.boot.air6_boot_contract import check_fdt
+for label, filename in (("baseline", sys.argv[2]),
+                        ("ethernet-opt-in", sys.argv[3])):
+    result = check_fdt(Path(filename).read_bytes())
+    if result["nodes"] < 5:
+        raise SystemExit("AIR6_COMPILED_FDT_TOO_FEW_NODES:" + label)
+    print("AIR6_COMPILED_FDT_FULL_STRUCTURE_PASS", label,
+          "nodes=" + str(result["nodes"]),
+          "phandles=" + str(result["phandles"]))
+PY
+
 # Check the *compiled* conservative and opt-in trees, not only their source
 # overrides: an upstream SoC DTSI change must not silently enable the
 # baseline Ethernet/PCS or disable the experimental PHY.
