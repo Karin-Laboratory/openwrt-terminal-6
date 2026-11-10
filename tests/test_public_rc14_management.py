@@ -50,6 +50,17 @@ class PublicRc14ManagementTests(unittest.TestCase):
                       self.workflow)
         self.assertIn('sh -n "$management"', self.workflow)
         self.assertIn("No SXXrc14 startup link is installed", self.workflow)
+        self.assertIn("PUBLIC_MT6990_P26_INTERNAL_MANAGEMENT_TARGET_ROOT_OWNERSHIP_PASS",
+                      self.workflow)
+        self.assertIn("PUBLIC_MT6990_REAL_P26_EMBEDDED_RC14_MANAGEMENT_READBACK_PASS",
+                      self.workflow)
+        self.assertIn("unsquashfs -cat", self.workflow)
+        self.assertIn("usr/libexec/sba6d/rc14-management.sh |", self.workflow)
+        self.assertIn("stat -c '%u:%g:%a' \"$management\" | grep -Fx '0:0:755'",
+                      self.workflow)
+        self.assertLess(
+            self.workflow.index("PUBLIC_MT6990_P26_INTERNAL_MANAGEMENT_TARGET_ROOT_OWNERSHIP_PASS"),
+            self.workflow.index("PUBLIC_MT6990_REAL_P26_EMBEDDED_RC14_MANAGEMENT_READBACK_PASS"))
         self.assertNotIn('install -D -m 0755 "$GITHUB_WORKSPACE/config/sbat6-stage/'
                          'usr/libexec/sba6d/rc14-management.sh" "$rootfs/overlay/',
                          self.workflow)
