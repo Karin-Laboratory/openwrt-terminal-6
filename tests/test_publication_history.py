@@ -203,6 +203,18 @@ class HistoryScannerTests(unittest.TestCase):
         gate.history_findings(issues, objects)
         self.assertIn((sha, "restricted artifact filename/type"), objects)
 
+    def test_object_ids_include_historical_symlink_blob(self):
+        (self.root / "target.txt").write_text("safe\\n")
+        os.symlink("target.txt", self.root / "alias")
+        self.commit("synthetic symlink object")
+        sha = subprocess.check_output(
+            ["git", "rev-parse", "HEAD:alias"], cwd=self.root
+        ).decode().strip()
+        issues, objects = set(), set()
+        gate.history_findings(issues, objects)
+        self.assertIn(("alias", "symlink requires manual review"), issues)
+        self.assertIn((sha, "symlink requires manual review"), objects)
+
     def test_object_ids_include_oversized_historical_blob(self):
         p = self.root / "large.txt"
         p.write_bytes(b"x" * (gate.MAX_SIZE + 1))
