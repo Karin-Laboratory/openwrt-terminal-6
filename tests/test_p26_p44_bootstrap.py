@@ -123,7 +123,7 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn('mount -t tmpfs -o mode=0700,size=64m,nosuid,nodev', source)
         self.assertIn('BACKING="$RAM"', source)
         self.assertIn('mount --move "$BACKING" "$NEWROOT/overlay"', source)
-        owner_guard = source.index('if [ ! -e "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ]; then')
+        owner_guard = source.index('if [ "$BOOT_MODE" = ram-experimental ] &&')
         p44_mount = source.index('mount -t ext4 -o ro,noload "$P44" "$UPPER"')
         self.assertLess(owner_guard, p44_mount)
         self.assertLess(source.index('[ "$observed" = "$expected" ]'),
@@ -150,7 +150,7 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn('halt_boot P44_GPT_PARTNAME', source)
         self.assertIn('halt_boot P44_POST_JOURNAL_BOOT_SHADOW', source)
         self.assertIn('log P44_OWNER_APPROVED', source)
-        self.assertIn('if [ ! -e "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ]; then', source)
+        self.assertIn('if [ "$BOOT_MODE" = ram-experimental ] &&', source)
 
     def test_target_busybox_parses_ram_init_in_isolated_qemu(self):
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
