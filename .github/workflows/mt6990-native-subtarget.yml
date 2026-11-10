@@ -709,7 +709,8 @@ jobs:
               --config "$SBAT6_P25_BOOT_V2_CONFIG" --output "$p25"
             python3 "$GITHUB_WORKSPACE/tools/boot/verify_p25_independent.py" \
               --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
-              --ramdisk "$work/air6-native-initramfs.cpio.gz" --dtb "$native_dtb"
+              --ramdisk "$work/air6-native-initramfs.cpio.gz" --dtb "$native_dtb" \
+              --config "$SBAT6_P25_BOOT_V2_CONFIG"
             echo 'PUBLIC_NATIVE_SOURCE_P25_UNSIGNED_FULL_BYTE_READBACK_PASS'
             echo 'LIMIT: no Air6 LK validation, vendor extension, signature or flash'
           else
