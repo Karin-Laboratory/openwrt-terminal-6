@@ -91,6 +91,18 @@ else
     # Check P44 with journal replay disabled before owner-authorized RW mount.
     mount -t ext4 -o ro,noload "$P44" "$UPPER" ||
         halt_boot P44_RO_NOLOAD_MOUNT
+    # RC13/14 observed a P44 ext4 marker and fstools state symlink.
+    # Inspect only: no formatting, repair, or auto-provisioning here.
+    marker="$UPPER/.sba6d-rootfs-data-v1"
+    [ -f "$marker" ] && [ ! -L "$marker" ] ||
+        halt_boot P44_MARKER_MISSING_OR_LINK
+    grep -Fxq 'SBA6D_ROOTFS_DATA_V1' "$marker" ||
+        halt_boot P44_MARKER_MISMATCH
+    [ -L "$UPPER/.fs_state" ] ||
+        halt_boot P44_FS_STATE_NOT_SYMLINK
+    fs_state="$(readlink "$UPPER/.fs_state")" ||
+        halt_boot P44_FS_STATE_UNREADABLE
+    [ "$fs_state" = 2 ] || halt_boot P44_FS_STATE_NOT_READY
     [ -d "$UPPER/upper" ] && [ ! -L "$UPPER/upper" ] ||
         halt_boot P44_UPPER_INVALID
     [ -d "$UPPER/work" ] && [ ! -L "$UPPER/work" ] ||
@@ -111,6 +123,15 @@ else
     [ -d "$UPPER/upper" ] && [ ! -L "$UPPER/upper" ] &&
         [ -d "$UPPER/work" ] && [ ! -L "$UPPER/work" ] ||
         halt_boot P44_POST_JOURNAL_LAYOUT
+    # Recheck identity after the permitted RW mount/journal replay.
+    [ -f "$UPPER/.sba6d-rootfs-data-v1" ] &&
+        [ ! -L "$UPPER/.sba6d-rootfs-data-v1" ] &&
+        grep -Fxq 'SBA6D_ROOTFS_DATA_V1' "$UPPER/.sba6d-rootfs-data-v1" ||
+        halt_boot P44_POST_JOURNAL_MARKER_CHANGED
+    [ -L "$UPPER/.fs_state" ] &&
+        [ "$(readlink "$UPPER/.fs_state")" = 2 ] ||
+        halt_boot P44_POST_JOURNAL_FS_STATE_CHANGED
+
     [ ! -e "$UPPER/upper/etc/preinit" ] &&
         [ ! -L "$UPPER/upper/etc/preinit" ] &&
         [ ! -e "$UPPER/upper/sbin/init" ] &&
@@ -160,5 +181,8 @@ mount --move /proc "$NEWROOT/proc" || halt_boot MOVE_PROC
 mount --move /sys "$NEWROOT/sys" || halt_boot MOVE_SYS
 mount --move /dev "$NEWROOT/dev" || halt_boot MOVE_DEV
 log SWITCH_ROOT_BEGIN
+# Preserve RC13/14's proven handoff: 70_initramfs_test uses INITRAMFS=1
+# to avoid a second fstools mount_root overlay transition in /etc/preinit.
+export INITRAMFS=1
 exec switch_root -c /dev/console "$NEWROOT" /sbin/init
 halt_boot SWITCH_ROOT_FAILED
