@@ -44,9 +44,22 @@ done
 # Only an owner-provisioned persistent P44 key is accepted. Never generate or
 # replace it in the management bring-up path.
 grep -q '^ssh-' "$secret_dir/authorized_keys" || fail SSH_AUTHORIZED_KEY_FORMAT
+# RC14's actual failure boundary: the switch P1 -> CPU5 MIB counters
+# advanced while MAC1/eth1 RX stayed at zero. Carrier and a TCP listener
+# were therefore false positives for a usable LAN management path.
+# --check reports only configuration readiness; --start additionally needs
+# at least one real MAC1 RX packet (e.g. owner-sent ARP probe). This avoids
+# claiming SSH READY before the SoC receive path has shown any life.
 case "$action" in
-    --check) log PREFLIGHT_PASS; exit 0 ;;
+    --check) log PREFLIGHT_PASS_LINK_ONLY; exit 0 ;;
 esac
+[ -r /sys/class/net/eth1/statistics/rx_packets ] ||
+    fail MAC1_RX_COUNTER_UNAVAILABLE
+rx_packets="$(cat /sys/class/net/eth1/statistics/rx_packets)" ||
+    fail MAC1_RX_COUNTER_READ_FAILED
+case "$rx_packets" in ''|*[!0-9]*) fail MAC1_RX_COUNTER_INVALID ;; esac
+[ "$rx_packets" -gt 0 ] || fail MAC1_RX_ABSENT_WAIT_FOR_TRAFFIC
+log MAC1_RX_OBSERVED_NOT_END_TO_END_PROOF
 lock=/tmp/sba6d-public-mgmt-start.lock
 mkdir "$lock" 2>/dev/null || fail START_ALREADY_ATTEMPTED
 # Network application remains a deliberate owner action. This candidate
