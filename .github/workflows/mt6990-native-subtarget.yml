@@ -915,8 +915,8 @@ jobs:
               "lk_injected_nodes": [],
               "vendor64_prefix_sha256": None,
           }
-          Path(sys.argv[2]).write_text(json.dumps(metadata, sort_keys=True) + "\\n")
-          Path(sys.argv[3]).write_text(json.dumps({"source": "synthetic-fixture"}) + "\\n")
+          Path(sys.argv[2]).write_text(json.dumps(metadata, sort_keys=True) + "\n")
+          Path(sys.argv[3]).write_text(json.dumps({"source": "synthetic-fixture"}) + "\n")
           PY
           python3 "$GITHUB_WORKSPACE/tools/boot/air6_boot_contract.py" \
             --p25 "$work/p25-p26-aware-research-unsigned.img" \
