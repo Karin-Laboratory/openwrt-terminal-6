@@ -93,7 +93,11 @@ def linked_initramfs(data):
     start = symbol_table(data, sections, "__initramfs_start")
     size_symbol = symbol_table(data, sections, "__initramfs_size")
     require(start["size"] == 0, "ELF_INITRAMFS_START_SYMBOL_SIZE")
-    require(size_symbol["size"] == 8, "ELF_INITRAMFS_SIZE_SYMBOL_SIZE")
+    # GNU ld may retain the assembly symbol as STT_NOTYPE with st_size=0,
+    # even though the symbol points at the eight-byte .quad payload. Validate
+    # the payload by its containing allocated section and read exactly 8 bytes
+    # at the symbol value instead of relying on st_size metadata.
+    require(size_symbol["size"] in (0, 8), "ELF_INITRAMFS_SIZE_SYMBOL_SIZE")
     containing_start = [s for s in sections if s["flags"] & SHF_ALLOC and
                         s["type"] != SHT_NOBITS and s["addr"] <= start["value"] <
                         s["addr"] + s["size"]]

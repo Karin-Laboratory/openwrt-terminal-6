@@ -73,11 +73,13 @@ def fake_vmlinux_with_linked_initramfs(payload):
     ]
     for i, header in enumerate(headers):
         struct.pack_into("<IIQQQQIIQQ", blob, shoff + i * 64, *header)
-    # Null symbol, linker start symbol, and 64-bit size object.
+    # Null symbol, linker start symbol, and assembler size symbol. The actual
+    # vmlinux can keep this as STT_NOTYPE with st_size=0 while its address
+    # points to the eight-byte .quad payload.
     struct.pack_into("<IBBHQQ", blob, sym_off + 24, 1, 0x10, 0, 4,
                      initramfs_start, 0)
-    struct.pack_into("<IBBHQQ", blob, sym_off + 48, 19, 0x11, 0, 4,
-                     size_addr, 8)
+    struct.pack_into("<IBBHQQ", blob, sym_off + 48, 19, 0x10, 0, 4,
+                     size_addr, 0)
     blob[names_off:names_off + len(names)] = names
     blob[str_off:str_off + len(strtab)] = strtab
     blob[data_off:data_off + len(init_data)] = init_data
