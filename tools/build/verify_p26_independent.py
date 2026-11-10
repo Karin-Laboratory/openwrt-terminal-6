@@ -143,7 +143,7 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     # silently surviving a later changed p26 producer run.
     with attestation.open("x", encoding="utf-8") as f:
         json.dump(evidence, f, sort_keys=True, indent=2)
-        f.write("\\n")
+        f.write("\n")
     return evidence
 
 
