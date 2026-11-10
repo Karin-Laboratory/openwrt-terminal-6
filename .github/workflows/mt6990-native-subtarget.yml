@@ -646,6 +646,40 @@ jobs:
           sha256sum "$kernel/usr/initramfs_data.o" \
             "$kernel/arch/arm64/boot/Image"
           echo 'PUBLIC_MT6990_SAME_KERNEL_EMBEDDED_PROCD_PID1_IMAGE_BUILD_PASS'
+          # Prepare public native components for the unsigned Android-v2 p25
+          # assembler. This is a source-built handoff, NOT proof that the Air6
+          # LK accepts the resulting boot image. No address is guessed.
+          gzip -n -9 -c "$kernel/arch/arm64/boot/Image" > "$work/air6-native-Image.gz"
+          gzip -n -9 -c "$work/air6-procd-initramfs.cpio" > "$work/air6-native-initramfs.cpio.gz"
+          gzip -t "$work/air6-native-Image.gz"
+          gzip -t "$work/air6-native-initramfs.cpio.gz"
+          native_dtb="$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
+          test -s "$native_dtb"
+          sha256sum "$work/air6-native-Image.gz" \
+            "$work/air6-native-initramfs.cpio.gz" "$native_dtb"
+          echo 'PUBLIC_P25_NATIVE_SOURCE_INPUTS_PREPARED_PASS'
+          # A genuine Air6-compatible RC14 header requires validated addresses,
+          # cmdline and vendor-specific requirements. No private settings are
+          # shipped as public CI defaults. Explicit config permits an isolated,
+          # unsigned owner-workspace build, never a public upload.
+          if test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}"; then
+            test -f "$SBAT6_P25_BOOT_V2_CONFIG"
+            install -d -m 0700 "$work/private-p25"
+            p25="$work/private-p25/boot_a.unsigned.p25"
+            python3 "$GITHUB_WORKSPACE/tools/boot/pack_p25_unsigned_v2.py" \
+              --kernel "$work/air6-native-Image.gz" \
+              --ramdisk "$work/air6-native-initramfs.cpio.gz" \
+              --dtb "$native_dtb" \
+              --config "$SBAT6_P25_BOOT_V2_CONFIG" --output "$p25"
+            python3 "$GITHUB_WORKSPACE/tools/boot/verify_p25_independent.py" \
+              --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
+              --ramdisk "$work/air6-native-initramfs.cpio.gz" --dtb "$native_dtb"
+            echo 'PUBLIC_NATIVE_SOURCE_P25_UNSIGNED_FULL_BYTE_READBACK_PASS'
+            echo 'LIMIT: no Air6 LK validation, vendor extension, signature or flash'
+          else
+            echo 'P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE'
+            echo 'LIMIT: real components ready; no fabricated target addresses'
+          fi
           # Boot this exact native OpenWrt Image (with its real procd rootfs)
           # under QEMU virt. No Air6 DTB is passed: virt uses QEMU-generated
           # DT and PL011 console. Require real PID1, netifd and bridge runtime.
