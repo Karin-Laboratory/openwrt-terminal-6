@@ -427,6 +427,34 @@ jobs:
           PY
           echo 'PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS'
           echo 'LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution'
+          # Keep a concise, non-binary manufacture receipt in the Actions
+          # summary. Never upload/cache the image or the full producer receipts.
+          python3 - "$work/private-p26/packed/p26-receipt.json" \
+            "$work/private-p26/packed/p26-independent-attestation.json" \
+            "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json
+          from pathlib import Path
+          import re
+          import sys
+          producer, independent = (json.loads(Path(p).read_text()) for p in sys.argv[1:3])
+          if (not isinstance(producer.get("p26_sha256"), str)
+                  or not re.fullmatch(r"[0-9a-f]{64}", producer["p26_sha256"])
+                  or producer.get("p26_sha256") != independent.get("p26_sha256")
+                  or producer.get("partition_bytes") != 134217728
+                  or independent.get("partition_bytes") != 134217728
+                  or type(producer.get("squashfs_bytes")) is not int
+                  or producer["squashfs_bytes"] <= 0
+                  or independent.get("status") != "P26_INDEPENDENT_FS_READBACK_VERIFIED"):
+              raise SystemExit("P26 summary identity gate failed")
+          summary = Path(sys.argv[3])
+          with summary.open("a", encoding="utf-8") as stream:
+              stream.write("## Unsigned Air6 source-build receipt\n\n")
+              stream.write("| Item | Result |\n|---|---|\n")
+              stream.write(f"| P26 | {producer['partition_bytes']} bytes; SHA-256 `{producer['p26_sha256']}` |\n")
+              stream.write(f"| SquashFS | {producer['squashfs_bytes']} bytes; SHA-256 `{producer['squashfs_sha256']}` |\n")
+              stream.write("| Independent filesystem/readback | PASS |\n")
+              stream.write("| Signature / hardware boot / distribution | NOT PERFORMED / NOT PROVEN |\n\n")
+          PY
           # Build an external diagnostic PID1 cpio with the SAME pinned
           # OpenWrt cross-toolchain as the native MT6990 kernel Image.
           # It is not a procd boot test or a device-installable image.
@@ -868,5 +896,10 @@ jobs:
             echo 'PUBLIC_AIR6_SOURCE_P25_P26_FIRST_STAGE_PAIR_BYTE_IDENTITY_PASS'
           else
             echo 'P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE'
+            printf '%s\n' '## P25 manufacture status' '' \
+              'BLOCKED: no independently validated SBAT6_P25_BOOT_V2_CONFIG was supplied.' \
+              'No P25 candidate or P25/P26 pair receipt was produced.' \
+              'P26 bytes remain ephemeral; no firmware artifact was uploaded.' \
+              >> "$GITHUB_STEP_SUMMARY"
           fi
           echo 'LIMIT: Air6 bootloader acceptance and hardware cold boot NOT verified'
