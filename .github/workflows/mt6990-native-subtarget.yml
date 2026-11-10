@@ -749,42 +749,40 @@ jobs:
           EOF
           docker build --pull --file "$work/Dockerfile.native-qemu" \
             --tag sbat6-native-procd-qemu:ci "$work"
-          # Run the *actual native OpenWrt AArch64 BusyBox* with QEMU user
-          # emulation, not the runner's BusyBox, before assessing /init
-          # prerequisites. This is command availability only, not boot proof.
-          # QEMU-user must supply a target argv[0] that resolves to the
-          # BusyBox multi-call binary. Never silently substitute host BusyBox.
-          # Capture stdout/stderr independently: the previous native run
-          # reached this step, then reported "busybox: applet not found".
-          # Use a canonical absolute target argv[0] and retain an explicit
-          # diagnostic instead of assuming the cause was missing -0.
-          if ! docker run --rm --network none --read-only \
-            --cap-drop ALL --security-opt no-new-privileges \
-            --pids-limit 64 --memory 512m --cpus 1 \
-            --user 1001:1001 \
-            --mount "type=bind,src=$rootfs,dst=/rootfs,readonly" \
-            sbat6-native-procd-qemu:ci \
-            qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox --list \
-            > "$work/target-openwrt-busybox-applets.txt" \
-            2> "$work/target-openwrt-busybox-applets.stderr"; then
-            echo 'BLOCKED_TARGET_BUSYBOX_QEMU_APPLET_LIST_EXECUTION' >&2
-            cat "$work/target-openwrt-busybox-applets.stderr" >&2
-            # Alternate canonical multi-call dispatch is diagnostic only.
-            # Do not use this output to pass the gate if the primary fails.
-            docker run --rm --network none --read-only \
+          # OpenWrt can omit the BusyBox "busybox" dispatcher applet while
+          # retaining the individual applets. Both "busybox --list" and
+          # "busybox --help" then fail with "busybox: applet not found".
+          # Probe each REQUIRED applet using QEMU's explicit TARGET argv[0],
+          # not the host executable and not a guessed BusyBox dispatcher.
+          # An absent BusyBox applet is acceptable only when the independent
+          # validator locates a separate executable inside this target rootfs.
+          : > "$work/target-openwrt-busybox-applets.txt"
+          for applet in sh mount umount sha256sum switch_root grep cat readlink cmp mkdir sleep; do
+            if docker run --rm --network none --read-only \
               --cap-drop ALL --security-opt no-new-privileges \
               --pids-limit 64 --memory 512m --cpus 1 \
               --user 1001:1001 \
               --mount "type=bind,src=$rootfs,dst=/rootfs,readonly" \
               sbat6-native-procd-qemu:ci \
-              qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox --help \
-              > "$work/target-openwrt-busybox-help.stdout" \
-              2> "$work/target-openwrt-busybox-help.stderr" || true
-            head -c 1024 "$work/target-openwrt-busybox-help.stdout" >&2 || true
-            cat "$work/target-openwrt-busybox-help.stderr" >&2
-            exit 1
-          fi
-          test -s "$work/target-openwrt-busybox-applets.txt"
+              qemu-aarch64 -L /rootfs -0 "$applet" /rootfs/bin/busybox --help \
+              > "$work/busybox-$applet.stdout" \
+              2> "$work/busybox-$applet.stderr"; then
+              if grep -Fq 'applet not found' "$work/busybox-$applet.stdout" \
+                "$work/busybox-$applet.stderr"; then
+                echo "BLOCKED_TARGET_BUSYBOX_FALSE_SUCCESS_$applet" >&2
+                exit 1
+              fi
+              printf '%s\n' "$applet" >> "$work/target-openwrt-busybox-applets.txt"
+            elif grep -Fq 'applet not found' "$work/busybox-$applet.stdout" \
+                 "$work/busybox-$applet.stderr"; then
+              echo "TARGET_BUSYBOX_APPLET_ABSENT_$applet"
+            else
+              echo "BLOCKED_TARGET_BUSYBOX_QEMU_APPLET_RUNTIME_$applet" >&2
+              cat "$work/busybox-$applet.stdout" "$work/busybox-$applet.stderr" >&2
+              exit 1
+            fi
+          done
+          echo 'PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_DIRECT_APPLET_PROBES_PASS'
           python3 "$GITHUB_WORKSPACE/tools/boot/verify_p26_p44_target_tools.py" \
             --rootfs "$rootfs" \
             --target-busybox-applets "$work/target-openwrt-busybox-applets.txt"
@@ -800,8 +798,8 @@ jobs:
             --mount "type=bind,src=$GITHUB_WORKSPACE/scripts/air6-p26-p44-init.sh,dst=/air6-init.sh,readonly" \
             sbat6-native-procd-qemu:ci bash -c '
               set -euo pipefail
-              qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox sh -n /air6-init.sh
-              qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox sh /air6-init.sh --capabilities \
+              qemu-aarch64 -L /rootfs -0 sh /rootfs/bin/busybox -n /air6-init.sh
+              qemu-aarch64 -L /rootfs -0 sh /rootfs/bin/busybox /air6-init.sh --capabilities \
                 | grep -Fq P26_RAM_OVERLAY_DEFAULT
               echo PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_RAM_BOOT_SCRIPT_PARSE_PASS
             '
