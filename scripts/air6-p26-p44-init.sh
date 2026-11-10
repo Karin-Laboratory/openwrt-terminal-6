@@ -194,7 +194,7 @@ else
     log P44_RO_NOLOAD_PASS
 
     umount "$UPPER" || halt_boot P44_RO_UMOUNT_FAILED
-    mount -t ext4 -o rw,noatime "$P44" "$UPPER" ||
+    mount -t ext4 -o rw,noatime,nosuid,nodev "$P44" "$UPPER" ||
         halt_boot P44_RW_MOUNT_FAILED
     # Journal replay must not silently invalidate the read-only preflight.
     [ -d "$UPPER/upper" ] && [ ! -L "$UPPER/upper" ] &&
