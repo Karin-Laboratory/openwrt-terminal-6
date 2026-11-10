@@ -99,7 +99,7 @@ def scan_tracked_path(path: str, label: str, payload: bytes, findings: set) -> N
     findings.update((label, category) for _, category in local)
 
 
-def history_findings(findings: set) -> int:
+def history_findings(findings: set, object_findings=None) -> int:
     """Scan path/blob PAIRS, not only blob IDs: same blob may have risky alias."""
     if git("rev-parse", "--is-shallow-repository").strip() != b"false":
         raise ValueError("shallow clone: cannot certify reachable history")
@@ -169,7 +169,11 @@ def history_findings(findings: set) -> int:
             if size > MAX_SIZE:
                 findings.add((label, "oversized historical blob"))
                 continue
+            before = set(findings)
             scan_tracked_path(path, label, git("cat-file", "blob", sha), findings)
+            if object_findings is not None:
+                for finding in findings - before:
+                    object_findings.add((sha, finding[1]))
             scanned += 1
     # Annotated tag objects may be pointed to by ANY Git ref namespace,
     # not just refs/tags (e.g. a custom ref retained after tag deletion).
@@ -202,13 +206,21 @@ def current_findings(findings: set) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--history", action="store_true")
+    parser.add_argument("--object-ids", action="store_true",
+                        help="print offending Git blob IDs without content (requires --history)")
     args = parser.parse_args()
+    if args.object_ids and not args.history:
+        parser.error("--object-ids requires --history")
     findings = set()
+    object_findings = set() if args.object_ids else None
     try:
-        scanned = history_findings(findings) if args.history else current_findings(findings)
+        scanned = history_findings(findings, object_findings) if args.history else current_findings(findings)
     except (subprocess.CalledProcessError, ValueError, OSError) as exc:
         print(f"BLOCKED: unable to complete Git audit ({type(exc).__name__})", file=sys.stderr)
         return 2
+    if object_findings is not None:
+        for sha, category in sorted(object_findings):
+            print(f"BLOB_ID: {sha}: {category}")
     for path, category in sorted(findings):
         # repr escapes control characters in paths; matched secret values are never shown.
         print(f"BLOCKED: {ascii(path)}: {category}")
