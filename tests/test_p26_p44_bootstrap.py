@@ -112,6 +112,8 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
     def test_alternative_p26_aware_kernel_is_packed_into_separate_research_p25(self):
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
         self.assertIn("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS", workflow)
+        self.assertIn("gzip -dc \"$work/air6-p26-aware-Image.gz\" | cmp - \"$alternate_image\"", workflow)
+        self.assertIn("PUBLIC_MT6990_ALTERNATIVE_IMAGE_GZIP_IDENTITY_PASS", workflow)
         self.assertIn("--output \"$work/p25-p26-aware-research-unsigned.img\"", workflow)
         self.assertIn("--kernel \"$work/air6-p26-aware-Image.gz\"", workflow)
         self.assertIn("--p25-receipt \"$work/p25-p26-aware-research.json\"", workflow)
