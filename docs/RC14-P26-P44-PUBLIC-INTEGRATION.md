@@ -37,6 +37,23 @@ erase an existing owner overlay or secrets. The hook is not responsible for
 initial overlay creation. Any p44 partition identity hardening, boot timing, hotplug
 tests and hardware verification remain **unproven**.
 
+## P26 independent post-production attestation
+
+The P26 producer intentionally marks its provisional JSON receipt
+`P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK`, even if its own prefix/padding
+checks pass. The separate `verify_p26_independent.py` now supports
+`--producer-receipt` and `--attestation` arguments. Only after full 128 MiB
+prefix/padding readback and extraction/inode/mode/owner/xattr/hardlink comparison
+succeeds does it issue a **new**, exclusive-creation JSON receipt with status
+`P26_INDEPENDENT_FS_READBACK_VERIFIED`.
+
+The new attestation binds the full P26 SHA-256, SquashFS SHA-256/length,
+and the producer receipt SHA-256, and explicitly states that physical boot,
+LK acceptance, radio behavior and publication rights are not proven. Native
+CI compares both receipts before printing
+`PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS`.
+It does not mutate the provisional receipt, sign or upload either image.
+
 ## Evidence and limitations
 
 - Private RC14 observation: A boot reached interactive UART with p26 SquashFS and
