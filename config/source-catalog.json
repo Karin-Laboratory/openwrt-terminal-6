@@ -31,6 +31,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "87c27af24c37b0557f3990baf979d708252fd273",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "examples/fe-recovery/Makefile",
       "component": "ethernet",
       "origin": "independent-original",
@@ -558,6 +567,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "b12618f05dc8d4a61ef9d24aa94e77a64b344d41",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_public_rc14_management.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "dd4b9b9f3eff42415e572455109bc56ede84c43a",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
