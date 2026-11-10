@@ -47,7 +47,8 @@ def validate(root: Path, catalog: dict, public: bool = False,
         rel = PurePosixPath(name)
         if (rel.is_absolute() or ".." in rel.parts or "." in rel.parts
                 or name.startswith("/") or not name.startswith(
-                    ("patches/", "scripts/", "tools/", "examples/", "tests/", "board/"))):
+                    ("patches/", "scripts/", "tools/", "examples/", "tests/", "board/",
+                     "config/sbat6-stage/"))):
             issues.append(prefix + ": unsafe or unsupported path")
             continue
         if name in seen:
@@ -90,7 +91,8 @@ def validate(root: Path, catalog: dict, public: bool = False,
     # seven original handpicked kernel/boot/modem entries.
     source_paths = set()
     forbidden_firmware_suffixes = {".img", ".bin", ".dtb", ".dtbo", ".key", ".pem", ".ko", ".cpio"}
-    for dirname in ("patches", "scripts", "tools", "examples", "tests", "board"):
+    for dirname in ("patches", "scripts", "tools", "examples", "tests", "board",
+                    "config/sbat6-stage"):
         subtree = root / dirname
         if subtree.is_symlink():
             issues.append("source directory must not be symlink: " + dirname)
