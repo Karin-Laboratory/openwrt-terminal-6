@@ -12,6 +12,60 @@ The private image has a 64-byte opaque prefix before the FDT in its DTB section.
 
 AOSP's generic v2 specification describes nonempty kernel, ramdisk, and DTB sections and page-aligned section layout ([boot image header](https://source.android.com/docs/core/architecture/bootloader/boot-image-header), [AOSP header definition](https://android.googlesource.com/platform/system/tools/mkbootimg/+/refs/heads/master/include/bootimg/bootimg.h)). The observed RC14 zero external ramdisk is therefore a vendor/LK-specific profile, not a generic AOSP-conformant profile. This repository labels it `kernel_embedded` and requires the empty external ramdisk explicitly; it does not imply that an arbitrary LK accepts that profile.
 
+## Owner-private RC14 provenance and reference-profile gate
+
+**2026-11-11 progress:** private RC13/RC14 source review confirms that the
+64-byte prefix was **carried forward byte-for-byte** from an earlier owner-held
+RC11 P25 template. It was not synthesized by the RC14 build algorithm.
+Private RC8 assembler evidence shows `old_dtb[:64] + bare_dtb` after a
+pinned template SHA check. This is evidence of *byte origin*, not permission
+to redistribute or understanding of LK vendor-header semantics.
+
+Two independently authored public audit utilities now separate these claims:
+
+1. `tools/boot/audit_p25_reference_v2.py` operates **offline on an
+   owner-held, SHA-pinned 32 MiB reference P25**. It validates the Android
+   boot-v2 header, sizes and alignment, 64-byte FDT offset, bare DTB
+   totalsize, boot ID, observed addresses and embedded-ramdisk layout.
+   Optionally it compares an **independently provided local** 64-byte prefix.
+   It never writes or extracts that prefix and writes a new 0600 JSON receipt
+   only to an owner-selected private path.
+2. `tools/boot/verify_p25_profile_provenance.py` independently checks
+   candidate config fields and private prefix hash against the above
+   receipt, and validates the newly built public DTB container. It reports
+   whether the public DTB differs from the reference bare DTB.
+   **Matching prior bytes does not validate memory placement, the new public
+   DTB, LK acceptance or redistribution rights.**
+
+Run these in an **owner-controlled local workspace**, not a public CI
+environment with confidential image or prefix inputs:
+
+```sh
+python3 tools/boot/audit_p25_reference_v2.py \
+  --reference /OWNER_PRIVATE/p25-reference.img \
+  --expected-sha256 '<owner-verified-full-reference-sha256>' \
+  --candidate-prefix /OWNER_PRIVATE/observed-prefix.bin \
+  --private-receipt /OWNER_PRIVATE/first-unused/reference-audit.json
+
+python3 tools/boot/verify_p25_profile_provenance.py \
+  --config /OWNER_PRIVATE/boot-v2-config.json \
+  --prefix /OWNER_PRIVATE/observed-prefix.bin \
+  --audit-receipt /OWNER_PRIVATE/first-unused/reference-audit.json \
+  --public-dtb /OWNER_PRIVATE/public-built/mt6990-air-terminal-6.dtb
+```
+
+The native unsigned P25 build now requires all **three** explicit inputs
+(`SBAT6_P25_BOOT_V2_CONFIG`, `SBAT6_P25_DTB_SECTION_PREFIX`,
+`SBAT6_P25_REFERENCE_AUDIT`); otherwise it emits a named BLOCKED
+reason and creates no P25. No reference P25, prefix, or owner receipt is
+ever added to this repository or uploaded as a CI artifact.
+
+**Separate unresolved authorizations:** a lawful/independently created
+prefix or documented permission to use the old one, independent validation
+that the observed load addresses and DTB suit the new public kernel, actual
+LK acceptance and device boot, and rights clearance for any distribution.
+A successful metadata audit must *not* be labeled a flashable pair.
+
 ## Inputs and command
 
 The config is an exact JSON object with these keys:
@@ -53,7 +107,7 @@ The native kernel build links the first-stage CPIO into `usr/initramfs_data.o` a
 
 ## Same-run P25/P26 gate and CI
 
-A matching same-run P25/P26 pair receipt is generated only if the caller provides both `SBAT6_P25_BOOT_V2_CONFIG` and `SBAT6_P25_DTB_SECTION_PREFIX` as validated local inputs. Neither is committed or stored as a repository secret. CI does not upload images, receipts containing private values, or firmware artifacts. If either input is absent, CI records an explicit P25 block reason and emits no P25 or pair receipt; P26 manufacture/readback is independent.
+A matching same-run P25/P26 pair receipt is generated only if the caller provides `SBAT6_P25_BOOT_V2_CONFIG`, `SBAT6_P25_DTB_SECTION_PREFIX`, and `SBAT6_P25_REFERENCE_AUDIT` as coherent local inputs. Neither is committed or stored as a repository secret. CI does not upload images, receipts containing private values, or firmware artifacts. If either input is absent, CI records an explicit P25 block reason and emits no P25 or pair receipt; P26 manufacture/readback is independent.
 
 The pair verifier checks the full 32 MiB P25 and 128 MiB P26 identities, producer and independent P26 readback receipts, exact P26 SHA-256 embedded in the verified CPIO, and the CPIO linkage to the built kernel. The receipt is an unsigned byte-identity result only.
 
