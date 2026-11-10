@@ -51,6 +51,44 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertFalse(result["device_boot_proven"])
         self.assertFalse(record["owner_rw_approval_embedded"])
 
+    def test_p44_required_initramfs_is_self_contained_and_independently_verified(self):
+        with mock.patch.object(maker, "PARTITION_BYTES", 4096):
+            record = maker.package(
+                self.root, self.p26, self.p26_receipt, self.cpio,
+                self.receipt, boot_mode="p44-required")
+            result = reader.verify(self.root, self.p26, self.p26_receipt,
+                                   self.cpio, self.receipt)
+        self.assertEqual(result["status"], "P26_P44_CPIO_INDEPENDENT_FULL_READBACK_PASS")
+        self.assertEqual(record["boot_mode"], "p44-required")
+        self.assertTrue(record["p44_required"])
+        self.assertFalse(record["p44_owner_secret_embedded"])
+        self.assertFalse(record["owner_rw_approval_embedded"])
+        self.assertFalse(record["device_boot_proven"])
+        self.assertNotEqual(record["init_sha256"],
+                            hashlib.sha256(maker.BOOT_SCRIPT.read_bytes()).hexdigest())
+
+    def test_p44_required_mode_receipt_tampering_fails_closed(self):
+        with mock.patch.object(maker, "PARTITION_BYTES", 4096):
+            maker.package(self.root, self.p26, self.p26_receipt,
+                          self.cpio, self.receipt, boot_mode="p44-required")
+        receipt = json.loads(self.receipt.read_text())
+        receipt["boot_mode"] = "ram-experimental"
+        receipt["p44_required"] = False
+        self.receipt.write_text(json.dumps(receipt))
+        with self.assertRaisesRegex(ValueError, "BOOTSTAGE_INIT_MISMATCH"):
+            self.verify()
+
+    def test_rc14_p44_mode_script_has_no_ram_fallback(self):
+        source = maker.BOOT_SCRIPT.read_text()
+        self.assertIn("BOOT_MODE='ram-experimental'", source)
+        self.assertIn('if [ "$BOOT_MODE" = ram-experimental ] &&', source)
+        self.assertIn('if [ "$BOOT_MODE" = p44-required ]; then', source)
+        self.assertIn('P44_ROOTFS_DATA_GPT_MISMATCH', source)
+        self.assertIn("P44_MARKER_MISMATCH", source)
+        self.assertIn("P44_FS_STATE_NOT_READY", source)
+        self.assertIn("export INITRAMFS=1", source)
+        self.assertNotIn("mkfs.", source)
+
     def test_tampered_cpio_fails_even_with_unchanged_p26(self):
         self.build()
         with self.cpio.open("r+b") as stream:
