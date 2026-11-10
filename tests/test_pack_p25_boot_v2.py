@@ -38,10 +38,19 @@ class BootV2SpecTests(unittest.TestCase):
             self.assertEqual(r["kernel"]["inflated_bytes"], 64)
             self.assertEqual(r["kernel"]["inflated_sha256"],
                              hashlib.sha256(image).hexdigest())
+            self.assertEqual(r["kernel"]["lk_output_cap_bytes"], 0x02300000)
+            self.assertEqual(r["kernel"]["lk_headroom_bytes"],
+                             0x02300000 - 64)
             broken = json.loads(receipt.read_text())
             broken["kernel"]["inflated_sha256"] = "0" * 64
             receipt.write_text(json.dumps(broken))
             with self.assertRaisesRegex(ValueError, "gzip kernel readback"):
+                reader.verify(out, receipt, k, dt)
+            receipt.write_text(json.dumps(r))
+            bad_headroom = json.loads(receipt.read_text())
+            bad_headroom["kernel"]["lk_headroom_bytes"] += 1
+            receipt.write_text(json.dumps(bad_headroom))
+            with self.assertRaisesRegex(ValueError, "LK_OUTPUT_CAP_RECEIPT_MISMATCH"):
                 reader.verify(out, receipt, k, dt)
             receipt.write_text(json.dumps(r))
             self.assertFalse(r["lk_header_and_vendor64_accepted"])
@@ -61,6 +70,33 @@ class BootV2SpecTests(unittest.TestCase):
                 f.write(b"NO")
             with self.assertRaisesRegex(ValueError, "SHA mismatch"):
                 reader.verify(out, receipt, k, dt)
+
+    def test_genuine_lk_35m_inflate_limit_is_strict(self):
+        # Only compressed length could be tiny; a 35MiB expanded Image
+        # exactly matches LK avail_out and must be refused before packing.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            kernel = root / "Image.gz"
+            head = bytearray(64)
+            head[56:60] = b"ARM\\x64"
+            with kernel.open("wb") as dst:
+                with gzip.GzipFile(fileobj=dst, mode="wb", mtime=0) as gz:
+                    gz.write(head)
+                    remaining = maker.LK_OUTPUT_CAP - len(head)
+                    block = bytes(1 << 20)
+                    while remaining:
+                        part = block[:min(len(block), remaining)]
+                        gz.write(part)
+                        remaining -= len(part)
+            dtb = root / "board.dtb"
+            fdt = bytearray(64)
+            struct.pack_into(">10I", fdt, 0, 0xd00dfeed, 64, 56, 48,
+                             40, 17, 16, 0, 8, 8)
+            dtb.write_bytes(fdt)
+            with self.assertRaisesRegex(ValueError, "LK_OUTPUT_CAP_EXCEEDED"):
+                maker.validate_inputs(kernel, dtb)
+            with self.assertRaisesRegex(ValueError, "LK_OUTPUT_CAP_EXCEEDED"):
+                reader.inspect_single_gzip(kernel)
 
     def test_reject_uncompressed_image_or_invented_metadata(self):
         with tempfile.TemporaryDirectory() as tmp:
