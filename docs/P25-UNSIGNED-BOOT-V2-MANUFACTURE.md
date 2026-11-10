@@ -30,6 +30,30 @@ The producer validates gzip framing and decompression, FDT header and total
 length, nonempty components, output size and load-address shape. Unit tests
 exercise the synthetic layout only.
 
+
+## Native source-built handoff (2026-11-10)
+
+The native MT6990 package-build workflow now prepares three actual build inputs
+after compiling the same kernel with the procd PID1 initramfs embedded:
+`air6-native-Image.gz`, `air6-native-initramfs.cpio.gz`, and
+`mt6990-air-terminal-6.dtb`. Compression uses `gzip -n -9` with no
+source filename/timestamp; the job checks gzip integrity and prints SHA-256.
+
+The workflow intentionally does not invent a kernel load address or boot
+command line. Without `SBAT6_P25_BOOT_V2_CONFIG`, it emits
+`P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE` and produces
+no candidate p25. If an independently validated configuration file is available
+to an isolated local/owner-controlled run, the same native inputs are passed
+through the unsigned v2 assembler and **independent** full-32MiB verifier.
+The public hosted job does not configure signing or upload the resulting image.
+
+A native source-built Image with an embedded initramfs **and** a separate
+ramdisk is an experimental handoff, not confirmation of the precise RC14 boot
+protocol. The signed vendor-specific header extensions, LK inflate format
+acceptance, real memory map, init transition and Air6 DTB compatibility must be
+proven separately. Do not treat the synthetic layout gate as an RK14/RC14 boot
+reproduction.
+
 ## Acceptance still pending
 
 1. An independently verified public-source ARM64 kernel, correct C-unit DTB
