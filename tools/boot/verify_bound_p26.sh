@@ -8,6 +8,12 @@ manifest=${1:-/etc/air6/p26.sha256}
 device=${2:-/dev/mmcblk0p26}
 [ -f "$manifest" ] && [ ! -L "$manifest" ] && [ -r "$manifest" ] || exit 11
 [ -e "$device" ] && [ ! -L "$device" ] && [ -r "$device" ] || exit 12
+# Command substitution strips trailing newlines (and some shells ignore NULs).
+# Require one exact sha256sum line, including its terminating LF.
+expected_bytes=$((67 + ${#device}))
+actual_bytes=$(wc -c < "$manifest") || exit 13
+actual_lines=$(wc -l < "$manifest") || exit 13
+[ "$actual_bytes" -eq "$expected_bytes" ] && [ "$actual_lines" -eq 1 ] || exit 15
 record=$(cat "$manifest") || exit 13
 expected=${record%% *}
 [ "${#expected}" -eq 64 ] || exit 14
