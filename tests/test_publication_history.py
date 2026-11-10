@@ -171,6 +171,24 @@ class HistoryScannerTests(unittest.TestCase):
                             for path, category in issues), issues)
         self.assertNotIn(fake_name, repr(issues))
 
+    def test_only_documented_generic_lan_profile_address_is_exempt(self):
+        path = "config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh"
+        findings = set()
+        gate.scan(path, b"bind 192.168.1.1:22\\n", findings)
+        self.assertEqual(findings, set())
+        gate.scan(path, b"bind 192.168.1.1:22; peer 192.168.7.71\\n", findings)
+        self.assertIn((path, "private network endpoint"), findings)
+        findings.clear()
+        gate.scan("other-script.sh", b"bind 192.168.1.1:22", findings)
+        self.assertIn(("other-script.sh", "private network endpoint"), findings)
+        findings.clear()
+        gate.scan(path, b"root@192.168.1.1", findings)
+        self.assertIn((path, "device login endpoint"), findings)
+        findings.clear()
+        gate.scan("tests/test_public_rc14_management.py",
+                  b"literal 192.168.1.1\\n", findings)
+        self.assertEqual(findings, set())
+
     def test_benign_history_stays_clean(self):
         (self.root / "first.txt").write_text("hello\n")
         self.commit("first safe document")
