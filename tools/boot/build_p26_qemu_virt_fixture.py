@@ -19,7 +19,7 @@ READER = ROOT / "scripts/package-arm64-busybox-initramfs.py"
 NEWC = ROOT / "scripts/build-minimal-arm64-initramfs.py"
 PATCHES = (
     (b"P26=/dev/mmcblk0p26", b"P26=/dev/vda"),
-    (b"'PARTNAME=rootfs_a' /sys/class/block/mmcblk0p26/uevent",
+    (b"'PARTNAME=rootfs_a' \"/sys/class/block/${P26##*/}/uevent\"",
      b"'DEVNAME=vda' /sys/class/block/vda/uevent"),
 )
 
@@ -69,7 +69,10 @@ def build(original_cpio, cpio_receipt, p26_file, p26_receipt, output, manifest):
         if revised.count(old) != 1 or revised.count(new):
             raise ValueError("QEMU_FIXTURE_PATCH_INPUT")
         revised = revised.replace(old, new)
-    if b"/dev/mmcblk0p26" in revised or b"PARTNAME=rootfs_a" in revised:
+    # The source retains a dormant P44-required GPT scan which legitimately
+    # names rootfs_a; reject only the *active* P26 verification check.
+    if (b"/dev/mmcblk0p26" in revised or
+            b'grep -qx \'PARTNAME=rootfs_a\' "/sys/class/block/${P26##*/}/uevent"' in revised):
         raise ValueError("QEMU_FIXTURE_P26_PATH_UNCHANGED")
     entries["init"] = (mode, revised, major, minor)
     pack = _module(NEWC)
