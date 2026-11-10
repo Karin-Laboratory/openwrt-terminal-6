@@ -249,3 +249,19 @@ preserving the full P26 hash-corruption and RAM-positive assertions after
 the new real-device slot preflight. These QEMU tests are not a substitute
 for source-built Air6 DTB MMC enablement, LK acceptance or a cold-boot test.
 
+
+## Observed C-LK kernel inflate capacity backport
+
+RC8 private source documented the owner-observed genuine C-unit LK
+`avail_out=0x02300000` when decompressing the ARM64 kernel. This is a
+**35MiB output buffer**, not a limit on compressed `Image.gz` length.
+The independently implemented public P25 packer and reader now reject
+an uncompressed Image of **35MiB or larger**, reject malformed or
+multi-member gzip, and record the actual output count, SHA-256, fixed
+LK capacity and remaining headroom. A synthetic boundary regression
+builds a valid gzip member that expands to exactly the limit and
+requires both tools to fail closed.
+
+The observation constrains one known LK failure mode. It does **not**
+prove correct P25 load addresses, vendor64 field interpretation,
+MMC-capable DTB, signed LK acceptance, or actual hardware boot.
