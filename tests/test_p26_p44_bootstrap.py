@@ -122,6 +122,13 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertLess(workflow.index("PUBLIC_MT6990_NATIVE_ALTERNATIVE_RAM_INITRAMFS_IMAGE_BUILD_PASS"),
                         workflow.index("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS"))
         self.assertIn('BLOCKED_SYNTHETIC_OR_UNREVIEWED_P25_METADATA', workflow)
+        self.assertIn("PUBLIC_MT6990_P26_AWARE_P25_FDT_STRUCTURAL_CONTRACT_PASS", workflow)
+        self.assertIn('result["status"] == "STRUCTURAL_ONLY_LK_UNVERIFIED"', workflow)
+        self.assertIn('result["sign_ready"] is False', workflow)
+        self.assertIn("--dtb-section \"$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb\"", workflow)
+        self.assertLess(workflow.index("PUBLIC_MT6990_P26_AWARE_P25_FDT_STRUCTURAL_CONTRACT_PASS"),
+                        workflow.index("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS"))
+
 
     def test_qemu_busybox_explicit_argv0_and_fail_closed(self):
         # Every native target BusyBox invocation uses the same explicit
