@@ -37,6 +37,20 @@ class FirstStageContractTests(unittest.TestCase):
         self.assertEqual(positions, sorted(positions))
         self.assertIn("while :; do sleep 60; done", text)
 
+    def test_emmc_discovery_is_bounded_and_precedes_identity_checks(self):
+        text = FIRST.read_text()
+        start = text.index('i=0\nwhile [ ! -b "$root" ] || [ ! -b "$persist" ]; do')
+        end = text.index('\ndone', start) + len('\ndone')
+        loop = text[start:end]
+        self.assertIn('[ "$i" -lt 20 ] || fail PARTITIONS_NOT_BLOCK', loop)
+        self.assertIn('sleep 1', loop)
+        self.assertIn('i=$((i + 1))', loop)
+        self.assertLess(end, text.index('fail PARTITIONS_ALIASED'))
+        self.assertLess(end, text.index("grep -qx 'PARTNAME=rootfs_a'"))
+        self.assertLess(end, text.index('/usr/libexec/air6/verify-bound-p26'))
+        self.assertNotIn('mknod', text)
+        self.assertNotIn('blockdev --rereadpt', text)
+
     def test_no_partition_mutation_or_formatting(self):
         text = FIRST.read_text()
         for disallowed in ("mkfs", "mke2fs", "e2fsck", "resize2fs",
