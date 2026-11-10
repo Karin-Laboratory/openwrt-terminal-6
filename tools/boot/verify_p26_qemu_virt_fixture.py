@@ -52,7 +52,7 @@ def verify(original_cpio, fixture_cpio, receipt_path, p26, p26_receipt):
         raise ValueError("VIRTIO_READBACK_ORIGINAL_INIT")
     expected = source.replace(b"P26=/dev/mmcblk0p26", b"P26=/dev/vda")
     expected = expected.replace(
-        b"'PARTNAME=rootfs_a' /sys/class/block/mmcblk0p26/uevent",
+        b"'PARTNAME=rootfs_a' \"/sys/class/block/${P26##*/}/uevent\"",
         b"'DEVNAME=vda' /sys/class/block/vda/uevent")
     if (after["init"][0] != before["init"][0] or
             after["init"][1] != expected or sha(expected) != record.get("init_sha256") or
