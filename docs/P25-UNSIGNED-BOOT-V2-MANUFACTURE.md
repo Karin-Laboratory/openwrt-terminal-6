@@ -93,12 +93,19 @@ and a host-side check rejects missing/ambiguous SHA content. The final
 independent unsigned-pair gate checks this same hash appears in the embedded
 CPIO as well as the P26 producer and independent-readback receipts.
 
-**Implementation gap:** the public procd initramfs does not yet execute an
-early-boot P26 SHA check or reproduce RC14's verified P44/overlay mount,
-SquashFS `/rom` mount and `switch_root` sequence. P44's late optional
-extension runner is a separate mechanism. The SHA being embedded and
-pair-checked is a **build-time contract only** until these runtime controls
-are separately implemented and tested. No actual boot behavior is claimed.
+An independently authored full-P26 runtime checker
+(`tools/boot/verify_bound_p26.sh`) is now also staged into the native
+initramfs at `/usr/libexec/air6/verify-bound-p26`. It verifies a strict
+hash record against the entire P26 device, fails closed on mismatch, missing
+inputs or symlinked paths, and has host-only dynamic regression tests.
+It never writes to the P26 device.
+
+**Implementation gap:** the public procd initramfs does not yet **invoke**
+this checker before normal init, or reproduce RC14's verified P44/overlay
+mount, SquashFS `/rom` mount and `switch_root` sequence. P44's late
+optional extension runner is separate. Both the stored binding and the
+checker are present, but **device runtime enforcement is not yet wired**.
+No boot behavior is claimed.
 
 ## Acceptance still pending
 
