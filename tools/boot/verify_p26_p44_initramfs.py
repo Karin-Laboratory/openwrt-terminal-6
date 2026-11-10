@@ -50,6 +50,20 @@ def verify(rootfs, p26_file, p26_receipt, cpio_file, receipt_file):
             record.get("p44_identity_gate") != "EXT4_RO_NOLOAD_MARKER_FS_STATE_UPPER_WORK" or
             record.get("p44_owner_secret_embedded") is not False):
         raise ValueError("BOOTSTAGE_P44_MODE_ATTESTATION")
+    if record.get("management_autostart") is not False:
+        raise ValueError("BOOTSTAGE_UNAPPROVED_MANAGEMENT_AUTOSTART")
+    if mode == "p44-required":
+        rel = producer.MANAGEMENT_REL
+        audited = producer.MANAGEMENT_SOURCE.read_bytes()
+        payload = parsed.get(rel)
+        if (record.get("management_entry") != rel or
+                record.get("management_sha256") != hashlib.sha256(audited).hexdigest() or
+                payload is None or payload[1] != audited or
+                not stat.S_ISREG(payload[0]) or
+                stat.S_IMODE(payload[0]) != 0o755):
+            raise ValueError("BOOTSTAGE_P26_MANAGEMENT_ENTRY_MISMATCH")
+    elif record.get("management_entry") is not None or record.get("management_sha256") is not None:
+        raise ValueError("BOOTSTAGE_RAM_MANAGEMENT_ATTESTATION")
     init = producer.BOOT_SCRIPT.read_bytes()
     marker = b"BOOT_MODE='ram-experimental'"
     if init.count(marker) != 1:
