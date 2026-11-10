@@ -101,9 +101,9 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
 
     def test_target_busybox_parses_ram_init_in_isolated_qemu(self):
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
-        self.assertIn("qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox sh -n /air6-init.sh",
+        self.assertIn("qemu-aarch64 -L /rootfs -0 sh /rootfs/bin/busybox -n /air6-init.sh",
                       workflow)
-        self.assertIn("qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox sh /air6-init.sh --capabilities",
+        self.assertIn("qemu-aarch64 -L /rootfs -0 sh /rootfs/bin/busybox /air6-init.sh --capabilities",
                       workflow)
         self.assertIn("PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_RAM_BOOT_SCRIPT_PARSE_PASS",
                       workflow)
@@ -130,16 +130,19 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
                         workflow.index("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS"))
 
 
-    def test_qemu_busybox_explicit_argv0_and_fail_closed(self):
-        # Every native target BusyBox invocation uses the same explicit
-        # absolute argv[0] so QEMU linux-user does not dispatch a fake applet.
+    def test_qemu_busybox_direct_target_applet_dispatch(self):
+        # OpenWrt BusyBox can omit the 'busybox' dispatcher while retaining
+        # sh/mount/etc. Probe actual target applets by argv[0], and do not
+        # substitute a host binary or silently accept QEMU errors.
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
-        command = "qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox"
-        self.assertEqual(workflow.count(command), 4)
-        self.assertNotIn("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox", workflow)
-        self.assertIn("BLOCKED_TARGET_BUSYBOX_QEMU_APPLET_LIST_EXECUTION", workflow)
-        self.assertIn("--network none --read-only", workflow)
-        self.assertIn("--cap-drop ALL --security-opt no-new-privileges", workflow)
+        self.assertIn('for applet in sh mount umount sha256sum switch_root grep cat readlink cmp mkdir sleep; do', workflow)
+        self.assertIn('qemu-aarch64 -L /rootfs -0 "$applet" /rootfs/bin/busybox --help', workflow)
+        self.assertIn('PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_DIRECT_APPLET_PROBES_PASS', workflow)
+        self.assertIn('BLOCKED_TARGET_BUSYBOX_QEMU_APPLET_RUNTIME_$applet', workflow)
+        self.assertIn('--target-busybox-applets "$work/target-openwrt-busybox-applets.txt"', workflow)
+        self.assertIn('--network none --read-only', workflow)
+        self.assertIn('--cap-drop ALL --security-opt no-new-privileges', workflow)
+        self.assertNotIn('qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox', workflow)
 
     def test_qemu_virt_alternative_init_actual_pid1_missing_p26_gate(self):
         # Native kernel must embed the alternate verified CPIO AFTER the
