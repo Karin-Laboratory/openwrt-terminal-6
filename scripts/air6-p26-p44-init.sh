@@ -53,26 +53,39 @@ grep -qw 'bootslot=a' /proc/cmdline || halt_boot NOT_SLOT_A
 # rather than inheriting one C-unit's eMMC numbering. Reject duplicates
 # and cross-disk aliases before mounting or writing any filesystem.
 if [ "$BOOT_MODE" = p44-required ]; then
-    found_p26=
-    found_p44=
-    found_userdata=
-    for entry in /sys/class/block/mmcblk*p*/uevent; do
-        [ -f "$entry" ] || continue
-        device="${entry%/uevent}"
-        device="${device##*/}"
-        case "$device" in mmcblk*p[0-9]*) : ;; *) continue ;; esac
-        if grep -qx 'PARTNAME=rootfs_a' "$entry"; then
-            [ -z "$found_p26" ] || halt_boot P26_DUPLICATE_GPT_PARTNAME
-            found_p26="/dev/$device"
+    # Private RC13 allowed up to 20 seconds for eMMC/GPT enumeration.
+    # Repeat ONLY read-only sysfs scans; duplicate labels fail immediately.
+    # Never infer "missing partition" from one transient early scan.
+    scan_attempt=0
+    while [ "$scan_attempt" -lt 80 ]; do
+        found_p26=
+        found_p44=
+        found_userdata=
+        for entry in /sys/class/block/mmcblk*p*/uevent; do
+            [ -f "$entry" ] || continue
+            device="${entry%/uevent}"
+            device="${device##*/}"
+            case "$device" in mmcblk*p[0-9]*) : ;; *) continue ;; esac
+            if grep -qx 'PARTNAME=rootfs_a' "$entry"; then
+                [ -z "$found_p26" ] || halt_boot P26_DUPLICATE_GPT_PARTNAME
+                found_p26="/dev/$device"
+            fi
+            if grep -qx 'PARTNAME=rootfs_data' "$entry"; then
+                [ -z "$found_p44" ] || halt_boot P44_DUPLICATE_GPT_PARTNAME
+                found_p44="/dev/$device"
+            fi
+            if grep -qx 'PARTNAME=user_data' "$entry"; then
+                [ -z "$found_userdata" ] || halt_boot USER_DATA_DUPLICATE_GPT_PARTNAME
+                found_userdata="/dev/$device"
+            fi
+        done
+        if [ -n "$found_p26" ] && [ -b "$found_p26" ] &&
+            [ -n "$found_p44" ] && [ -b "$found_p44" ] &&
+            [ -n "$found_userdata" ] && [ -b "$found_userdata" ]; then
+            break
         fi
-        if grep -qx 'PARTNAME=rootfs_data' "$entry"; then
-            [ -z "$found_p44" ] || halt_boot P44_DUPLICATE_GPT_PARTNAME
-            found_p44="/dev/$device"
-        fi
-        if grep -qx 'PARTNAME=user_data' "$entry"; then
-            [ -z "$found_userdata" ] || halt_boot USER_DATA_DUPLICATE_GPT_PARTNAME
-            found_userdata="/dev/$device"
-        fi
+        sleep 0.25
+        scan_attempt=$((scan_attempt + 1))
     done
     [ -n "$found_p26" ] && [ -n "$found_p44" ] &&
         [ -n "$found_userdata" ] ||
