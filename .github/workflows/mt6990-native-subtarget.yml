@@ -772,6 +772,12 @@ jobs:
                 echo "BLOCKED_TARGET_BUSYBOX_FALSE_SUCCESS_$applet" >&2
                 exit 1
               fi
+              if ! grep -Fq 'BusyBox v' "$work/busybox-$applet.stdout" \
+                  "$work/busybox-$applet.stderr"; then
+                echo "BLOCKED_TARGET_BUSYBOX_HELP_OUTPUT_NOT_VERIFIED_$applet" >&2
+                cat "$work/busybox-$applet.stdout" "$work/busybox-$applet.stderr" >&2
+                exit 1
+              fi
               printf '%s\n' "$applet" >> "$work/target-openwrt-busybox-applets.txt"
             elif grep -Fq 'applet not found' "$work/busybox-$applet.stdout" \
                  "$work/busybox-$applet.stderr"; then
