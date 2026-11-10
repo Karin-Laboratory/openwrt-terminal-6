@@ -301,6 +301,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_air6_first_stage_contract.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3f42e987e3e481c0af35fcace6e6ea7ea6a1385d",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_air6_source_scope.py",
       "component": "board-dt",
       "origin": "independent-original",
@@ -315,6 +324,24 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "f0ebc9889ae3bcff8a244373f1f8728c22bc7fb4",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_audit_p25_reference_v2.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "08f7fd7c49ffae9ddf3ba400b8af2ce69c16abd2",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_build_air6_first_stage.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "0c715d8d358e5235cb5f4f4a24f68414c47dd628",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -355,6 +382,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_classify_p25_dtb_prefix.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "46465ad5f23caa8ce697a2f63651549ecc4d9933",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_feed_git_objects.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -369,6 +405,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "7363a6887d6f96db400bb48dd8178d792933a3de",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_install_p44_extension.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b91b849baf0cc648f888f500ec81480e6e580a78",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -409,6 +454,24 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_p44_real_ext4.sh",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b09f823f95da6ba4fc60567fbdd3c9cb4397de50",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_pack_p25_unsigned_v2.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3c7934a3e657c105009dbd0dadc776a64815a301",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_pack_p26_rootfs.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -436,6 +499,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_prepare_p44_state.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3f6035c63e1e73a1481b0a585768c43273d0b7b0",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_procd_image_stage.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -449,7 +521,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "b76f662a19fee98dea9d728eadc46414c37ee733",
+      "git_blob_sha1": "5bddceb5cd8d7377bd95a63271851e935d9ae34d",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -508,11 +580,38 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_verify_bound_p26.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "bfccb9ac9753a1055d1ac4d961d18b17a7c201ac",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_verify_kernel_initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "4743fbef70bb86f83898274f8cc2aa98ff573858",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_verify_p25_profile_provenance.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "04249436a921f02424e3f34728ba3e0f6b7ce400",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_verify_p26_independent.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "bbe6cb1df915b6bfa7ffdf65ec7b223a6cb76075",
+      "git_blob_sha1": "5c889a78177a714e1eacb75d4761fefc0c7eee6a",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -531,6 +630,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "a8b7a43a40fd704b828ad96c04151087b11bc76c",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_verify_unsigned_pair.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "7640842c87a75bb8adee6bc0c9f220d435e77ca4",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -580,11 +688,65 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/boot/air6_first_stage.sh",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "7d366a79982c19c7b68ca719eb89341fb2ec9993",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/audit_p25_reference_v2.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "108d1a60ebda1f3d235fcb2ffa3984a29c0e64f1",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/classify_p25_dtb_prefix.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "f822bb3409813fb9a08a88d808cab031cf34015f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/pack_p25_unsigned_v2.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "5847b864afcc63eac888ff3b70aee3836700fe36",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/prepare_p44_state.sh",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "fb2e2dffe33af819312ce1de8b984c500488967e",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/boot/slot_observation.py",
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "c6393bd5c4b09becdff5a16c0d68dbfb85c0db3f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/verify_bound_p26.sh",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "f65b27997344609b069c7985a2f43cc7df4812d9",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -598,11 +760,56 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/boot/verify_kernel_initramfs.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "e0f760eb9a81d18eb18620a40ea786aa20bb8032",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/verify_p25_independent.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "cc2d7f69e83b5bad08c07b0fa635f1e8bc191644",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/verify_p25_profile_provenance.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "db9877c6ad02aefb89f98c922ab03f38e446a521",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/build_air6_first_stage.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "68989cfe3e4e8c3699461134ed1b8a5937e57194",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/build/check_air6_userspace_source.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "a3225a2d3500b3c581c53d551f4d0dabca4f52bf",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/install_p44_extension.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "664cb20d5a03f79d1cdfec017d8fb95ddf2447a8",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -665,7 +872,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "4584d851c68125e2e69a5e18c5120fddb815ce60",
+      "git_blob_sha1": "ac92746c5ae513904fdb060658b023ed361bb3b8",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -684,6 +891,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "0ecd1dfbc7b37132c632b1ad9043cc1925b7962a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/verify_unsigned_pair.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "9dfa7259f0c2a9f666c94483eb39ae99a525d222",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -728,7 +944,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "c3d4c9f35cf4549a8a97c0a48dbb7eb69a501600",
+      "git_blob_sha1": "f74bf7e7d168ab32d42a928f873320c570b1f119",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },

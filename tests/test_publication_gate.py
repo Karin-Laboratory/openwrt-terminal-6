@@ -49,6 +49,22 @@ class PublicationGateTests(unittest.TestCase):
         gate.scan("notes/b.txt", sample, issues)
         self.assertIn(("notes/b.txt", "internal build directory"), issues)
 
+    def test_air6_runtime_mountpoints_are_not_host_build_paths(self):
+        for mountpoint in (b"rom", b"check", b"rw", b"newroot"):
+            with self.subTest(mountpoint=mountpoint):
+                issues = set()
+                gate.scan("tools/boot/air6_first_stage.sh",
+                          b"/mnt/" + b"air6/" + mountpoint + b"/nested", issues)
+                self.assertNotIn(("tools/boot/air6_first_stage.sh",
+                                  "internal build directory"), issues)
+
+        issues = set()
+        gate.scan("notes/b.txt", b"/mnt/" + b"air6/private/build", issues)
+        self.assertIn(("notes/b.txt", "internal build directory"), issues)
+        issues = set()
+        gate.scan("notes/b.txt", b"/mnt/" + b"runner/work", issues)
+        self.assertIn(("notes/b.txt", "internal build directory"), issues)
+
     def test_indented_credential_assignments_are_blocked(self):
         # Split synthetic fixture names to avoid embedding credentials in tests.
         cases = (

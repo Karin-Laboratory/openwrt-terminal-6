@@ -1,6 +1,8 @@
 # Unsigned p26 rootfs_a packing lane (draft, 2026-11-04)
 
-**Status: PACKER SOURCE ONLY. No public-source-built 128 MiB p26 has yet been manufactured or independently verified.**
+**Status (2026-11-10):** a public-source-built 128 MiB p26 with independent SquashFS/readback verification was recorded on the PR #127 base at commit `aabe6ac11e13093c6929ff1676ecd54bed2aae1b` (Actions run [#42350310859](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42350310859), SHA-256 `c55884a21dddac40569689b90c3911d3400092d652278b9deb8a009145b23c35`). That image predates the PR #133 P44 extension changes and is **not** the current PR #133 output.
+
+At the start of the 2026-11-10 follow-up, PR #133 head `c6c33643e45d328bfa263323a37854d37f87358f` had an exact-head P26 production/readback job queued as Actions run [#42794634887](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/42794634887). This follow-up changes the build workflow's reporting, so that older run cannot validate the new workflow blob. The P44-extended P26 remains unverified until the latest PR #133 head passes its own job; its SHA must not be replaced with the PR #127 hash.
 The authoritative policy is [MAINLINE-P25-P26-POLICY](MAINLINE-P25-P26-POLICY.md). No firmware distribution or device access is authorized.
 
 ## Reused, independently observed format
@@ -62,4 +64,4 @@ No signing, device flashing, boot-slot changes, reboot, or artifact publication 
 3. Run `unsquashfs` in a separate process on the newly built image; compare the complete file tree and link/ownership/mode inventory, then read back the full 128 MiB bytes and zero padding. Verify reproducibility with a pinned `squashfs-tools` revision and an independent rebuild.
 4. Confirm minimal LAN configuration, wired driver/DTB availability and key-only SSH provisioning as separate acceptance gates. **No credentials, private key, EEPROM, modem calibration or radio firmware** may enter public inputs. Wi-Fi and modem remain optional rights-gated modules. NR/IPv6/6GHz/EasyMesh are not prerequisites.
 
-Until these are demonstrated on an actual public-source-produced image, report `P26_BUILD=BLOCKED`, even if the host tests pass.
+For a given commit, report `P26_BUILD=BLOCKED` unless that exact commit has a successful source-built P26 and independent filesystem/readback attestation. The older PR #127 result demonstrates the packer path, not the newer P44-extended tree. Separately, P25 remains blocked until an independently validated boot-v2 config and a boot-capable C-unit DTB/kernel input set are available; a successful byte-layout/pair check would still not establish LK acceptance or a physical boot.
