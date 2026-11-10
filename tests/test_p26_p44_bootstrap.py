@@ -23,6 +23,10 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         (self.root / "sbin/procd").write_bytes(b"synthetic target procd")
         (self.root / "sbin/init").symlink_to("procd")
         (self.root / "etc/preinit").write_text("#!/bin/sh\nexit 0\n")
+        entry = self.root / maker.MANAGEMENT_REL
+        entry.parent.mkdir(parents=True)
+        entry.write_bytes(maker.MANAGEMENT_SOURCE.read_bytes())
+        entry.chmod(0o755)
         self.p26 = self.base / "p26.img"
         self.p26.write_bytes(b"x" * 4096)
         self.p26_receipt = self.base / "p26.json"
@@ -62,10 +66,23 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertEqual(record["boot_mode"], "p44-required")
         self.assertTrue(record["p44_required"])
         self.assertFalse(record["p44_owner_secret_embedded"])
+        self.assertEqual(record["management_entry"], maker.MANAGEMENT_REL)
+        self.assertEqual(record["management_sha256"],
+                         hashlib.sha256(maker.MANAGEMENT_SOURCE.read_bytes()).hexdigest())
+        self.assertFalse(record["management_autostart"])
         self.assertFalse(record["owner_rw_approval_embedded"])
         self.assertFalse(record["device_boot_proven"])
         self.assertNotEqual(record["init_sha256"],
                             hashlib.sha256(maker.BOOT_SCRIPT.read_bytes()).hexdigest())
+
+    def test_required_p44_rejects_unaudited_management_entry(self):
+        candidate = self.root / maker.MANAGEMENT_REL
+        candidate.write_text("#!/bin/sh\\nexit 0\\n")
+        with mock.patch.object(maker, "PARTITION_BYTES", 4096):
+            with self.assertRaisesRegex(ValueError, "P26_MANAGEMENT_SOURCE_MISMATCH"):
+                maker.package(self.root, self.p26, self.p26_receipt,
+                              self.cpio, self.receipt, boot_mode="p44-required")
+        self.assertFalse(self.cpio.exists())
 
     def test_p44_required_mode_receipt_tampering_fails_closed(self):
         with mock.patch.object(maker, "PARTITION_BYTES", 4096):
