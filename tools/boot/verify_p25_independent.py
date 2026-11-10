@@ -20,8 +20,8 @@ def aligned(n):
     return (n + PAGE - 1) // PAGE * PAGE
 
 
-def verify(image, kernel, ramdisk, dtb):
-    for path in (image, kernel, ramdisk, dtb):
+def verify(image, kernel, ramdisk, dtb, config):
+    for path in (image, kernel, ramdisk, dtb, config):
         checked(path.is_file() and not path.is_symlink(), "NONREGULAR_INPUT")
     data = image.read_bytes()
     checked(len(data) == SIZE, "PARTITION_SIZE")
@@ -34,6 +34,29 @@ def verify(image, kernel, ramdisk, dtb):
             "UNEXPECTED_RECOVERY_SECTION")
     dtbsize, dtbaddr = struct.unpack_from("<IQ", data, 1648)
     checked(all((kaddr, raddr, tags, dtbaddr)), "MISSING_LOAD_ADDRESS")
+    # Compare every boot-sensitive header byte to the independently supplied
+    # owner's configuration. A section-only readback could accept altered
+    # load addresses, boot arguments or device name while reporting PASS.
+    cfg = json.loads(config.read_text())
+    checked(isinstance(cfg, dict) and set(cfg) == {
+        "kernel_addr", "ramdisk_addr", "tags_addr", "dtb_addr",
+        "name", "cmdline"}, "CONFIG_SCHEMA")
+    try:
+        addrs = tuple(int(cfg[key], 0) for key in
+                      ("kernel_addr", "ramdisk_addr", "tags_addr", "dtb_addr"))
+        name = cfg["name"].encode("ascii")
+        cmdline = cfg["cmdline"].encode("ascii")
+    except (ValueError, TypeError, AttributeError, UnicodeError) as exc:
+        raise ValueError("P25_VERIFY_FAIL_CONFIG_FORMAT") from exc
+    checked((kaddr, raddr, tags, dtbaddr) == addrs, "CONFIG_LOAD_ADDRESSES")
+    checked(len(name) <= 15 and len(cmdline) <= 1535 and b"\\x00" not in name + cmdline,
+            "CONFIG_STRINGS")
+    checked(data[48:64] == name.ljust(16, b"\\x00"), "CONFIG_NAME")
+    checked(data[64:576] == cmdline[:512].ljust(512, b"\\x00"),
+            "CONFIG_CMDLINE_PRIMARY")
+    checked(data[608:1632] == cmdline[512:].ljust(1024, b"\\x00"),
+            "CONFIG_CMDLINE_EXTRA")
+    checked(os_version == 0, "OS_VERSION")
     checked(ksize > 0 and rsize > 0 and dtbsize > 0, "EMPTY_SECTION")
     sections = (kernel.read_bytes(), ramdisk.read_bytes(), dtb.read_bytes())
     checked((ksize, rsize, dtbsize) == tuple(len(s) for s in sections),
@@ -63,11 +86,11 @@ def verify(image, kernel, ramdisk, dtb):
 
 def main():
     parser = argparse.ArgumentParser()
-    for flag in ("p25", "kernel", "ramdisk", "dtb"):
+    for flag in ("p25", "kernel", "ramdisk", "dtb", "config"):
         parser.add_argument("--" + flag, required=True, type=Path)
     a = parser.parse_args()
     print("P25_INDEPENDENT_READBACK_PASS", json.dumps(
-        verify(a.p25, a.kernel, a.ramdisk, a.dtb), sort_keys=True))
+        verify(a.p25, a.kernel, a.ramdisk, a.dtb, a.config), sort_keys=True))
 
 
 if __name__ == "__main__":
