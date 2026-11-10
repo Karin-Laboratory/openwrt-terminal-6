@@ -356,6 +356,24 @@ jobs:
           test -x "$rootfs/etc/rc.d/S10netifd"
           grep -Fq "config interface 'loopback'" "$rootfs/etc/config/network"
           echo 'PUBLIC_MT6990_NATIVE_QEMU_NETIFD_BRIDGE_BOOT_POLICY_STAGED'
+          # Ship the independently authored RC14-derived LAN2/SSH candidate
+          # INSIDE P26, not on P44. Deliberately not connected to procd auto
+          # start until native driver, NIC and per-device provisioning pass.
+          # Use the retained fakeroot metadata state to stage target UID/GID.
+          management="$rootfs/usr/libexec/sba6d/rc14-management.sh"
+          test ! -e "$management" && test ! -L "$management"
+          fakeroot -i "$work/p26-fakeroot.state" -s "$work/p26-fakeroot.state" -- \
+            install -D -m 0755 \
+              "$GITHUB_WORKSPACE/config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh" \
+              "$management"
+          test -s "$management" && test -x "$management"
+          cmp "$management" \
+            "$GITHUB_WORKSPACE/config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh"
+          sh -n "$management"
+          # No SXXrc14 startup link is installed: an unprovisioned OpenWrt
+          # rootfs cannot expose an SSH service without per-unit host keys.
+          ! find "$rootfs/etc/rc.d" -maxdepth 1 -name '*rc14*' -print -quit | grep -q .
+          echo 'PUBLIC_MT6990_P26_INTERNAL_RC14_MANAGEMENT_SOURCE_STAGED'
           tar --sort=name --mtime='@0' --owner=0 --group=0 \
             --numeric-owner -C "$rootfs" -czf "$work/sbat6-rootfs-stage.tar.gz" .
           test -s "$work/sbat6-rootfs-stage.tar.gz"
