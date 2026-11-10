@@ -54,6 +54,15 @@ def metadata(image, section, injected=(), prefix_sha=None):
 
 
 class P25ContractTests(unittest.TestCase):
+    def test_pinned_compiled_board_dtbs_use_same_full_structure_gate(self):
+        from pathlib import Path
+        script = (Path(__file__).resolve().parents[1] /
+                  "scripts/verify-air6-board-dtc.sh").read_text()
+        self.assertIn("from tools.boot.air6_boot_contract import check_fdt", script)
+        self.assertIn('"$TEMP/air6.dtbin" "$TEMP/air6-ethernet.dtbin"', script)
+        self.assertIn("AIR6_COMPILED_FDT_FULL_STRUCTURE_PASS", script)
+        self.assertIn('check_fdt(Path(filename).read_bytes())', script)
+
     def test_bare_fdt_aosp_v2_structure_does_not_claim_lk(self):
         section = fdt()
         image = specimen(section)
