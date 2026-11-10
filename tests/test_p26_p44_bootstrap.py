@@ -164,6 +164,7 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn("USER_DATA_DUPLICATE_GPT_PARTNAME", source)
         self.assertIn("USER_DATA_NOT_BLOCK", source)
         self.assertIn("P44_OVERLAPS_USER_DATA", source)
+        self.assertIn('mount -t ext4 -o rw,noatime,nosuid,nodev "$P44" "$UPPER"', source)
         self.assertIn("PARTITION_GEOMETRY_INVALID", source)
         self.assertIn("EMPTY_PARTITION_GEOMETRY", source)
         self.assertIn("userdata_start + userdata_sectors", source)
