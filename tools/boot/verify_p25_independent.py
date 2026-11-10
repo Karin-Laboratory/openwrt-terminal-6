@@ -49,12 +49,12 @@ def verify(image, kernel, ramdisk, dtb, config):
     except (ValueError, TypeError, AttributeError, UnicodeError) as exc:
         raise ValueError("P25_VERIFY_FAIL_CONFIG_FORMAT") from exc
     checked((kaddr, raddr, tags, dtbaddr) == addrs, "CONFIG_LOAD_ADDRESSES")
-    checked(len(name) <= 15 and len(cmdline) <= 1535 and b"\\x00" not in name + cmdline,
+    checked(len(name) <= 15 and len(cmdline) <= 1535 and b"\x00" not in name + cmdline,
             "CONFIG_STRINGS")
-    checked(data[48:64] == name.ljust(16, b"\\x00"), "CONFIG_NAME")
-    checked(data[64:576] == cmdline[:512].ljust(512, b"\\x00"),
+    checked(data[48:64] == name.ljust(16, b"\x00"), "CONFIG_NAME")
+    checked(data[64:576] == cmdline[:512].ljust(512, b"\x00"),
             "CONFIG_CMDLINE_PRIMARY")
-    checked(data[608:1632] == cmdline[512:].ljust(1024, b"\\x00"),
+    checked(data[608:1632] == cmdline[512:].ljust(1024, b"\x00"),
             "CONFIG_CMDLINE_EXTRA")
     checked(os_version == 0, "OS_VERSION")
     checked(ksize > 0 and rsize > 0 and dtbsize > 0, "EMPTY_SECTION")
