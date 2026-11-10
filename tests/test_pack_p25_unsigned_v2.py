@@ -50,13 +50,40 @@ class TestP25BootV2(unittest.TestCase):
 
     def test_independent_full_readback(self):
         p25.build(self.kernel, self.ramdisk, self.dtb, self.cfg, self.output)
-        result = p25verify.verify(self.output, self.kernel, self.ramdisk, self.dtb)
+        result = p25verify.verify(self.output, self.kernel, self.ramdisk, self.dtb, self.cfg)
         self.assertEqual(result["partition_bytes"], 33554432)
         damaged = bytearray(self.output.read_bytes())
         damaged[-1] = 1
         self.output.write_bytes(damaged)
         with self.assertRaisesRegex(ValueError, "NONZERO_PARTITION_PADDING"):
-            p25verify.verify(self.output, self.kernel, self.ramdisk, self.dtb)
+            p25verify.verify(self.output, self.kernel, self.ramdisk, self.dtb, self.cfg)
+
+    def test_rejects_modified_header_cmdline(self):
+        p25.build(self.kernel, self.ramdisk, self.dtb, self.cfg, self.output)
+        damaged = bytearray(self.output.read_bytes())
+        damaged[64] ^= 1
+        self.output.write_bytes(damaged)
+        with self.assertRaisesRegex(ValueError, "CONFIG_CMDLINE_PRIMARY"):
+            p25verify.verify(self.output, self.kernel, self.ramdisk, self.dtb,
+                             self.cfg)
+
+    def test_rejects_modified_header_address(self):
+        p25.build(self.kernel, self.ramdisk, self.dtb, self.cfg, self.output)
+        damaged = bytearray(self.output.read_bytes())
+        damaged[12] ^= 4
+        self.output.write_bytes(damaged)
+        with self.assertRaisesRegex(ValueError, "CONFIG_LOAD_ADDRESSES"):
+            p25verify.verify(self.output, self.kernel, self.ramdisk, self.dtb,
+                             self.cfg)
+
+    def test_rejects_modified_config_after_manufacture(self):
+        p25.build(self.kernel, self.ramdisk, self.dtb, self.cfg, self.output)
+        config = json.loads(self.cfg.read_text())
+        config["cmdline"] = "console=ttyAMA0"
+        self.cfg.write_text(json.dumps(config))
+        with self.assertRaisesRegex(ValueError, "CONFIG_CMDLINE_PRIMARY"):
+            p25verify.verify(self.output, self.kernel, self.ramdisk, self.dtb,
+                             self.cfg)
 
     def test_rejects_invalid_kernel(self):
         self.kernel.write_bytes(b"not gzip")
