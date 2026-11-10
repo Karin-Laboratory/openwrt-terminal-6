@@ -29,6 +29,25 @@ def verify(image, receipt, kernel, dtb):
         raise ValueError("incorrect receipt")
     if record.get("status") != "REAL_32M_BYTES_AOSP_V2_STRUCTURE_ONLY_NOT_LK_ACCEPTED":
         raise ValueError("unverified LK status required")
+    layout = record.get("dtb_layout", "bare-fdt")
+    prefix_sha = record.get("vendor64_prefix_sha256")
+    if layout not in ("bare-fdt", "opaque-64-prefix-plus-fdt"):
+        raise ValueError("unknown DTB section layout")
+    with dtb.open("rb") as stream:
+        if layout == "opaque-64-prefix-plus-fdt":
+            prefix = stream.read(64)
+            if (len(prefix) != 64 or not isinstance(prefix_sha, str) or
+                    hashlib.sha256(prefix).hexdigest() != prefix_sha):
+                raise ValueError("vendor64 prefix SHA mismatch")
+        elif prefix_sha is not None:
+            raise ValueError("unexpected prefix SHA on bare DTB")
+        header = stream.read(8)
+        if len(header) != 8 or header[:4] != b"\xd0\x0d\xfe\xed":
+            raise ValueError("bad bare FDT magic")
+        total_size = struct.unpack(">I", header[4:])[0]
+        expected_size = dtb.stat().st_size - (64 if layout == "opaque-64-prefix-plus-fdt" else 0)
+        if total_size != expected_size:
+            raise ValueError("FDT total size disagrees with DTB section")
     if any(record.get(k) is not False for k in
            ("lk_header_and_vendor64_accepted", "signed", "device_boot_proven", "distributable")):
         raise ValueError("misleading acceptance claim")
