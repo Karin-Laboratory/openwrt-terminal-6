@@ -158,7 +158,7 @@ jobs:
           # target/linux/compile so this cannot fail with an opaque Kbuild
           # "C compiler ... not found" after kernel patch extraction.
           early_compiler="$(find "$work/openwrt/staging_dir" -maxdepth 5 \
-            -type f -name 'aarch64-openwrt-linux-musl-gcc' -print -quit)"
+            -name 'aarch64-openwrt-linux-musl-gcc' -print -quit)"
           if [ -z "$early_compiler" ] || [ ! -x "$early_compiler" ]; then
             echo 'BLOCKED_NATIVE_TOOLCHAIN_GCC_NOT_INSTALLED' >&2
             find "$work/openwrt/staging_dir" -maxdepth 5 -name '*gcc*' -print >&2
