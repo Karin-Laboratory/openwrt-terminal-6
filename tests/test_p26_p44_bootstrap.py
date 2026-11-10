@@ -140,6 +140,11 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
         self.assertIn('make -C "$work/openwrt" -j1 V=s toolchain/install', workflow)
         self.assertIn('PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS', workflow)
+        self.assertIn('PUBLIC_MT6990_NATIVE_TOOLCHAIN_AARCH64_OBJECT_COMPILE_PASS', workflow)
+        self.assertIn('BLOCKED_NATIVE_TOOLCHAIN_BAD_AARCH64_ELF', workflow)
+        self.assertIn('"$early_compiler" -x c -O2 -c -o "$work/air6-toolchain-probe.o" -', workflow)
+        self.assertLess(workflow.index('PUBLIC_MT6990_NATIVE_TOOLCHAIN_AARCH64_OBJECT_COMPILE_PASS'),
+                        workflow.index('make -C "$work/openwrt" -j2 V=s target/linux/compile'))
         self.assertIn('BLOCKED_NATIVE_TOOLCHAIN_GCC_NOT_INSTALLED', workflow)
         self.assertIn('BLOCKED_NATIVE_TOOLCHAIN_LD_NOT_INSTALLED', workflow)
         self.assertIn('aarch64-openwrt-linux-musl-gcc', workflow)
