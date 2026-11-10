@@ -153,6 +153,24 @@ jobs:
           # This gate previously failed with only a summarized make error;
           # serial verbose output avoids guessing and blind reruns.
           make -C "$work/openwrt" -j1 V=s toolchain/install
+          # Toolchain was previously skipped by an accidental shell-comment
+          # continuation. Check the real staged AArch64 GCC *before* the long
+          # target/linux/compile so this cannot fail with an opaque Kbuild
+          # "C compiler ... not found" after kernel patch extraction.
+          early_compiler="$(find "$work/openwrt/staging_dir" -maxdepth 5 \
+            -type f -name 'aarch64-openwrt-linux-musl-gcc' -print -quit)"
+          if [ -z "$early_compiler" ] || [ ! -x "$early_compiler" ]; then
+            echo 'BLOCKED_NATIVE_TOOLCHAIN_GCC_NOT_INSTALLED' >&2
+            find "$work/openwrt/staging_dir" -maxdepth 5 -name '*gcc*' -print >&2
+            exit 1
+          fi
+          early_bin="$(dirname "$early_compiler")"
+          if [ ! -x "$early_bin/aarch64-openwrt-linux-musl-ld" ]; then
+            echo 'BLOCKED_NATIVE_TOOLCHAIN_LD_NOT_INSTALLED' >&2
+            exit 1
+          fi
+          "$early_compiler" -dumpmachine | grep -Fx 'aarch64-openwrt-linux-musl'
+          echo 'PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS'
           # The actual OpenWrt procd dependency closure reaches package/kernel/linux
           # even without selected kmod defaults. Build the native MT6990 kernel
           # first rather than hiding or bypassing its dependency. This is still
