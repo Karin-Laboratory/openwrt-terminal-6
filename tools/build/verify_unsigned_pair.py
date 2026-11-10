@@ -42,8 +42,8 @@ def p25_verifier():
 
 
 def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
-                independent, out, p25_verify=None):
-    paths = (p25, kernel, ramdisk, dtb, config, p26, producer, independent)
+                independent, cpio, out, p25_verify=None):
+    paths = (p25, kernel, ramdisk, dtb, config, p26, producer, independent, cpio)
     require(all(valid_path(p) for p in paths), "INVALID_INPUT")
     require(not out.exists() and not out.is_symlink()
             and out.parent.is_dir()
@@ -76,6 +76,10 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
             approved.get("p26_sha256"), "P26_IMAGE_IDENTITY")
     require(approved.get("producer_receipt_sha256") == digest(producer),
             "P26_RECEIPT_IDENTITY")
+    # The actual kernel initramfs must contain the same complete-P26 hash.
+    # This is a build binding, NOT evidence that an early boot check runs.
+    bound = (p26_hash + "  /dev/mmcblk0p26").encode("ascii")
+    require(cpio.read_bytes().count(bound) == 1, "P26_INITRAMFS_SHA_BINDING")
     require(original.get("squashfs_sha256") ==
             approved.get("squashfs_sha256") and
             original.get("squashfs_bytes") ==
@@ -86,6 +90,7 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         "p26_sha256": p26_hash,
         "p26_independent_receipt_sha256": digest(independent),
         "p25_config_sha256": digest(config),
+        "bound_initramfs_sha256": digest(cpio),
         "signed": False, "device_writes": False, "public_binary": False,
         "not_proven": ["Air6 LK accepts p25", "RC14 boot compatibility",
                        "hardware cold boot", "LAN/SSH", "publication rights"],
@@ -100,11 +105,11 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("p25", "kernel", "ramdisk", "dtb", "config",
-                 "p26", "producer", "independent", "out"):
+                 "p26", "producer", "independent", "cpio", "out"):
         parser.add_argument("--" + name, required=True, type=Path)
     a = parser.parse_args()
     result = verify_pair(a.p25, a.kernel, a.ramdisk, a.dtb, a.config,
-                         a.p26, a.producer, a.independent, a.out)
+                         a.p26, a.producer, a.independent, a.cpio, a.out)
     print("PUBLIC_UNSIGNED_P25_P26_PAIR_BYTE_IDENTITIES_PASS",
           result["p25_sha256"], result["p26_sha256"])
 
