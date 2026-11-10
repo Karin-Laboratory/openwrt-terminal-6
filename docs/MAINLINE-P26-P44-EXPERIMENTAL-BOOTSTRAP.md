@@ -124,3 +124,20 @@ confirmed OEM vendor64 semantics and is neither signer-ready nor flashable.
 The alternative Air6 initramfs is not interchangeable with the QEMU-only
 virtio variant. A green CI here is an engineering artifact, not hardware
 boot evidence. All generated images remain ephemeral.
+
+## Optional external 64-byte-prefixed FDT section support
+
+The public boot-v2 research packer now accepts an **externally supplied**
+64-byte-prefixed FDT *section* when its metadata explicitly sets
+`dtb_layout=opaque-64-prefix-plus-fdt` and a matching
+`vendor64_prefix_sha256`. The builder validates the prefix hash and the
+inner FDT header/size; the independent reader repeats those checks against
+the packed 32MiB P25. The default remains the original bare FDT layout.
+
+This enables private experiments with an independently reviewed, lawfully
+obtained section without adding OEM bytes, device identifiers or proprietary
+prefix-generation recipes to the public repository. Tests use a synthetic
+64-byte prefix only. The 64-byte boundary and SHA **do not establish the
+meaning of the prefix, load-address correctness, or LK acceptance**.
+No vendor64 sample is shipped or assumed. The current public CI research P25
+continues to pack a bare FDT.
