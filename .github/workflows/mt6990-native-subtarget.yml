@@ -730,51 +730,9 @@ jobs:
           sha256sum "$kernel/usr/initramfs_data.o" \
             "$kernel/arch/arm64/boot/Image"
           echo 'PUBLIC_MT6990_SAME_KERNEL_EMBEDDED_PROCD_PID1_IMAGE_BUILD_PASS'
-          # Prepare public native components for the unsigned Android-v2 p25
-          # assembler. This is a source-built handoff, NOT proof that the Air6
-          # LK accepts the resulting boot image. No address is guessed.
-          gzip -n -9 -c "$kernel/arch/arm64/boot/Image" > "$work/air6-native-Image.gz"
-          gzip -n -9 -c "$work/air6-procd-initramfs.cpio" > "$work/air6-native-initramfs.cpio.gz"
-          gzip -t "$work/air6-native-Image.gz"
-          gzip -t "$work/air6-native-initramfs.cpio.gz"
-          native_dtb="$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
-          test -s "$native_dtb"
-          sha256sum "$work/air6-native-Image.gz" \
-            "$work/air6-native-initramfs.cpio.gz" "$native_dtb"
-          echo 'PUBLIC_P25_NATIVE_SOURCE_INPUTS_PREPARED_PASS'
-          # A genuine Air6-compatible RC14 header requires validated addresses,
-          # cmdline and vendor-specific requirements. No private settings are
-          # shipped as public CI defaults. Explicit config permits an isolated,
-          # unsigned owner-workspace build, never a public upload.
-          if test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}"; then
-            test -f "$SBAT6_P25_BOOT_V2_CONFIG"
-            install -d -m 0700 "$work/private-p25"
-            p25="$work/private-p25/boot_a.unsigned.p25"
-            python3 "$GITHUB_WORKSPACE/tools/boot/pack_p25_unsigned_v2.py" \
-              --kernel "$work/air6-native-Image.gz" \
-              --ramdisk "$work/air6-native-initramfs.cpio.gz" \
-              --dtb "$native_dtb" \
-              --config "$SBAT6_P25_BOOT_V2_CONFIG" --output "$p25"
-            python3 "$GITHUB_WORKSPACE/tools/boot/verify_p25_independent.py" \
-              --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
-              --ramdisk "$work/air6-native-initramfs.cpio.gz" --dtb "$native_dtb" \
-              --config "$SBAT6_P25_BOOT_V2_CONFIG"
-            echo 'PUBLIC_NATIVE_SOURCE_P25_UNSIGNED_FULL_BYTE_READBACK_PASS'
-            # Pair both same-run unsigned images only when independently verified.
-            python3 "$GITHUB_WORKSPACE/tools/build/verify_unsigned_pair.py" \
-              --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
-              --ramdisk "$work/air6-native-initramfs.cpio.gz" \
-              --dtb "$native_dtb" --config "$SBAT6_P25_BOOT_V2_CONFIG" \
-              --p26 "$work/private-p26/packed/rootfs_a.p26" \
-              --producer "$work/private-p26/packed/p26-receipt.json" \
-              --independent "$work/private-p26/packed/p26-independent-attestation.json" \
-              --cpio "$work/air6-procd-initramfs.cpio" \
-              --out "$work/private-p25/unsigned-p25-p26-pair.json"
-            echo 'LIMIT: no Air6 LK validation, vendor extension, signature or flash'
-          else
-            echo 'P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE'
-            echo 'LIMIT: real components ready; no fabricated target addresses'
-          fi
+          # Preserve this procd PID1 Image for isolated QEMU smoke testing.
+          # A distinct source-built Air6 first-stage Image is rebuilt AFTER
+          # this generic QEMU test, never passed to QEMU virt without devices.
           # Boot this exact native OpenWrt Image (with its real procd rootfs)
           # under QEMU virt. No Air6 DTB is passed: virt uses QEMU-generated
           # DT and PL011 console. Require real PID1, netifd and bridge runtime.
@@ -843,3 +801,70 @@ jobs:
           echo 'LIMIT: QEMU virt cannot establish Air6 bootloader/DTB/AP compatibility'
           echo 'LIMIT: native procd QEMU virt boot only; Air6 device boot not tested'
           echo 'LIMIT: no device boot, signing, installable image, private material or rights approval'
+          # RC14 public translation: a *separate* Air6 first-stage initramfs,
+          # sourced only from this job's native BusyBox/runtime and verified P26.
+          # The QEMU procd smoke Image above remains a distinct artifact.
+          sh -n "$GITHUB_WORKSPACE/tools/boot/air6_first_stage.sh"
+          python3 -m py_compile "$GITHUB_WORKSPACE/tools/build/build_air6_first_stage.py"
+          python3 "$GITHUB_WORKSPACE/tools/build/build_air6_first_stage.py" \
+            --rootfs "$rootfs" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --output "$work/air6-first-stage-initramfs.cpio"
+          test -s "$work/air6-first-stage-initramfs.cpio"
+          # The following must be available *built in*, not as unavailable
+          # modules in the initial ramdisk (the first stage does not modprobe).
+          "$kernel/scripts/config" --file "$kernel/.config" \
+            --enable EXT4_FS --enable SQUASHFS --enable OVERLAY_FS \
+            --enable CRYPTO_SHA256 --enable BLK_DEV_INITRD
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
+          for option in EXT4_FS SQUASHFS OVERLAY_FS BLK_DEV_INITRD; do
+            grep -qx "CONFIG_$option=y" "$kernel/.config" || {
+              echo "P25_BLOCKED_MISSING_FIRST_STAGE_BUILTIN_$option" >&2
+              exit 1
+            }
+          done
+          "$kernel/scripts/config" --file "$kernel/.config" \
+            --set-str INITRAMFS_SOURCE "$work/air6-first-stage-initramfs.cpio"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
+          test -s "$kernel/usr/initramfs_data.o"
+          sha256sum "$work/air6-first-stage-initramfs.cpio" \
+            "$kernel/arch/arm64/boot/Image"
+          echo 'PUBLIC_AIR6_FIRST_STAGE_KERNEL_IMAGE_SOURCE_BUILT_PASS'
+          # Unsigned P25 only when caller has supplied a validated exact boot
+          # configuration; the public repo intentionally contains no private
+          # load addresses, proprietary template or signer.
+          gzip -n -9 -c "$kernel/arch/arm64/boot/Image" > "$work/air6-native-Image.gz"
+          gzip -n -9 -c "$work/air6-first-stage-initramfs.cpio" > "$work/air6-native-initramfs.cpio.gz"
+          native_dtb="$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
+          test -s "$native_dtb"
+          if test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}"; then
+            test -f "$SBAT6_P25_BOOT_V2_CONFIG"
+            install -d -m 0700 "$work/private-p25"
+            p25="$work/private-p25/boot_a.unsigned.p25"
+            python3 "$GITHUB_WORKSPACE/tools/boot/pack_p25_unsigned_v2.py" \
+              --kernel "$work/air6-native-Image.gz" \
+              --ramdisk "$work/air6-native-initramfs.cpio.gz" \
+              --dtb "$native_dtb" \
+              --config "$SBAT6_P25_BOOT_V2_CONFIG" --output "$p25"
+            python3 "$GITHUB_WORKSPACE/tools/boot/verify_p25_independent.py" \
+              --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
+              --ramdisk "$work/air6-native-initramfs.cpio.gz" --dtb "$native_dtb" \
+              --config "$SBAT6_P25_BOOT_V2_CONFIG"
+            python3 "$GITHUB_WORKSPACE/tools/build/verify_unsigned_pair.py" \
+              --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
+              --ramdisk "$work/air6-native-initramfs.cpio.gz" \
+              --dtb "$native_dtb" --config "$SBAT6_P25_BOOT_V2_CONFIG" \
+              --p26 "$work/private-p26/packed/rootfs_a.p26" \
+              --producer "$work/private-p26/packed/p26-receipt.json" \
+              --independent "$work/private-p26/packed/p26-independent-attestation.json" \
+              --cpio "$work/air6-first-stage-initramfs.cpio" \
+              --out "$work/private-p25/unsigned-p25-p26-pair.json"
+            echo 'PUBLIC_AIR6_SOURCE_P25_P26_FIRST_STAGE_PAIR_BYTE_IDENTITY_PASS'
+          else
+            echo 'P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE'
+          fi
+          echo 'LIMIT: Air6 bootloader acceptance and hardware cold boot NOT verified'
