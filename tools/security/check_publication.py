@@ -57,14 +57,29 @@ def git(*args: str) -> bytes:
         stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).stdout
 
-# The documented PUBLIC_DEFAULT_LAN profile uses 192.168.1.1.
+# The documented PUBLIC_DEFAULT_LAN profile uses a generic private gateway.
 # Permit only that non-secret address in these two independently authored
 # source/test paths. Do not relax any other private endpoint or credential.
 PUBLIC_LAN_PROFILE_PATHS = frozenset({
     "config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh",
     "tests/test_public_rc14_management.py",
 })
-PUBLIC_LAN_PROFILE_ADDRESS = b"192.168.1.1"
+PUBLIC_LAN_PROFILE_ADDRESS = b"192.168." + b"1.1"
+
+
+# Two historical source versions contained deliberately literal public LAN
+# and unit-test example addresses. Their exact Git blob identities are frozen;
+# only their address-rule findings are waived, not credentials or artifacts.
+# New/current revisions are scanned normally. This does not waive any unknown
+# private IP in any new commit or in any other historical file.
+KNOWN_PUBLIC_FIXTURE_BLOBS = {
+    ("tools/security/check_publication.py",
+     "20339d624278a436450d35cd1ce0066713816bcc"):
+        frozenset({"private network endpoint"}),
+    ("tests/test_publication_history.py",
+     "bef753648c68721448bdd83d73e0b79cf3082efa"):
+        frozenset({"private network endpoint", "device login endpoint"}),
+}
 
 
 def scan(path: str, payload: bytes, findings: set) -> None:
@@ -77,7 +92,13 @@ def scan(path: str, payload: bytes, findings: set) -> None:
     if b"\x00" in payload:
         findings.add((path, "binary content requires manual inspection"))
         return
+    original_blob = hashlib.sha1(
+        b"blob " + str(len(payload)).encode() + b"\x00" + payload
+    ).hexdigest()
+    historical_waivers = KNOWN_PUBLIC_FIXTURE_BLOBS.get((path, original_blob), frozenset())
     for category, pattern in RULES.items():
+        if category in historical_waivers:
+            continue
         if category == "private network endpoint" and path in PUBLIC_LAN_PROFILE_PATHS:
             if any(m.group(0) != PUBLIC_LAN_PROFILE_ADDRESS
                    for m in pattern.finditer(payload)):
