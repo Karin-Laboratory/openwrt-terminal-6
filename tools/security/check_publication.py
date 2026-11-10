@@ -169,10 +169,11 @@ def history_findings(findings: set, object_findings=None) -> int:
             if size > MAX_SIZE:
                 findings.add((label, "oversized historical blob"))
                 continue
-            before = set(findings)
-            scan_tracked_path(path, label, git("cat-file", "blob", sha), findings)
+            local_findings = set()
+            scan_tracked_path(path, label, git("cat-file", "blob", sha), local_findings)
+            findings.update(local_findings)
             if object_findings is not None:
-                for finding in findings - before:
+                for finding in local_findings:
                     object_findings.add((sha, finding[1]))
             scanned += 1
     # Annotated tag objects may be pointed to by ANY Git ref namespace,
