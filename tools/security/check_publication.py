@@ -39,7 +39,10 @@ RULES = {
         rb"(?<![0-9])(?:192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(?![0-9])"
     ),
     "internal build directory": re.compile(
-        rb"/(?:home|root|mnt)/[A-Za-z0-9_.+-]+/"
+        # The first-stage initramfs uses these fixed in-guest mountpoints;
+        # they are runtime paths, not host build directories. Keep scanning
+        # other /mnt workspaces and every /home or /root path.
+        rb"/(?:home|root)/[A-Za-z0-9_.+-]+/|/mnt/(?!air6/(?:rom|check|rw|newroot)(?![A-Za-z0-9_.+-]))[A-Za-z0-9_.+-]+/"
     ),
     "embedded boot command line": re.compile(
         rb'CONFIG_CMDLINE\s*=\s*"[^"\n]{15,}"'

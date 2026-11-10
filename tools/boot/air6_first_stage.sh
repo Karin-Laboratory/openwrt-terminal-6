@@ -31,22 +31,26 @@ mount -t squashfs -o ro "$root" /mnt/air6/rom || fail ROM
 [ -x /mnt/air6/rom/sbin/init ] || fail ROM_INIT
 # Read-only and no journal replay: never mutate owner's ext4 during validation.
 mount -t ext4 -o ro,noload "$persist" /mnt/air6/check || fail P44_READONLY
-[ -f /mnt/air6/check/.sba6d-rootfs-data-v1 ] &&
-    [ ! -L /mnt/air6/check/.sba6d-rootfs-data-v1 ] || fail P44_MARKER_TYPE
-grep -Fxq 'SBA6D_ROOTFS_DATA_V1' /mnt/air6/check/.sba6d-rootfs-data-v1 ||
-    fail P44_MARKER
-[ -d /mnt/air6/check/upper ] && [ ! -L /mnt/air6/check/upper ] ||
-    fail P44_UPPER
-[ -d /mnt/air6/check/work ] && [ ! -L /mnt/air6/check/work ] ||
-    fail P44_WORK
-[ -L /mnt/air6/check/.fs_state ] || fail P44_STATE_TYPE
-[ "$(readlink /mnt/air6/check/.fs_state)" = 2 ] || fail P44_STATE
+/usr/libexec/air6/prepare-p44-state /mnt/air6/check check
+p44_state=$?
+case "$p44_state" in
+    0) p44_initial_state=ready ;;
+    2) p44_initial_state=empty ;;
+    3) p44_initial_state=transaction ;;
+    *) fail P44_READONLY_STATE ;;
+esac
+echo 'AIR6_FIRST_STAGE_P44_READONLY_PREFLIGHT_PASS' >/dev/console
 umount /mnt/air6/check || fail P44_CHECK_UNMOUNT
 echo 'AIR6_FIRST_STAGE_P44_PREFLIGHT_PASS' >/dev/console
 mount -t ext4 -o rw,noatime,nosuid,nodev "$persist" /mnt/air6/rw ||
     fail P44_RW
-[ -d /mnt/air6/rw/upper ] && [ ! -L /mnt/air6/rw/upper ] || fail P44_UPPER_CHANGED
-[ -d /mnt/air6/rw/work ] && [ ! -L /mnt/air6/rw/work ] || fail P44_WORK_CHANGED
+if [ "$p44_initial_state" = empty ] || [ "$p44_initial_state" = transaction ]; then
+    /usr/libexec/air6/prepare-p44-state /mnt/air6/rw init ||
+        fail P44_EMPTY_INITIALIZATION
+else
+    /usr/libexec/air6/prepare-p44-state /mnt/air6/rw check ||
+        fail P44_STATE_CHANGED
+fi
 mount -t overlay overlay -o lowerdir=/mnt/air6/rom,upperdir=/mnt/air6/rw/upper,workdir=/mnt/air6/rw/work /mnt/air6/newroot ||
     fail ROOT_OVERLAY
 [ -x /mnt/air6/newroot/sbin/init ] || fail OVERLAY_INIT

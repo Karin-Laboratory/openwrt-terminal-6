@@ -15,7 +15,8 @@ import stat
 P26_BYTES = 134_217_728
 HERE = Path(__file__).resolve().parents[2]
 REQUIRED_APPLETS = ("sh", "mount", "umount", "mkdir", "grep", "sleep",
-                    "sha256sum", "cat", "readlink", "switch_root")
+                    "sha256sum", "cat", "readlink", "ln", "sync",
+                    "switch_root")
 
 
 def require(ok, code):
@@ -38,7 +39,9 @@ def build(root, p26, out):
             "BUSYBOX_NOT_AARCH64")
     script = HERE / "tools/boot/air6_first_stage.sh"
     checker = HERE / "tools/boot/verify_bound_p26.sh"
-    require(script.is_file() and checker.is_file(), "PUBLIC_SOURCES")
+    p44_state = HERE / "tools/boot/prepare_p44_state.sh"
+    require(script.is_file() and checker.is_file() and p44_state.is_file(),
+            "PUBLIC_SOURCES")
     for item in ("etc", "lib", "bin"):
         require(not (root / item).is_symlink(), "ROOTFS_PARENT_SYMLINK")
     import hashlib
@@ -84,6 +87,8 @@ def build(root, p26, out):
         (sha + "  /dev/mmcblk0p26\n").encode("ascii"))
     put("usr/libexec/air6/verify-bound-p26", stat.S_IFREG | 0o755,
         checker.read_bytes())
+    put("usr/libexec/air6/prepare-p44-state", stat.S_IFREG | 0o755,
+        p44_state.read_bytes())
     put("init", stat.S_IFREG | 0o755, script.read_bytes())
     result = bytearray()
     for ino, name in enumerate(sorted(entries), 1):

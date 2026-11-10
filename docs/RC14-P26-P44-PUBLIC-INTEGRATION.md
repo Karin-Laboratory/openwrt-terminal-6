@@ -32,10 +32,17 @@ without copying script standard output into a public build log. Failures never
 propagate to OpenWrt init. This is a development hook,
 not an isolation boundary against a malicious root user.
 
-The provisioner must separately initialize an empty p44 filesystem and must never
-erase an existing owner overlay or secrets. The hook is not responsible for
-initial overlay creation. Any p44 partition identity hardening, boot timing, hotplug
-tests and hardware verification remain **unproven**.
+The public first-stage initramfs first checks p44 as `ro,noload`, without journal
+replay. It accepts a recognized existing overlay unchanged. For a genuinely empty
+ext4 filesystem (allowing only an empty `lost+found`), it then remounts p44 read-write
+and creates only the required `upper/`, `work/`, `.fs_state -> 2`, and versioned
+readiness markers. It never runs `mkfs`, `fsck`, truncates, or removes data. An exact,
+recognized interrupted initialization can resume; any other non-empty or partial
+state fails closed. The first read-write ext4 mount may perform normal journal
+recovery if the filesystem needs it; that is distinct from formatting or an explicit
+repair utility. The hook is not responsible for p44 formatting. Any p44 partition
+identity hardening, boot timing, hotplug tests and hardware verification remain
+**unproven**.
 
 ## P26 independent post-production attestation
 

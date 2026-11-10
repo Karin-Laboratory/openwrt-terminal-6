@@ -305,7 +305,7 @@
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "675192388f3be7086638e19cd71f8e409fbd0971",
+      "git_blob_sha1": "3f42e987e3e481c0af35fcace6e6ea7ea6a1385d",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -332,7 +332,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "a5501ee7cde0eb5d6a2eb5b2fdccf6029944dad9",
+      "git_blob_sha1": "0c715d8d358e5235cb5f4f4a24f68414c47dd628",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -472,6 +472,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_prepare_p44_state.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3f6035c63e1e73a1481b0a585768c43273d0b7b0",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_procd_image_stage.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -485,7 +494,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "b76f662a19fee98dea9d728eadc46414c37ee733",
+      "git_blob_sha1": "5bddceb5cd8d7377bd95a63271851e935d9ae34d",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -638,7 +647,7 @@
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "6de33c84149b141a0ef353910545bb8559d020d6",
+      "git_blob_sha1": "7d366a79982c19c7b68ca719eb89341fb2ec9993",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -648,6 +657,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "79b8dc5b641beabf2f9ec229aceceeb195e6009a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/prepare_p44_state.sh",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "fb2e2dffe33af819312ce1de8b984c500488967e",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -692,7 +710,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "28d630703a2d18b2656f1dd7868cf26ae0a5f329",
+      "git_blob_sha1": "68989cfe3e4e8c3699461134ed1b8a5937e57194",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -845,7 +863,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "c3d4c9f35cf4549a8a97c0a48dbb7eb69a501600",
+      "git_blob_sha1": "f74bf7e7d168ab32d42a928f873320c570b1f119",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },

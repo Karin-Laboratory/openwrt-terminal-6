@@ -44,6 +44,7 @@ class FirstStageTests(unittest.TestCase):
         self.assertIn(receipt["p26_sha256"].encode("ascii") +
                       b"  /dev/mmcblk0p26", archive)
         self.assertIn(b"usr/libexec/air6/verify-bound-p26", archive)
+        self.assertIn(b"usr/libexec/air6/prepare-p44-state", archive)
         self.assertIn(b"AIR6_FIRST_STAGE_P26_SHA_PASS", archive)
         self.assertIn(b"TRAILER!!!", archive)
         with self.assertRaisesRegex(ValueError, "OUTPUT"):

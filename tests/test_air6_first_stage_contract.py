@@ -6,11 +6,12 @@ import unittest
 
 FIRST = Path(__file__).resolve().parents[1] / "tools/boot/air6_first_stage.sh"
 CHECKER = FIRST.with_name("verify_bound_p26.sh")
+P44_STATE = FIRST.with_name("prepare_p44_state.sh")
 
 
 class FirstStageContractTests(unittest.TestCase):
     def test_shell_syntax(self):
-        for file in (FIRST, CHECKER):
+        for file in (FIRST, CHECKER, P44_STATE):
             subprocess.run(["sh", "-n", str(file)], check=True, timeout=10)
 
     def test_boot_gates_order_and_fail_closed(self):
@@ -22,10 +23,10 @@ class FirstStageContractTests(unittest.TestCase):
             "/usr/libexec/air6/verify-bound-p26",
             "mount -t squashfs -o ro",
             "mount -t ext4 -o ro,noload",
-            "grep -Fxq 'SBA6D_ROOTFS_DATA_V1'",
-            '[ "$(readlink /mnt/air6/check/.fs_state)" = 2 ]',
+            "/usr/libexec/air6/prepare-p44-state /mnt/air6/check check",
             "umount /mnt/air6/check",
             "mount -t ext4 -o rw,noatime,nosuid,nodev",
+            "/usr/libexec/air6/prepare-p44-state /mnt/air6/rw init",
             "mount -t overlay overlay -o lowerdir=",
             "mount -t squashfs -o ro",
             "exec /sbin/switch_root"
@@ -43,8 +44,14 @@ class FirstStageContractTests(unittest.TestCase):
                            "dd if=", "wipefs", "parted ", "sfdisk "):
             self.assertNotIn(disallowed, text)
         self.assertIn("mount -t ext4 -o ro,noload", text)
-        self.assertNotIn("mkdir -p /mnt/air6/rw/upper", text)
-        self.assertNotIn("mkdir -p /mnt/air6/rw/work", text)
+        helper = (FIRST.parent / "prepare_p44_state.sh").read_text()
+        for disallowed in ("mkfs", "mke2fs", "e2fsck", "resize2fs",
+                           "dd if=", "wipefs", "parted ", "sfdisk ",
+                           "rm -rf", "rm -r "):
+            self.assertNotIn(disallowed, helper)
+        self.assertIn("AIR6_P44_EMPTY_EXT4_INITIALIZED", helper)
+        self.assertIn("AIR6_P44_EXISTING_STATE_PRESERVED", helper)
+        self.assertIn("AIR6_P44_INIT_IN_PROGRESS_V1", helper)
 
 
 if __name__ == "__main__":

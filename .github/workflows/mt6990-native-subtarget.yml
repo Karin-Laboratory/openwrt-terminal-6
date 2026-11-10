@@ -14,6 +14,15 @@ on:
       - tools/build/verify_p26_independent.py
       - tests/test_pack_p26_rootfs.py
       - tests/test_verify_p26_independent.py
+      - tests/test_air6_first_stage_contract.py
+      - tests/test_build_air6_first_stage.py
+      - tests/test_prepare_p44_state.py
+      - tests/test_publication_gate.py
+      - tools/security/check_publication.py
+      - tools/boot/air6_first_stage.sh
+      - tools/boot/prepare_p44_state.sh
+      - tools/boot/verify_bound_p26.sh
+      - tools/build/build_air6_first_stage.py
       - config/source-catalog.json
       - .github/workflows/mt6990-native-subtarget.yml
 permissions:
@@ -31,7 +40,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests -p 'test_mt6990_native_subtarget.py' -v
+          python3 -m unittest discover -s tests -p 'test_air6_first_stage_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_build_air6_first_stage.py' -v
+          python3 -m unittest discover -s tests -p 'test_prepare_p44_state.py' -v
+          python3 -m unittest discover -s tests -p 'test_publication_gate.py' -v
           python3 tools/build/verify_source_catalog.py
+          python3 tools/security/check_publication.py
       - name: Pin clean upstream OpenWrt and register noninstallable target
         shell: bash
         run: |
@@ -84,7 +98,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
       - name: Build pinned native MT6990 userspace package closure

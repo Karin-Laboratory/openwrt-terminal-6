@@ -117,10 +117,16 @@ initramfs, RC14 shell code, OEM DTB or vendor blob in this new source.
 The new `/init` is an experimental, fail-closed handoff:
 1. Mount proc/sys/dev, check A slot and expected block devices.
 2. Validate complete P26 SHA-256 before attempting P44 RW access.
-3. Mount P26 SquashFS read-only, and check pre-existing P44 ext4 with
-   `ro,noload`: marker text, `upper`/`work` directories and `.fs_state`
-   symlink. No formatting, partitioning, repair or provisioning.
-4. Only after the read-only gate, mount P44 RW, construct overlay lower/upper
+3. Mount P26 SquashFS read-only, and check P44 ext4 with `ro,noload` to avoid
+   journal replay during inspection. A recognized existing overlay is accepted
+   unchanged. A truly empty filesystem (apart from an empty `lost+found`) is
+   distinguished from unknown or partial content.
+4. Only after that read-only gate, mount P44 RW. For an empty filesystem, create
+   only `upper/`, `work/`, `.fs_state -> 2`, and versioned markers. The helper
+   never formats, runs fsck, truncates, or deletes. A narrowly recognized
+   interrupted initialization may resume; other partial states stop. The RW ext4
+   mount itself can perform the filesystem's normal journal recovery if needed.
+   Existing recognized overlay data is preserved. Then construct overlay lower/upper
    and work, expose `/rom` and `/overlay`, then `switch_root` to
    P26's `/sbin/init`.
 
