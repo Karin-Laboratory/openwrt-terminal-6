@@ -16,6 +16,8 @@ import stat
 
 ROOT = Path(__file__).resolve().parents[2]
 BOOT_SCRIPT = ROOT / "scripts/air6-p26-p44-init.sh"
+MANAGEMENT_REL = "usr/libexec/sba6d/rc14-management.sh"
+MANAGEMENT_SOURCE = ROOT / "config/sbat6-stage" / MANAGEMENT_REL
 NEWC_SCRIPT = ROOT / "scripts/build-minimal-arm64-initramfs.py"
 PARTITION_BYTES = 134_217_728
 MAX_ARCHIVE = 256 * 1024 * 1024
@@ -67,6 +69,18 @@ def package(rootfs, p26_file, p26_receipt, cpio_path, receipt_path,
                 "DROPBEAR_AUTO_START")
     require(boot_mode in ("ram-experimental", "p44-required"),
             "UNKNOWN_BOOT_MODE")
+    management_hash = None
+    if boot_mode == "p44-required":
+        candidate = rootfs / MANAGEMENT_REL
+        require(candidate.is_file() and not candidate.is_symlink(),
+                "P26_MANAGEMENT_ENTRY_MISSING")
+        require(all(not (rootfs / Path(*Path(MANAGEMENT_REL).parts[:i])).is_symlink()
+                    for i in range(1, len(Path(MANAGEMENT_REL).parts))),
+                "P26_MANAGEMENT_PARENT_SYMLINK")
+        require(candidate.read_bytes() == MANAGEMENT_SOURCE.read_bytes() and
+                stat.S_IMODE(candidate.stat().st_mode) == 0o755,
+                "P26_MANAGEMENT_SOURCE_MISMATCH")
+        management_hash = hashlib.sha256(candidate.read_bytes()).hexdigest()
     source = BOOT_SCRIPT.read_bytes()
     marker = b"BOOT_MODE='ram-experimental'"
     require(source.count(marker) == 1, "BOOT_MODE_TEMPLATE_IDENTITY")
@@ -116,6 +130,9 @@ def package(rootfs, p26_file, p26_receipt, cpio_path, receipt_path,
         "p44_required": boot_mode == "p44-required",
         "p44_identity_gate": "EXT4_RO_NOLOAD_MARKER_FS_STATE_UPPER_WORK",
         "p44_owner_secret_embedded": False,
+        "management_entry": MANAGEMENT_REL if boot_mode == "p44-required" else None,
+        "management_sha256": management_hash,
+        "management_autostart": False,
         "p26_bytes": PARTITION_BYTES,
         "p26_sha256": record["p26_sha256"],
         "cpio_bytes": len(out), "cpio_sha256": digest,
