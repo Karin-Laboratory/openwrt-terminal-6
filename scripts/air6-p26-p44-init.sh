@@ -45,6 +45,9 @@ mkdir -p /proc /sys /dev "$ROM" "$NEWROOT" ||
 mount -t proc proc /proc || halt_boot PROC_MOUNT
 mount -t sysfs sysfs /sys || halt_boot SYS_MOUNT
 mount -t devtmpfs devtmpfs /dev || halt_boot DEV_MOUNT
+# Private RC13/14 ran exclusively from A. Never mount A's P26/P44 from a
+# stock-B boot or any ambiguous kernel command line.
+grep -qw 'bootslot=a' /proc/cmdline || halt_boot NOT_SLOT_A
 
 # RC15 research portability path: locate both partitions by GPT PARTNAME
 # rather than inheriting one C-unit's eMMC numbering. Reject duplicates
@@ -52,6 +55,7 @@ mount -t devtmpfs devtmpfs /dev || halt_boot DEV_MOUNT
 if [ "$BOOT_MODE" = p44-required ]; then
     found_p26=
     found_p44=
+    found_userdata=
     for entry in /sys/class/block/mmcblk*p*/uevent; do
         [ -f "$entry" ] || continue
         device="${entry%/uevent}"
@@ -65,13 +69,40 @@ if [ "$BOOT_MODE" = p44-required ]; then
             [ -z "$found_p44" ] || halt_boot P44_DUPLICATE_GPT_PARTNAME
             found_p44="/dev/$device"
         fi
+        if grep -qx 'PARTNAME=user_data' "$entry"; then
+            [ -z "$found_userdata" ] || halt_boot USER_DATA_DUPLICATE_GPT_PARTNAME
+            found_userdata="/dev/$device"
+        fi
     done
-    [ -n "$found_p26" ] && [ -n "$found_p44" ] ||
+    [ -n "$found_p26" ] && [ -n "$found_p44" ] &&
+        [ -n "$found_userdata" ] ||
         halt_boot REQUIRED_GPT_PARTITIONS_NOT_FOUND
     p26_disk="${found_p26%p[0-9]*}"
     p44_disk="${found_p44%p[0-9]*}"
-    [ -n "$p26_disk" ] && [ "$p26_disk" = "$p44_disk" ] ||
+    userdata_disk="${found_userdata%p[0-9]*}"
+    [ -n "$p26_disk" ] && [ "$p26_disk" = "$p44_disk" ] &&
+        [ "$p26_disk" = "$userdata_disk" ] ||
         halt_boot REQUIRED_GPT_CROSS_DISK
+    # RC13 verified a preserved, preceding user_data partition. Use
+    # observed partition-table geometry rather than C-unit sector constants.
+    [ -b "$found_userdata" ] || halt_boot USER_DATA_NOT_BLOCK
+    p44_name="${found_p44##*/}"
+    userdata_name="${found_userdata##*/}"
+    read -r p44_start < "/sys/class/block/$p44_name/start" ||
+        halt_boot P44_START_UNREADABLE
+    read -r p44_sectors < "/sys/class/block/$p44_name/size" ||
+        halt_boot P44_SIZE_UNREADABLE
+    read -r userdata_start < "/sys/class/block/$userdata_name/start" ||
+        halt_boot USER_DATA_START_UNREADABLE
+    read -r userdata_sectors < "/sys/class/block/$userdata_name/size" ||
+        halt_boot USER_DATA_SIZE_UNREADABLE
+    for count in "$p44_start" "$p44_sectors" "$userdata_start" "$userdata_sectors"; do
+        case "$count" in ''|*[!0-9]*) halt_boot PARTITION_GEOMETRY_INVALID ;; esac
+    done
+    [ "$p44_sectors" -gt 0 ] && [ "$userdata_sectors" -gt 0 ] ||
+        halt_boot EMPTY_PARTITION_GEOMETRY
+    [ "$p44_start" -ge "$((userdata_start + userdata_sectors))" ] ||
+        halt_boot P44_OVERLAPS_USER_DATA
     P26="$found_p26"
     P44="$found_p44"
 fi
