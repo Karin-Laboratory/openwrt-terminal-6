@@ -57,6 +57,16 @@ def git(*args: str) -> bytes:
         stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).stdout
 
+# The documented PUBLIC_DEFAULT_LAN profile uses 192.168.1.1.
+# Permit only that non-secret address in these two independently authored
+# source/test paths. Do not relax any other private endpoint or credential.
+PUBLIC_LAN_PROFILE_PATHS = frozenset({
+    "config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh",
+    "tests/test_public_rc14_management.py",
+})
+PUBLIC_LAN_PROFILE_ADDRESS = b"192.168.1.1"
+
+
 def scan(path: str, payload: bytes, findings: set) -> None:
     item = PurePosixPath(path)
     if item.name.lower() in BLOCK_FILES or item.suffix.lower() in BLOCK_EXT:
@@ -68,7 +78,11 @@ def scan(path: str, payload: bytes, findings: set) -> None:
         findings.add((path, "binary content requires manual inspection"))
         return
     for category, pattern in RULES.items():
-        if pattern.search(payload):
+        if category == "private network endpoint" and path in PUBLIC_LAN_PROFILE_PATHS:
+            if any(m.group(0) != PUBLIC_LAN_PROFILE_ADDRESS
+                   for m in pattern.finditer(payload)):
+                findings.add((path, category))
+        elif pattern.search(payload):
             findings.add((path, category))
 
 def safe_path_label(path_raw: bytes, findings: set) -> str:
