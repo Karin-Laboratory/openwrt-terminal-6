@@ -110,12 +110,13 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn("--cap-drop ALL --security-opt no-new-privileges", workflow)
 
     def test_qemu_busybox_explicit_argv0_and_fail_closed(self):
-        # QEMU linux-user normally supplies its own argv[0]. BusyBox then
-        # interprets that as an applet name and can return status 127.
+        # Every native target BusyBox invocation uses the same explicit
+        # absolute argv[0] so QEMU linux-user does not dispatch a fake applet.
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
-        self.assertEqual(workflow.count("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox"), 3)
-        self.assertNotIn("qemu-aarch64 -L /rootfs /rootfs/bin/busybox", workflow)
-        self.assertIn("BLOCKED_TARGET_BUSYBOX_QEMU_ARGV0_OR_APPLET_DISPATCH", workflow)
+        command = "qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox"
+        self.assertEqual(workflow.count(command), 4)
+        self.assertNotIn("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox", workflow)
+        self.assertIn("BLOCKED_TARGET_BUSYBOX_QEMU_APPLET_LIST_EXECUTION", workflow)
         self.assertIn("--network none --read-only", workflow)
         self.assertIn("--cap-drop ALL --security-opt no-new-privileges", workflow)
 
