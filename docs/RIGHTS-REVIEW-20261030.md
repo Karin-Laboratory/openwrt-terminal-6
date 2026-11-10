@@ -8,7 +8,7 @@
 ## Verified inventory facts (catalog refreshed 2026-11-10)
 
 - `config/source-catalog.json` currently contains **104** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
-- The clean Public repository is already visible. GitHub-hosted CI has passed the source-only tests and reachable-history scanner, but this is narrower than complete publication/right-to-redistribute and sensitive artifact reviews.
+- The clean Public repository is already visible. An older GitHub-hosted CI checkpoint passed source-only tests and reachable-history scanning. **This does not describe the current PR:** at commit `73ff119e` the source preflight failed on six patterns in older reachable commits, while the native package workflow succeeded. History-remediation and source-identity tests are independent of any later successful P25/P26 host test. Do not disable or bypass the scanner; do not publish the flagged values.
 - **Public distribution remains source-only**; unsigned p25/p26 image construction in private or ephemeral CI is the current goal. Signed/installable releases, vendor radio/EEPROM materials, signing and device operations remain outside routine public distribution.
 
 ## Inventory by declared origin/license (not legal conclusions)
