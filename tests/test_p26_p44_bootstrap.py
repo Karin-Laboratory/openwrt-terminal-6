@@ -114,6 +114,12 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS", workflow)
         self.assertIn("gzip -dc \"$work/air6-p26-aware-Image.gz\" | cmp - \"$alternate_image\"", workflow)
         self.assertIn("PUBLIC_MT6990_ALTERNATIVE_IMAGE_GZIP_IDENTITY_PASS", workflow)
+        self.assertIn("PUBLIC_MT6990_P26_AWARE_P25_INFLATED_IMAGE_IDENTITY_PASS", workflow)
+        self.assertIn('size == kernel["inflated_bytes"]', workflow)
+        self.assertIn('h.hexdigest() == kernel["inflated_sha256"]', workflow)
+        self.assertLess(workflow.index("PUBLIC_MT6990_ALTERNATIVE_IMAGE_GZIP_IDENTITY_PASS"),
+                        workflow.index("PUBLIC_MT6990_P26_AWARE_P25_INFLATED_IMAGE_IDENTITY_PASS"))
+
         self.assertIn("--output \"$work/p25-p26-aware-research-unsigned.img\"", workflow)
         self.assertIn("--kernel \"$work/air6-p26-aware-Image.gz\"", workflow)
         self.assertIn("--p25-receipt \"$work/p25-p26-aware-research.json\"", workflow)
