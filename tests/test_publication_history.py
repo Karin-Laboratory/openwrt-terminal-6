@@ -171,6 +171,38 @@ class HistoryScannerTests(unittest.TestCase):
                             for path, category in issues), issues)
         self.assertNotIn(fake_name, repr(issues))
 
+
+    def test_object_ids_track_multiple_historical_versions(self):
+        p = self.root / "audit.txt"
+        first = "192" + ".168.21.31"
+        second = "192" + ".168.21.32"
+        expected = set()
+        for value in (first, second):
+            p.write_text(value + "\n")
+            self.commit("synthetic endpoint")
+            sha = subprocess.check_output(
+                ["git", "rev-parse", "HEAD:audit.txt"], cwd=self.root
+            ).decode().strip()
+            expected.add((sha, "private network endpoint"))
+        issues, objects = set(), set()
+        gate.history_findings(issues, objects)
+        self.assertTrue(expected.issubset(objects))
+        self.assertNotIn(first, repr(objects))
+        self.assertNotIn(second, repr(objects))
+
+    def test_object_ids_track_restricted_alias(self):
+        payload = b"harmless shared blob\n"
+        (self.root / "normal.txt").write_bytes(payload)
+        self.commit("safe alias")
+        (self.root / "restricted.img").write_bytes(payload)
+        self.commit("restricted alias")
+        sha = subprocess.check_output(
+            ["git", "rev-parse", "HEAD:restricted.img"], cwd=self.root
+        ).decode().strip()
+        issues, objects = set(), set()
+        gate.history_findings(issues, objects)
+        self.assertIn((sha, "restricted artifact filename/type"), objects)
+
     def test_benign_history_stays_clean(self):
         (self.root / "first.txt").write_text("hello\n")
         self.commit("first safe document")
