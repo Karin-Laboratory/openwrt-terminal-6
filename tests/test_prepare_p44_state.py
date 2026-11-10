@@ -101,6 +101,40 @@ class P44StateTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(tree_digest(self.root), before)
 
+    def test_marker_requires_exact_single_line_and_never_mutates_owner_data(self):
+        marker = self.root / ".sba6d-rootfs-data-v1"
+        (self.root / "upper").mkdir()
+        (self.root / "work").mkdir()
+        (self.root / ".fs_state").symlink_to("2")
+        for value in (
+            "prefixSBA6D_ROOTFS_DATA_V1\n",
+            "SBA6D_ROOTFS_DATA_V1suffix\n",
+            "SBA6D_ROOTFS_DATA_V1\nSBA6D_ROOTFS_DATA_V1\n",
+            "SBA6D_ROOTFS_DATA_V1\nunexpected\n",
+        ):
+            with self.subTest(value=value):
+                marker.write_text(value)
+                before = tree_digest(self.root)
+                for action in ("check", "init"):
+                    result = run(self.root, action)
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
+                    self.assertEqual(tree_digest(self.root), before)
+
+    def test_transaction_marker_requires_exact_single_line(self):
+        marker = self.root / ".air6-p44-init-v1"
+        for value in (
+            "prefixAIR6_P44_INIT_IN_PROGRESS_V1\n",
+            "AIR6_P44_INIT_IN_PROGRESS_V1suffix\n",
+            "AIR6_P44_INIT_IN_PROGRESS_V1\nAIR6_P44_INIT_IN_PROGRESS_V1\n",
+        ):
+            with self.subTest(value=value):
+                marker.write_text(value)
+                before = tree_digest(self.root)
+                for action in ("check", "init"):
+                    result = run(self.root, action)
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
+                    self.assertEqual(tree_digest(self.root), before)
+
     def test_symlinked_partition_mountpoint_is_rejected(self):
         link = self.root.parent / "p44-link"
         link.symlink_to(self.root, target_is_directory=True)

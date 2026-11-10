@@ -40,8 +40,8 @@ has_exact_line() {
     exact_file=$1
     exact_expected=$2
     [ -f "$exact_file" ] && [ ! -L "$exact_file" ] || return 1
-    [ "$(grep -Fc "$exact_expected" "$exact_file" 2>/dev/null || :)" = 1 ] || return 1
-    ! grep -Fv "$exact_expected" "$exact_file" >/dev/null 2>&1
+    [ "$(grep -Fxc "$exact_expected" "$exact_file" 2>/dev/null || :)" = 1 ] || return 1
+    ! grep -Fxv "$exact_expected" "$exact_file" >/dev/null 2>&1
 }
 
 is_ready() {
