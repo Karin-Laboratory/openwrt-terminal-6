@@ -877,6 +877,11 @@ jobs:
           # legacy QEMU procd initramfs, so it cannot test this boot path.
           # Retain synthetic addresses: this is NOT signer/LK-ready.
           gzip -n -c "$alternate_image" > "$work/air6-p26-aware-Image.gz"
+          # Independently prove the exact alternate Image is what the
+          # research P25 kernel gzip contains, not an older QEMU Image.
+          gzip -t "$work/air6-p26-aware-Image.gz"
+          gzip -dc "$work/air6-p26-aware-Image.gz" | cmp - "$alternate_image"
+          echo 'PUBLIC_MT6990_ALTERNATIVE_IMAGE_GZIP_IDENTITY_PASS'
           python3 "$GITHUB_WORKSPACE/tools/build/pack_p25_boot_v2.py" \
             --kernel "$work/air6-p26-aware-Image.gz" \
             --dtb "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb" \
