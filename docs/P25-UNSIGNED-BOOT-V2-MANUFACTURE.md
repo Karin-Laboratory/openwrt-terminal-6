@@ -1,164 +1,70 @@
-# Public, unsigned p25 boot-v2 manufacture
+# Public unsigned P25 boot-v2 manufacture
 
-This is an **independently authored** host-side assembler based on the public Android
-boot-image v2 specification:
-https://source.android.com/docs/core/architecture/bootloader/boot-image-header
+This independently authored packer emits a fixed 32 MiB unsigned P25-shaped image. It performs no signing, flashing, boot-control changes, or device operations. Layout validation is not a boot-compatibility claim.
 
-## Actual tool
+## Evidence and profile boundary
 
-`tools/boot/pack_p25_unsigned_v2.py` builds a precisely 33,554,432-byte unsigned
-`boot_a` candidate (p25) with 4 KiB aligned header, gzip kernel, ramdisk
-and FDT DTB; records SHA-256 receipt and a noncryptographic boot-image
-SHA-1 ID. It does not sign, flash, change boot control or use OEM files.
+The private RC14 manufacturing record describes a built-in initramfs in the Linux kernel and a zero-length external ramdisk in the boot header. Its later runtime records report C-unit Slot A running Linux 6.18.44 with P26/P44 mounted, and owner-performed recovery/reboot checks. An earlier cold-boot record reports fallback to Slot B, so the evidence is not a clean, single-pass cold-boot success. Those records concern a private build and are not proof that this public source build boots.
+
+The sanitized RC14 header observation is: Android magic, header version 2, page size 2048, OS version field `0x00020000`, board name `mt6990`, external ramdisk size 0, second-stage size 0, header size 1660, DTB section size 148829, and cmdline `bootopt=64S3,32N2,64N2 init_debug=4`. Observed address fields were kernel=0, tags=0, ramdisk=`0x01000000`, second=`0x00f00000`, and DTB=`0x01f00000`. Treat these as observed bytes from that RC14 image; they do not by themselves establish runtime physical placement or applicability to a different kernel/DTB.
+
+The private image has a 64-byte opaque prefix before the FDT in its DTB section. Its semantics and lawful redistribution status are not established. No prefix bytes or hash from the private image are included here. A public manufacture invocation must provide an independently approved, locally held prefix and its SHA-256 in the explicit configuration. Without that exact input, the public P25 gate stops.
+
+AOSP's generic v2 specification describes nonempty kernel, ramdisk, and DTB sections and page-aligned section layout ([boot image header](https://source.android.com/docs/core/architecture/bootloader/boot-image-header), [AOSP header definition](https://android.googlesource.com/platform/system/tools/mkbootimg/+/refs/heads/master/include/bootimg/bootimg.h)). The observed RC14 zero external ramdisk is therefore a vendor/LK-specific profile, not a generic AOSP-conformant profile. This repository labels it `kernel_embedded` and requires the empty external ramdisk explicitly; it does not imply that an arbitrary LK accepts that profile.
+
+## Inputs and command
+
+The config is an exact JSON object with these keys:
+
+```json
+{
+  "kernel_addr": "0x0",
+  "ramdisk_addr": "0x01000000",
+  "second_addr": "0x00f00000",
+  "tags_addr": "0x0",
+  "dtb_addr": "0x01f00000",
+  "page_size": 2048,
+  "os_version": 131072,
+  "name": "mt6990",
+  "cmdline": "bootopt=64S3,32N2,64N2 init_debug=4",
+  "ramdisk_mode": "kernel_embedded",
+  "dtb_prefix_bytes": 64,
+  "dtb_prefix_sha256": "<approved-local-input-sha256>"
+}
+```
+
+The values shown reflect the sanitized RC14 observation. They are **not a validated configuration for the public kernel or board DTB**. Do not use this example as a manufacturing approval. The prefix digest placeholder is intentionally not an input value.
 
 ```sh
 python3 tools/boot/pack_p25_unsigned_v2.py \
   --kernel /private/build/Image.gz \
-  --ramdisk /private/build/initramfs.cpio.gz \
+  --ramdisk /private/build/empty-ramdisk \
   --dtb /private/build/board.dtb \
-  --config /private/build/boot-v2-addresses.json \
-  --output /private/build/unsigned-boot_a.p25
+  --dtb-prefix /private/approved/dtb-section-prefix \
+  --config /private/validated/boot-v2-config.json \
+  --output /private/build/unsigned-p25.img
 ```
 
-The caller must supply exactly `kernel_addr`, `ramdisk_addr`, `tags_addr`,
-`dtb_addr`, `name` and `cmdline` in JSON. Numeric addresses are strings
-(e.g. `"0x40080000"`); no device-specific values or confidential boot
-parameters are provided by this repository. All supplied input files must
-be lawfully sourced, independently built and checked before use.
+The packer checks the gzip stream and that its decompressed bytes are an ARM64 Image, validates the FDT header/total size, config schema, prefix length/hash, section sizes/alignment/bounds, 32 MiB output and zero tail. `tools/boot/verify_p25_independent.py` independently reads the complete output back and checks the header, configuration, sections, prefix, boot ID and padding.
 
-The producer validates gzip framing and decompression, FDT header and total
-length, nonempty components, output size and load-address shape. The independent
-full-byte verifier now requires the **same explicit configuration** and checks
-kernel/ramdisk/tags/DTB addresses, board name, the entire 1535-byte command
-line, OS-version field, section bytes and zero padding. The verifier refuses
-altered boot arguments even when section hashes still match. Synthetic tests
-also corrupt the header and mutate config after manufacture. This is a byte
-layout check, not confirmation the private RC14 LK accepts these values.
+## Embedded initramfs check
 
+The native kernel build links the first-stage CPIO into `usr/initramfs_data.o` and `vmlinux`. `tools/boot/verify_kernel_initramfs.py` verifies the exact compressed `.init.ramfs` section in both ELF files, decompresses it to the expected CPIO, checks that the section occurs once in the ARM64 Image, and confirms the supplied gzip kernel decodes byte-for-byte to that Image. This proves source-build linkage and input identity, not that LK inflates or executes it on hardware.
 
-## Native source-built handoff (2026-11-10)
+## Same-run P25/P26 gate and CI
 
-The native MT6990 package-build workflow now prepares three actual build inputs
-after compiling the same kernel with the procd PID1 initramfs embedded:
-`air6-native-Image.gz`, `air6-native-initramfs.cpio.gz`, and
-`mt6990-air-terminal-6.dtb`. Compression uses `gzip -n -9` with no
-source filename/timestamp; the job checks gzip integrity and prints SHA-256.
+A matching same-run P25/P26 pair receipt is generated only if the caller provides both `SBAT6_P25_BOOT_V2_CONFIG` and `SBAT6_P25_DTB_SECTION_PREFIX` as validated local inputs. Neither is committed or stored as a repository secret. CI does not upload images, receipts containing private values, or firmware artifacts. If either input is absent, CI records an explicit P25 block reason and emits no P25 or pair receipt; P26 manufacture/readback is independent.
 
-The workflow intentionally does not invent a kernel load address or boot
-command line. Without `SBAT6_P25_BOOT_V2_CONFIG`, it emits
-`P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE` and produces
-no candidate p25. If an independently validated configuration file is available
-to an isolated local/owner-controlled run, the same native inputs are passed
-through the unsigned v2 assembler and **independent** full-32MiB verifier.
-The public hosted job does not configure signing or upload the resulting image.
+The pair verifier checks the full 32 MiB P25 and 128 MiB P26 identities, producer and independent P26 readback receipts, exact P26 SHA-256 embedded in the verified CPIO, and the CPIO linkage to the built kernel. The receipt is an unsigned byte-identity result only.
 
-A native source-built Image with an embedded initramfs **and** a separate
-ramdisk is an experimental handoff, not confirmation of the precise RC14 boot
-protocol. The signed vendor-specific header extensions, LK inflate format
-acceptance, real memory map, init transition and Air6 DTB compatibility must be
-proven separately. Do not treat the synthetic layout gate as an RC14 boot
-reproduction.
+`tests/test_p44_real_ext4.sh` exercises P44 state logic on newly created temporary ext4 image files. It checks empty initialization, preservation of a recognized overlay, resume of the exact recognized interrupted state, unchanged stop on unknown data, remount persistence, and inert behavior of the optional late extension hook without an enable marker. It does not touch any physical partition. This root-only integration test is run locally, not from GitHub Actions, because the repository's workflow policy disallows privileged shell steps. It requires e2fsprogs, loop mounts and a private mount namespace; it refuses to run the disabled-hook test if host `/overlay` already exists or is mounted.
 
-## Same-run unsigned P25/P26 pair identity
+## Remaining gates
 
-Once the real native P26 has passed independent 128 MiB extracted-tree readback,
-and ONLY if independently validated owner-private boot-v2 address/config is
-provided, the native job now builds an unsigned P25 and invokes
-`tools/build/verify_unsigned_pair.py`. This tool independently rechecks P25
-kernel/ramdisk/DTB, full 32 MiB layout and command-line/config identity,
-rehashes the actual 128 MiB P26, and compares that hash with **both** the
-P26 producer receipt and its separate independently verified readback
-attestation. It requires matching SquashFS metadata and producer receipt
-identity, then creates one exclusive-creation pair receipt.
+- The sanitized RC14 header observations do not validate addresses/cmdline against the separately built public kernel and DTB.
+- The opaque DTB-section prefix must be sourced/authorized and independently validated by the image owner; it is not present in this repository.
+- Public board DTB compatibility, LK parsing/inflate acceptance, real memory placement and first-stage execution remain unproven.
+- No public P25 candidate or P25/P26 pair can be manufactured until the validated configuration and prefix inputs are supplied to an owner-controlled run.
+- No signing, physical boot, distribution-rights approval or device installation is performed here.
 
-The resulting `UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED` means the two candidate
-images have consistent byte identity within the same native job, **not** that
-either is signed, fits the device's proprietary boot extension, boots the Air6,
-or has cleared distribution rights. Without an explicit accepted P25 config
-the pair step is skipped/blocked, not silently represented by synthetic inputs.
-
-## RC14-derived complete-P26 SHA binding (2026-11-10)
-
-The private RC14 build evidence shows a critical dependency not covered by
-standalone Android boot-v2 header packing: its first-stage initramfs was
-regenerated to carry the **complete 128 MiB P26 SHA-256**. RC14 did not reuse
-an earlier signed P25 after changing P26. This is an independently recorded
-architectural observation, **not** imported private source or binary data.
-
-The public native job now injects `etc/air6/p26.sha256` into the actual
-procd initramfs from the exact newly manufactured P26 image, before the
-kernel is rebuilt with `CONFIG_INITRAMFS_SOURCE`. The embedded file is a
-`sha256sum -c`-compatible hash record referring to the P26 block device,
-and a host-side check rejects missing/ambiguous SHA content. The final
-independent unsigned-pair gate checks this same hash appears in the embedded
-CPIO as well as the P26 producer and independent-readback receipts.
-
-An independently authored full-P26 runtime checker
-(`tools/boot/verify_bound_p26.sh`) is now also staged into the native
-initramfs at `/usr/libexec/air6/verify-bound-p26`. It verifies a strict
-hash record against the entire P26 device, fails closed on mismatch, missing
-inputs or symlinked paths, and has host-only dynamic regression tests.
-It never writes to the P26 device.
-
-The earlier standalone procd test CPIO does not invoke this checker.
-The separate experimental first-stage CPIO described below now does; the
-full device boot path has not been tested. P44's late optional extension
-runner remains independent.
-
-## Source-built RC14-style first-stage path (experimental)
-
-The public build now separately creates a **minimal AArch64 first-stage CPIO**
-with `tools/build/build_air6_first_stage.py`, using the native OpenWrt
-BusyBox + associated musl runtime, independently authored
-`tools/boot/air6_first_stage.sh` as `/init`, the standalone full-P26
-SHA checker and a fresh hash of the **same native P26**. There is no private
-initramfs, RC14 shell code, OEM DTB or vendor blob in this new source.
-
-The new `/init` is an experimental, fail-closed handoff:
-1. Mount proc/sys/dev, check A slot and expected block devices.
-2. Validate complete P26 SHA-256 before attempting P44 RW access.
-3. Mount P26 SquashFS read-only, and check P44 ext4 with `ro,noload` to avoid
-   journal replay during inspection. A recognized existing overlay is accepted
-   unchanged. A truly empty filesystem (apart from an empty `lost+found`) is
-   distinguished from unknown or partial content.
-4. Only after that read-only gate, mount P44 RW. For an empty filesystem, create
-   only `upper/`, `work/`, `.fs_state -> 2`, and versioned markers. The helper
-   never formats, runs fsck, truncates, or deletes. A narrowly recognized
-   interrupted initialization may resume; other partial states stop. The RW ext4
-   mount itself can perform the filesystem's normal journal recovery if needed.
-   Existing recognized overlay data is preserved. Then construct overlay lower/upper
-   and work, expose `/rom` and `/overlay`, then `switch_root` to
-   P26's `/sbin/init`.
-
-The native job now **keeps its existing procd/QEMU smoke Image separate**.
-After that test it builds a second MT6990 Image using the above first-stage
-CPIO. It explicitly requires kernel built-ins for ext4, SquashFS XZ,
-overlayfs and MMC block (no late module-loading dependency). A caller-supplied
-validated boot-v2 header config is still required for final unsigned P25
-packing and same-run P25/P26 pair identity confirmation.
-
-Safety tests cover CPIO creation, missing/modified P26 input, non-AArch64
-BusyBox, unsafe loader symlinks, first-stage shell syntax and SHA-before-P44
-ordering. These host tests **cannot** prove target BusyBox applet availability,
-MT6990 storage driver bring-up, DTB/LK compatibility or hardware boot. The
-public P26 still lacks RC14's optional UART shell mode, and its network/SSH
-startup is not verified. Neither image is approved for physical flashing.
-
-## Acceptance still pending
-
-1. An independently verified public-source ARM64 kernel, correct C-unit DTB
-   and real OpenWrt initramfs, plus verified build receipts.
-2. Observed RC14-compatible load addresses, boot arguments and vendor-specific
-   kernel/DTB ABI, obtained through lawful documented observations.
-3. Independent parser/readback of all 32 MiB, zero padding, section offsets,
-   hashes, config-provided boot addresses/cmdline and output identity on the
-   exact manufactured candidate.
-4. LK parsing and **physical** A-slot boot validation. Android v2 structure alone
-   does not establish Air6 LK acceptance, successful inflate, init/PID1 or network.
-5. A matching p26 rootfs with independently checked full 128 MiB byte layout.
-
-P25 is **not** a signed, tested or deployable Air Terminal 6 image at this stage.
-Neither a synthetic unit-test PASS nor a source-built candidate is a boot claim.
-
-Provenance: MIT independently authored assembly and tests. Android's format
-description is used as an interface specification, not copied source code.
+A P26 source build/readback, a P25 byte-layout check, and an actual Air Terminal 6 boot are separate claims and must be reported separately.

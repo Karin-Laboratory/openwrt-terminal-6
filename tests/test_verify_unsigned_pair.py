@@ -24,12 +24,18 @@ class PairTests(unittest.TestCase):
         self.p25.write_bytes(b"boot-v2-test" + bytes(64 - len(b"boot-v2-test")))
         self.p26.write_bytes(b"hsqs-test" + bytes(128 - len(b"hsqs-test")))
         self.parts = [self.base / f for f in ("kernel", "ramdisk", "dtb", "cfg")]
-        for part in self.parts:
+        for part in self.parts[:3]:
             part.write_text("synthetic")
+        self.parts[3].write_text(json.dumps({"ramdisk_mode": "kernel_embedded"}))
         self.producer = self.base / "producer.json"
         self.independent = self.base / "independent.json"
         self.out = self.base / "pair.json"
         self.cpio = self.base / "initramfs.cpio"
+        self.initramfs_object = self.base / "initramfs_data.o"
+        self.vmlinux = self.base / "vmlinux"
+        self.image = self.base / "Image"
+        for path in (self.initramfs_object, self.vmlinux, self.image):
+            path.write_bytes(b"synthetic")
         self.cpio.write_bytes(b"newc" + pair.digest(self.p26).encode("ascii") +
                               b"  /dev/mmcblk0p26" + b"TRAILER!!!")
         self.producer.write_text(json.dumps({
@@ -61,10 +67,16 @@ class PairTests(unittest.TestCase):
     def fake_p25(self, *args):
         return {"partition_bytes": 64, "p25_sha256": pair.digest(self.p25)}
 
+    def fake_initramfs(self, *args):
+        return {"kernel_image_sha256": "a" * 64}
+
     def run_pair(self):
         return pair.verify_pair(self.p25, *self.parts, self.p26,
                                 self.producer, self.independent,
-                                self.cpio, self.out, self.fake_p25)
+                                self.cpio, self.initramfs_object,
+                                self.vmlinux, self.image, self.out,
+                                p25_verify=self.fake_p25,
+                                initramfs_verify=self.fake_initramfs)
 
     def test_pair_identity_pass_and_refuse_overwrite(self):
         evidence = self.run_pair()
@@ -105,9 +117,12 @@ class PairTests(unittest.TestCase):
     def test_p25_identity_rejected(self):
         with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
             pair.verify_pair(self.p25, *self.parts, self.p26, self.producer,
-                             self.independent, self.cpio, self.out,
-                             lambda *args: {"partition_bytes": 64,
-                                            "p25_sha256": "0" * 64})
+                             self.independent, self.cpio,
+                             self.initramfs_object, self.vmlinux, self.image,
+                             self.out,
+                             p25_verify=lambda *args: {"partition_bytes": 64,
+                                                       "p25_sha256": "0" * 64},
+                             initramfs_verify=self.fake_initramfs)
 
 
 if __name__ == "__main__":

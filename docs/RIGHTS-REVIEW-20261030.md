@@ -5,27 +5,27 @@
 
 **Issue #2, ongoing review. This document does not grant copyright, contributor authorization, secure disclosure clearance, or firmware redistribution permission.**
 
-## Verified inventory facts (catalog refreshed 2026-11-05)
+## Verified inventory facts (catalog refreshed 2026-11-10)
 
-- `config/source-catalog.json` currently contains **97** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
+- `config/source-catalog.json` currently contains **100** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
 - The clean Public repository is already visible. GitHub-hosted CI has passed the source-only tests and reachable-history scanner, but this is narrower than complete publication/right-to-redistribute and sensitive artifact reviews.
 - **Public distribution remains source-only**; unsigned p25/p26 image construction in private or ephemeral CI is the current goal. Signed/installable releases, vendor radio/EEPROM materials, signing and device operations remain outside routine public distribution.
 
 ## Inventory by declared origin/license (not legal conclusions)
 
-<!-- source-catalog-inventory: inputs=97; pending=97 -->
+<!-- source-catalog-inventory: inputs=100; pending=100 -->
 
-The summary is a **2026-11-05 source-catalog snapshot**. Changes to catalog entries must update this breakdown and pass the source-only inventory consistency test. Counts represent declared entries, not permission to redistribute.
+The summary is a **2026-11-10 source-catalog snapshot**. Changes to catalog entries must update this breakdown and pass the source-only inventory consistency test. Counts represent declared entries, not permission to redistribute.
 
 | Declared origin / SPDX | Files | Example paths | Legal review state |
 | --- | ---: | --- | --- |
 | linux-v6.18-derived / GPL-2.0-only | 2 | `patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch` | pending; verify Linux upstream provenance |
 | modified-gpl-parent-derived / GPL-2.0-only | 3 | `patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch`; GPL-derived PHY fixes | pending; check exact parent and licensing |
 | research-transformer / GPL-2.0-only | 1 | `scripts/research/sba6d_stage10_clean_patch.py` | pending; distinguish transform from original |
-| independent-original / MIT | 86 | `tools/boot/slot_observation.py`; source build/tests | pending; verify actual authorship |
+| independent-original / MIT | 89 | `tools/boot/slot_observation.py`; source build/tests | pending; verify actual authorship |
 | research-board-overlay / GPL-2.0-only | 1 | `board/mt6990-air-terminal-6-sgmii1-experimental.dtso` | pending; check wiring evidence |
 | independent-original / GPL-2.0-only | 4 | `board/mt6990-air-terminal-6.dts`, ethernet test DTS | pending; verify authorship |
-| **Total** | **97** | Catalog entries; additional `missing_dependencies` are not source files | **97 pending** |
+| **Total** | **100** | Catalog entries; additional `missing_dependencies` are not source files | **100 pending** |
 
 The labels are not a copyright ruling. New/modified source retains a catalog identity and **pending** status until supported by evidence, but pending does not prevent development or isolated builds. Public backports carry a short PR origin URL/revision (or self-authored observation basis), license and any unresolved concerns.
 

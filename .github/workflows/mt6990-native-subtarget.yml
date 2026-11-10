@@ -22,6 +22,14 @@ on:
       - tools/boot/air6_first_stage.sh
       - tools/boot/prepare_p44_state.sh
       - tools/boot/verify_bound_p26.sh
+      - tools/boot/pack_p25_unsigned_v2.py
+      - tools/boot/verify_p25_independent.py
+      - tools/boot/verify_kernel_initramfs.py
+      - tools/build/verify_unsigned_pair.py
+      - tests/test_pack_p25_unsigned_v2.py
+      - tests/test_verify_kernel_initramfs.py
+      - tests/test_verify_unsigned_pair.py
+      - docs/P25-UNSIGNED-BOOT-V2-MANUFACTURE.md
       - tools/build/build_air6_first_stage.py
       - config/source-catalog.json
       - .github/workflows/mt6990-native-subtarget.yml
@@ -858,11 +866,12 @@ jobs:
           "$kernel/scripts/config" --file "$kernel/.config" \
             --enable EXT4_FS --enable SQUASHFS --enable SQUASHFS_XZ \
             --enable OVERLAY_FS --enable CRYPTO_SHA256 \
-            --enable MMC --enable MMC_BLOCK --enable BLK_DEV_INITRD
+            --enable MMC --enable MMC_BLOCK --enable BLK_DEV_INITRD \
+            --enable INITRAMFS_COMPRESSION_XZ
           PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
             make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
           for option in EXT4_FS SQUASHFS SQUASHFS_XZ OVERLAY_FS \
-                        MMC MMC_BLOCK BLK_DEV_INITRD; do
+                        MMC MMC_BLOCK BLK_DEV_INITRD INITRAMFS_COMPRESSION_XZ; do
             grep -qx "CONFIG_$option=y" "$kernel/.config" || {
               echo "P25_BLOCKED_MISSING_FIRST_STAGE_BUILTIN_$option" >&2
               exit 1
@@ -875,39 +884,60 @@ jobs:
           PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
             make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
           test -s "$kernel/usr/initramfs_data.o"
+          gzip -n -9 -c "$kernel/arch/arm64/boot/Image" > "$work/air6-native-Image.gz"
+          python3 "$GITHUB_WORKSPACE/tools/boot/verify_kernel_initramfs.py" \
+            --object "$kernel/usr/initramfs_data.o" \
+            --vmlinux "$kernel/vmlinux" \
+            --image "$kernel/arch/arm64/boot/Image" \
+            --kernel-gz "$work/air6-native-Image.gz" \
+            --cpio "$work/air6-first-stage-initramfs.cpio" \
+            --compression xz
           sha256sum "$work/air6-first-stage-initramfs.cpio" \
             "$kernel/arch/arm64/boot/Image"
           echo 'PUBLIC_AIR6_FIRST_STAGE_KERNEL_IMAGE_SOURCE_BUILT_PASS'
-          # Unsigned P25 only when caller has supplied a validated exact boot
-          # configuration; the public repo intentionally contains no private
-          # load addresses, proprietary template or signer.
-          gzip -n -9 -c "$kernel/arch/arm64/boot/Image" > "$work/air6-native-Image.gz"
-          gzip -n -9 -c "$work/air6-first-stage-initramfs.cpio" > "$work/air6-native-initramfs.cpio.gz"
+          # Unsigned P25 only when the caller supplies both a validated exact
+          # boot-v2 configuration and the separately hash-pinned DTB prefix.
+          # Neither private config nor vendor prefix is stored in this repo.
+          : > "$work/air6-native-empty-ramdisk"
           native_dtb="$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
           test -s "$native_dtb"
-          if test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}"; then
+          if test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}" && \
+             test -n "${SBAT6_P25_DTB_SECTION_PREFIX:-}"; then
             test -f "$SBAT6_P25_BOOT_V2_CONFIG"
+            test -f "$SBAT6_P25_DTB_SECTION_PREFIX"
             install -d -m 0700 "$work/private-p25"
             p25="$work/private-p25/boot_a.unsigned.p25"
             python3 "$GITHUB_WORKSPACE/tools/boot/pack_p25_unsigned_v2.py" \
               --kernel "$work/air6-native-Image.gz" \
-              --ramdisk "$work/air6-native-initramfs.cpio.gz" \
+              --ramdisk "$work/air6-native-empty-ramdisk" \
               --dtb "$native_dtb" \
+              --dtb-prefix "$SBAT6_P25_DTB_SECTION_PREFIX" \
               --config "$SBAT6_P25_BOOT_V2_CONFIG" --output "$p25"
             python3 "$GITHUB_WORKSPACE/tools/boot/verify_p25_independent.py" \
               --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
-              --ramdisk "$work/air6-native-initramfs.cpio.gz" --dtb "$native_dtb" \
+              --ramdisk "$work/air6-native-empty-ramdisk" --dtb "$native_dtb" \
+              --dtb-prefix "$SBAT6_P25_DTB_SECTION_PREFIX" \
               --config "$SBAT6_P25_BOOT_V2_CONFIG"
             python3 "$GITHUB_WORKSPACE/tools/build/verify_unsigned_pair.py" \
               --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
-              --ramdisk "$work/air6-native-initramfs.cpio.gz" \
+              --ramdisk "$work/air6-native-empty-ramdisk" \
               --dtb "$native_dtb" --config "$SBAT6_P25_BOOT_V2_CONFIG" \
+              --dtb-prefix "$SBAT6_P25_DTB_SECTION_PREFIX" \
               --p26 "$work/private-p26/packed/rootfs_a.p26" \
               --producer "$work/private-p26/packed/p26-receipt.json" \
               --independent "$work/private-p26/packed/p26-independent-attestation.json" \
               --cpio "$work/air6-first-stage-initramfs.cpio" \
+              --initramfs-object "$kernel/usr/initramfs_data.o" \
+              --vmlinux "$kernel/vmlinux" \
+              --image "$kernel/arch/arm64/boot/Image" \
               --out "$work/private-p25/unsigned-p25-p26-pair.json"
             echo 'PUBLIC_AIR6_SOURCE_P25_P26_FIRST_STAGE_PAIR_BYTE_IDENTITY_PASS'
+          elif test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}"; then
+            echo 'P25_BLOCKED_RC14_DTB_SECTION_PREFIX_UNAVAILABLE'
+            printf '%s\n' '## P25 manufacture status' '' \
+              'BLOCKED: external DTB section prefix input is missing.' \
+              'No candidate P25 or P25/P26 pair receipt was produced.' \
+              >> "$GITHUB_STEP_SUMMARY"
           else
             echo 'P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE'
             printf '%s\n' '## P25 manufacture status' '' \

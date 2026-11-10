@@ -41,9 +41,21 @@ def p25_verifier():
     return mod
 
 
+def initramfs_verifier():
+    path = Path(__file__).resolve().parents[1] / "boot/verify_kernel_initramfs.py"
+    spec = importlib.util.spec_from_file_location("public_kernel_initramfs", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
-                independent, cpio, out, p25_verify=None):
-    paths = (p25, kernel, ramdisk, dtb, config, p26, producer, independent, cpio)
+                independent, cpio, initramfs_object, vmlinux, image, out,
+                dtb_prefix=None, p25_verify=None, initramfs_verify=None):
+    paths = [p25, kernel, ramdisk, dtb, config, p26, producer, independent,
+             cpio, initramfs_object, vmlinux, image]
+    if dtb_prefix is not None:
+        paths.append(dtb_prefix)
     require(all(valid_path(p) for p in paths), "INVALID_INPUT")
     require(not out.exists() and not out.is_symlink()
             and out.parent.is_dir()
@@ -51,9 +63,15 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
             "OUTPUT_EXISTS_OR_SYMLINK")
     # Independently recheck the p25 including all boot-sensitive config bytes.
     check = p25_verify or p25_verifier().verify
-    p25_result = check(p25, kernel, ramdisk, dtb, config)
+    p25_result = check(p25, kernel, ramdisk, dtb, config, dtb_prefix)
     require(p25_result["partition_bytes"] == P25_BYTES and
             p25_result["p25_sha256"] == digest(p25), "P25_IDENTITY")
+    cfg = json.loads(config.read_text())
+    require(cfg.get("ramdisk_mode") == "kernel_embedded",
+            "RC14_PROFILE_REQUIRES_KERNEL_EMBEDDED_INITRAMFS")
+    init_check = initramfs_verify or initramfs_verifier().verify
+    initramfs_result = init_check(initramfs_object, vmlinux, image, kernel,
+                                  cpio, "xz")
     original = json.loads(producer.read_text())
     approved = json.loads(independent.read_text())
     require(original.get("schema") == 1 and
@@ -76,8 +94,9 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
             approved.get("p26_sha256"), "P26_IMAGE_IDENTITY")
     require(approved.get("producer_receipt_sha256") == digest(producer),
             "P26_RECEIPT_IDENTITY")
-    # The actual kernel initramfs must contain the same complete-P26 hash.
-    # This is a build binding, NOT evidence that an early boot check runs.
+    # The CPIO is verified against both Kbuild's linked initramfs section and
+    # the exact ARM64 Image.gz; its P26 hash is a build binding, not proof the
+    # early boot code ran on hardware.
     bound = (p26_hash + "  /dev/mmcblk0p26").encode("ascii")
     require(cpio.read_bytes().count(bound) == 1, "P26_INITRAMFS_SHA_BINDING")
     require(original.get("squashfs_sha256") ==
@@ -91,6 +110,8 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         "p26_independent_receipt_sha256": digest(independent),
         "p25_config_sha256": digest(config),
         "bound_initramfs_sha256": digest(cpio),
+        "initramfs_object_sha256": digest(initramfs_object),
+        "kernel_image_sha256": initramfs_result["kernel_image_sha256"],
         "signed": False, "device_writes": False, "public_binary": False,
         "not_proven": ["Air6 LK accepts p25", "RC14 boot compatibility",
                        "hardware cold boot", "LAN/SSH", "publication rights"],
@@ -105,11 +126,15 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("p25", "kernel", "ramdisk", "dtb", "config",
-                 "p26", "producer", "independent", "cpio", "out"):
+                 "p26", "producer", "independent", "cpio",
+                 "initramfs-object", "vmlinux", "image", "out"):
         parser.add_argument("--" + name, required=True, type=Path)
+    parser.add_argument("--dtb-prefix", type=Path)
     a = parser.parse_args()
     result = verify_pair(a.p25, a.kernel, a.ramdisk, a.dtb, a.config,
-                         a.p26, a.producer, a.independent, a.cpio, a.out)
+                         a.p26, a.producer, a.independent, a.cpio,
+                         a.initramfs_object, a.vmlinux, a.image, a.out,
+                         dtb_prefix=a.dtb_prefix)
     print("PUBLIC_UNSIGNED_P25_P26_PAIR_BYTE_IDENTITIES_PASS",
           result["p25_sha256"], result["p26_sha256"])
 
