@@ -71,9 +71,10 @@ class BootV2SpecTests(unittest.TestCase):
             image = bytearray(64)
             image[56:60] = b"ARM\x64"
             kernel = root / "Image.gz"
-            with gzip.GzipFile(filename="", mode="wb",
-                               fileobj=kernel.open("wb"), mtime=0) as stream:
-                stream.write(image)
+            with kernel.open("wb") as dst:
+                with gzip.GzipFile(filename="", mode="wb",
+                                   fileobj=dst, mtime=0) as stream:
+                    stream.write(image)
             fdt = bytearray(64)
             struct.pack_into(">10I", fdt, 0, 0xd00dfeed, 64, 56, 48, 40, 17, 16, 0, 8, 8)
             prefix = bytes(range(64))  # synthetic; NO OEM bytes.
