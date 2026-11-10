@@ -175,6 +175,13 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn("USER_DATA_DUPLICATE_GPT_PARTNAME", source)
         self.assertIn("USER_DATA_NOT_BLOCK", source)
         self.assertIn("P44_OVERLAPS_USER_DATA", source)
+        self.assertIn('while [ "$scan_attempt" -lt 80 ]; do', source)
+        self.assertIn("sleep 0.25", source)
+        self.assertIn('scan_attempt=$((scan_attempt + 1))', source)
+        self.assertLess(source.index('while [ "$scan_attempt" -lt 80 ]; do'),
+                        source.index("REQUIRED_GPT_PARTITIONS_NOT_FOUND"))
+        self.assertLess(source.index("P26_DUPLICATE_GPT_PARTNAME"),
+                        source.index("REQUIRED_GPT_PARTITIONS_NOT_FOUND"))
         self.assertIn('mount -t ext4 -o rw,noatime,nosuid,nodev "$P44" "$UPPER"', source)
         self.assertIn("PARTITION_GEOMETRY_INVALID", source)
         self.assertIn("EMPTY_PARTITION_GEOMETRY", source)
