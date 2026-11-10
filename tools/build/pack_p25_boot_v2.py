@@ -40,6 +40,7 @@ def validate_inputs(kernel, dtb, layout="bare-fdt", prefix_sha=None):
     decoder = zlib.decompressobj(wbits=16 + zlib.MAX_WBITS)
     limit = 256 * 1024 * 1024
     expanded, header = 0, bytearray()
+    inflated_sha256 = hashlib.sha256()
     with kernel.open("rb") as src:
         for chunk in iter(lambda: src.read(1 << 20), b""):
             if decoder.eof:
@@ -49,6 +50,7 @@ def validate_inputs(kernel, dtb, layout="bare-fdt", prefix_sha=None):
             except zlib.error as exc:
                 raise ValueError("invalid gzip member or CRC") from exc
             expanded += len(decoded)
+            inflated_sha256.update(decoded)
             if expanded > limit or decoder.unconsumed_tail:
                 raise ValueError("gzip Image exceeds expanded size limit")
             if len(header) < 64:
@@ -63,6 +65,7 @@ def validate_inputs(kernel, dtb, layout="bare-fdt", prefix_sha=None):
         raise ValueError("unrecognized DTB section layout")
     if layout == "bare-fdt" and prefix_sha is not None:
         raise ValueError("unexpected vendor64 SHA for bare FDT")
+    inflated = {"bytes": expanded, "sha256": inflated_sha256.hexdigest()}
     with dtb.open("rb") as src:
         if layout == "opaque-64-prefix-plus-fdt":
             if not isinstance(prefix_sha, str) or len(prefix_sha) != 64 or any(
@@ -82,6 +85,7 @@ def validate_inputs(kernel, dtb, layout="bare-fdt", prefix_sha=None):
         if any(off > size or n > size - off for off, n in
                ((off_struct, sizes[1]), (off_strings, sizes[0]))):
             raise ValueError("invalid FDT block")
+    return inflated
 
 
 def build(kernel, dtb, metadata, output, receipt):
@@ -92,7 +96,7 @@ def build(kernel, dtb, metadata, output, receipt):
     cfg = json.loads(metadata.read_text())
     layout = cfg.get("dtb_layout", "bare-fdt")
     prefix_sha = cfg.get("vendor64_prefix_sha256")
-    validate_inputs(kernel, dtb, layout, prefix_sha)
+    inflated = validate_inputs(kernel, dtb, layout, prefix_sha)
     if cfg.get("format") != "aosp-boot-v2-metadata-v1":
         raise ValueError("unrecognized header metadata")
     if cfg.get("metadata_provenance") not in ("synthetic-research-only", "owner-reviewed-public-metadata"):
@@ -164,7 +168,9 @@ def build(kernel, dtb, metadata, output, receipt):
                 "cmdline": cmdline, "extra_cmdline": extra_cmdline},
             "partition_bytes": PARTITION, "header_bytes": HEADER_SIZE,
             "page_size": PAGE, "kernel": {"offset": koff, "bytes": ksize,
-                "sha256": file_sha(kernel)},
+                "sha256": file_sha(kernel),
+                "inflated_bytes": inflated["bytes"],
+                "inflated_sha256": inflated["sha256"]},
             "dtb": {"offset": doff, "bytes": dsize, "sha256": file_sha(dtb)},
             "body_end": end, "zero_tail_bytes": PARTITION - end,
             "android_image_id_sha1": sha1.hexdigest(),
