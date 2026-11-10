@@ -46,8 +46,37 @@ mount -t proc proc /proc || halt_boot PROC_MOUNT
 mount -t sysfs sysfs /sys || halt_boot SYS_MOUNT
 mount -t devtmpfs devtmpfs /dev || halt_boot DEV_MOUNT
 
+# RC15 research portability path: locate both partitions by GPT PARTNAME
+# rather than inheriting one C-unit's eMMC numbering. Reject duplicates
+# and cross-disk aliases before mounting or writing any filesystem.
+if [ "$BOOT_MODE" = p44-required ]; then
+    found_p26=
+    found_p44=
+    for entry in /sys/class/block/mmcblk*p*/uevent; do
+        [ -f "$entry" ] || continue
+        device="${entry%/uevent}"
+        device="${device##*/}"
+        case "$device" in mmcblk*p[0-9]*) : ;; *) continue ;; esac
+        if grep -qx 'PARTNAME=rootfs_a' "$entry"; then
+            [ -z "$found_p26" ] || halt_boot P26_DUPLICATE_GPT_PARTNAME
+            found_p26="/dev/$device"
+        fi
+        if grep -qx 'PARTNAME=rootfs_data' "$entry"; then
+            [ -z "$found_p44" ] || halt_boot P44_DUPLICATE_GPT_PARTNAME
+            found_p44="/dev/$device"
+        fi
+    done
+    [ -n "$found_p26" ] && [ -n "$found_p44" ] ||
+        halt_boot REQUIRED_GPT_PARTITIONS_NOT_FOUND
+    p26_disk="${found_p26%p[0-9]*}"
+    p44_disk="${found_p44%p[0-9]*}"
+    [ -n "$p26_disk" ] && [ "$p26_disk" = "$p44_disk" ] ||
+        halt_boot REQUIRED_GPT_CROSS_DISK
+    P26="$found_p26"
+    P44="$found_p44"
+fi
 [ -b "$P26" ] || halt_boot P26_NOT_BLOCK
-grep -qx 'PARTNAME=rootfs_a' /sys/class/block/mmcblk0p26/uevent ||
+grep -qx 'PARTNAME=rootfs_a' "/sys/class/block/${P26##*/}/uevent" ||
     halt_boot P26_GPT_PARTNAME
 
 [ -s "$EXPECTED" ] && [ ! -L "$EXPECTED" ] ||
@@ -88,7 +117,7 @@ else
     # owner-approved operation, never performed during boot.
     [ -b "$P44" ] || halt_boot P44_NOT_BLOCK
     if [ "$BOOT_MODE" = p44-required ]; then
-        grep -qx 'PARTNAME=rootfs_data' /sys/class/block/mmcblk0p44/uevent ||
+        grep -qx 'PARTNAME=rootfs_data' "/sys/class/block/${P44##*/}/uevent" ||
             halt_boot P44_ROOTFS_DATA_GPT_MISMATCH
     else
         [ -f "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ] ||
@@ -101,7 +130,7 @@ else
         case "$partname" in
             ''|*[!a-zA-Z0-9_-]*) halt_boot P44_PARTNAME_INVALID ;;
         esac
-        grep -qx "PARTNAME=$partname" /sys/class/block/mmcblk0p44/uevent ||
+        grep -qx "PARTNAME=$partname" "/sys/class/block/${P44##*/}/uevent" ||
             halt_boot P44_GPT_PARTNAME
     fi
     mkdir -p "$UPPER" || halt_boot P44_MOUNTPOINT
