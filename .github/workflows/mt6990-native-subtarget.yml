@@ -752,18 +752,36 @@ jobs:
           # Run the *actual native OpenWrt AArch64 BusyBox* with QEMU user
           # emulation, not the runner's BusyBox, before assessing /init
           # prerequisites. This is command availability only, not boot proof.
-          # QEMU-user normally injects its own argv[0]. BusyBox dispatches
-          # applets on argv[0], so WITHOUT "-0 busybox" even --list returns 127
-          # with "busybox: applet not found"; never relax this flag.
+          # QEMU-user must supply a target argv[0] that resolves to the
+          # BusyBox multi-call binary. Never silently substitute host BusyBox.
+          # Capture stdout/stderr independently: the previous native run
+          # reached this step, then reported "busybox: applet not found".
+          # Use a canonical absolute target argv[0] and retain an explicit
+          # diagnostic instead of assuming the cause was missing -0.
           if ! docker run --rm --network none --read-only \
             --cap-drop ALL --security-opt no-new-privileges \
             --pids-limit 64 --memory 512m --cpus 1 \
             --user 1001:1001 \
             --mount "type=bind,src=$rootfs,dst=/rootfs,readonly" \
             sbat6-native-procd-qemu:ci \
-            qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox --list \
-            > "$work/target-openwrt-busybox-applets.txt"; then
-            echo 'BLOCKED_TARGET_BUSYBOX_QEMU_ARGV0_OR_APPLET_DISPATCH' >&2
+            qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox --list \
+            > "$work/target-openwrt-busybox-applets.txt" \
+            2> "$work/target-openwrt-busybox-applets.stderr"; then
+            echo 'BLOCKED_TARGET_BUSYBOX_QEMU_APPLET_LIST_EXECUTION' >&2
+            cat "$work/target-openwrt-busybox-applets.stderr" >&2
+            # Alternate canonical multi-call dispatch is diagnostic only.
+            # Do not use this output to pass the gate if the primary fails.
+            docker run --rm --network none --read-only \
+              --cap-drop ALL --security-opt no-new-privileges \
+              --pids-limit 64 --memory 512m --cpus 1 \
+              --user 1001:1001 \
+              --mount "type=bind,src=$rootfs,dst=/rootfs,readonly" \
+              sbat6-native-procd-qemu:ci \
+              qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox --help \
+              > "$work/target-openwrt-busybox-help.stdout" \
+              2> "$work/target-openwrt-busybox-help.stderr" || true
+            head -c 1024 "$work/target-openwrt-busybox-help.stdout" >&2 || true
+            cat "$work/target-openwrt-busybox-help.stderr" >&2
             exit 1
           fi
           test -s "$work/target-openwrt-busybox-applets.txt"
