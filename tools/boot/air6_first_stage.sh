@@ -47,8 +47,7 @@ mount -t overlay overlay -o lowerdir=/mnt/air6/rom,upperdir=/mnt/air6/rw/upper,w
 mkdir -p /mnt/air6/newroot/rom /mnt/air6/newroot/overlay ||
     fail NEWROOT_DIRS
 mount -o bind /mnt/air6/rw /mnt/air6/newroot/overlay || fail P44_BIND
-mount -o bind /mnt/air6/rom /mnt/air6/newroot/rom || fail ROM_BIND
-mount -o remount,bind,ro /mnt/air6/newroot/rom || fail ROM_BIND_RO
+mount -t squashfs -o ro "$root" /mnt/air6/newroot/rom || fail ROM_READONLY
 echo 'AIR6_FIRST_STAGE_SWITCH_ROOT_BEGIN' >/dev/console
 export INITRAMFS=1
 exec /sbin/switch_root -c /dev/console /mnt/air6/newroot /sbin/init
