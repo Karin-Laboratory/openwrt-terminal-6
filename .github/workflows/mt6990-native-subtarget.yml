@@ -761,6 +761,7 @@ jobs:
               --p26 "$work/private-p26/packed/rootfs_a.p26" \
               --producer "$work/private-p26/packed/p26-receipt.json" \
               --independent "$work/private-p26/packed/p26-independent-attestation.json" \
+              --cpio "$work/air6-procd-initramfs.cpio" \
               --out "$work/private-p25/unsigned-p25-p26-pair.json"
             echo 'LIMIT: no Air6 LK validation, vendor extension, signature or flash'
           else
