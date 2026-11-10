@@ -157,6 +157,15 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertLess(source.index('[ "$observed" = "$expected" ]'),
                         source.index('mount -t tmpfs -o mode=0700,size=64m,nosuid,nodev'))
 
+    def test_p44_cannot_replace_p26_internal_management_entry(self):
+        source = maker.BOOT_SCRIPT.read_text()
+        self.assertIn('P26_MANAGEMENT_ENTRY_ABSENT', source)
+        self.assertIn('P44_MANAGEMENT_ENTRY_SHADOW', source)
+        self.assertIn('P44_MANAGEMENT_ENTRY_REPLACED', source)
+        self.assertIn('cmp -s "$ROM/$management" "$NEWROOT/$management"', source)
+        self.assertLess(source.index('P44_MANAGEMENT_ENTRY_REPLACED'),
+                        source.index('exec switch_root -c /dev/console'))
+
     def test_rc14_observed_p44_marker_fs_state_and_preinit_handoff(self):
         source = maker.BOOT_SCRIPT.read_text()
         self.assertIn("SBA6D_ROOTFS_DATA_V1", source)
