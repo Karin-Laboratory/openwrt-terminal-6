@@ -27,8 +27,13 @@ parameters are provided by this repository. All supplied input files must
 be lawfully sourced, independently built and checked before use.
 
 The producer validates gzip framing and decompression, FDT header and total
-length, nonempty components, output size and load-address shape. Unit tests
-exercise the synthetic layout only.
+length, nonempty components, output size and load-address shape. The independent
+full-byte verifier now requires the **same explicit configuration** and checks
+kernel/ramdisk/tags/DTB addresses, board name, the entire 1535-byte command
+line, OS-version field, section bytes and zero padding. The verifier refuses
+altered boot arguments even when section hashes still match. Synthetic tests
+also corrupt the header and mutate config after manufacture. This is a byte
+layout check, not confirmation the private RC14 LK accepts these values.
 
 
 ## Native source-built handoff (2026-11-10)
@@ -61,7 +66,8 @@ reproduction.
 2. Observed RC14-compatible load addresses, boot arguments and vendor-specific
    kernel/DTB ABI, obtained through lawful documented observations.
 3. Independent parser/readback of all 32 MiB, zero padding, section offsets,
-   hashes and output identity on the exact manufactured candidate.
+   hashes, config-provided boot addresses/cmdline and output identity on the
+   exact manufactured candidate.
 4. LK parsing and **physical** A-slot boot validation. Android v2 structure alone
    does not establish Air6 LK acceptance, successful inflate, init/PID1 or network.
 5. A matching p26 rootfs with independently checked full 128 MiB byte layout.
