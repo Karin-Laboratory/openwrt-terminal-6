@@ -4,6 +4,8 @@ on:
     paths:
       - 'tools/boot/pack_p25_unsigned_v2.py'
       - 'tools/boot/verify_p25_independent.py'
+      - 'tools/boot/verify_bound_p26.sh'
+      - 'tests/test_verify_bound_p26.py'
       - 'tests/test_pack_p25_unsigned_v2.py'
       - '.github/workflows/p25-boot-v2-tests.yml'
   workflow_dispatch:
@@ -21,3 +23,5 @@ jobs:
         run: |
           python3 -m py_compile tools/boot/pack_p25_unsigned_v2.py tools/boot/verify_p25_independent.py tests/test_pack_p25_unsigned_v2.py
           python3 -m unittest discover -s tests -p test_pack_p25_unsigned_v2.py -v
+          sh -n tools/boot/verify_bound_p26.sh
+          python3 -m unittest discover -s tests -p test_verify_bound_p26.py -v
