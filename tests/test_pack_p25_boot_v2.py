@@ -65,5 +65,52 @@ class BootV2SpecTests(unittest.TestCase):
             self.assertFalse((root / "o").exists())
 
 
+    def test_external_synthetic_vendor64_prefix_roundtrip_and_tamper(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            image = bytearray(64)
+            image[56:60] = b"ARM\x64"
+            kernel = root / "Image.gz"
+            with gzip.GzipFile(filename="", mode="wb",
+                               fileobj=kernel.open("wb"), mtime=0) as stream:
+                stream.write(image)
+            fdt = bytearray(64)
+            struct.pack_into(">10I", fdt, 0, 0xd00dfeed, 64, 56, 48, 40, 17, 16, 0, 8, 8)
+            prefix = bytes(range(64))  # synthetic; NO OEM bytes.
+            dtb = root / "synthetic-prefix-board.dtb"
+            dtb.write_bytes(prefix + fdt)
+            meta = root / "meta.json"
+            data = {
+                "format": "aosp-boot-v2-metadata-v1",
+                "metadata_provenance": "synthetic-research-only",
+                "page_size": 2048,
+                "kernel_addr": 0, "tags_addr": 0, "dtb_addr": 0, "os_version": 0,
+                "board": "research", "cmdline": "",
+                "dtb_layout": "opaque-64-prefix-plus-fdt",
+                "vendor64_prefix_sha256": hashlib.sha256(prefix).hexdigest(),
+            }
+            meta.write_text(json.dumps(data))
+            out, receipt = root / "boot.img", root / "receipt.json"
+            result = maker.build(kernel, dtb, meta, out, receipt)
+            self.assertEqual(result["dtb_layout"], "opaque-64-prefix-plus-fdt")
+            self.assertEqual(reader.verify(out, receipt, kernel, dtb),
+                             result["p25_sha256"])
+            bad = dict(result)
+            bad["vendor64_prefix_sha256"] = "0" * 64
+            receipt.write_text(json.dumps(bad))
+            with self.assertRaisesRegex(ValueError, "vendor64 prefix SHA"):
+                reader.verify(out, receipt, kernel, dtb)
+            data["vendor64_prefix_sha256"] = "0" * 64
+            meta.write_text(json.dumps(data))
+            with self.assertRaisesRegex(ValueError, "vendor64 prefix SHA"):
+                maker.build(kernel, dtb, meta, root / "invalid.img", root / "invalid.json")
+            self.assertFalse((root / "invalid.img").exists())
+            data["vendor64_prefix_sha256"] = hashlib.sha256(prefix).hexdigest()
+            data["dtb_layout"] = "bare-fdt"
+            meta.write_text(json.dumps(data))
+            with self.assertRaisesRegex(ValueError, "unexpected vendor64 SHA"):
+                maker.build(kernel, dtb, meta, root / "invalid2.img", root / "invalid2.json")
+
+
 if __name__ == "__main__":
     unittest.main()
