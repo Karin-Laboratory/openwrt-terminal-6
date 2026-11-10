@@ -18,6 +18,12 @@ root=/dev/mmcblk0p26
 persist=/dev/mmcblk0p44
 [ -b "$root" ] && [ -b "$persist" ] || fail PARTITIONS_NOT_BLOCK
 [ "$root" != "$persist" ] || fail PARTITIONS_ALIASED
+[ -r /sys/class/block/mmcblk0p26/uevent ] &&
+    grep -qx 'PARTNAME=rootfs_a' /sys/class/block/mmcblk0p26/uevent ||
+    fail P26_PARTNAME
+[ -r /sys/class/block/mmcblk0p44/uevent ] &&
+    grep -qx 'PARTNAME=rootfs_data' /sys/class/block/mmcblk0p44/uevent ||
+    fail P44_PARTNAME
 /usr/libexec/air6/verify-bound-p26 /etc/air6/p26.sha256 "$root" || fail P26_SHA
 echo 'AIR6_FIRST_STAGE_P26_SHA_PASS' >/dev/console
 mkdir -p /mnt/air6/rom /mnt/air6/check /mnt/air6/rw /mnt/air6/newroot || fail MOUNTPOINTS
