@@ -136,6 +136,16 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
                         workflow.index("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS"))
 
 
+    def test_native_toolchain_runs_are_serialized_without_killing_active_evidence(self):
+        workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
+        package_job = workflow.split("  native-package-compile:", 1)[1]
+        self.assertIn('group: public-air6-native-package-', package_job)
+        self.assertIn('github.event.pull_request.number || github.ref', package_job)
+        self.assertIn('cancel-in-progress: false', package_job)
+        self.assertLess(package_job.index("concurrency:"),
+                        package_job.index("timeout-minutes: 180"))
+        self.assertNotIn('cancel-in-progress: true', package_job)
+
     def test_native_toolchain_is_real_and_precedes_kernel_build(self):
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
         self.assertIn('make -C "$work/openwrt" -j1 V=s toolchain/install', workflow)
