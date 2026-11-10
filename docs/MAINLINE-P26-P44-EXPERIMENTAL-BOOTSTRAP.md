@@ -104,3 +104,23 @@ P26 and CPIO remain unchanged. The expected result is
 early-start log *after* `switch_root` begins. None of these are treated as
 Air6 hardware acceptance, and passing source unit tests is not itself
 runtime success.
+
+## Same-run alternative initramfs research P25 (2026-11-10)
+
+The native build now attempts a **second, separate unsigned research P25**
+after compiling the actual alternative-initramfs kernel Image. Unlike the
+original QEMU/procd P25, this Image contains the P26-hash-aware `/init`
+and is compressed with `gzip -n` before boot-v2 packing.
+
+The CI reuses the *same* synthetic AOSP-v2 metadata and same compiled
+Air6 DTB, independently verifies the 32MiB P25 byte layout and checks its
+pair receipt against the same-run source-built 128MiB P26 and the alternative
+CPIO's embedded P26 SHA. This catches packaging/pairing drift without
+disclosing or consuming any owner-only device metadata.
+
+**Limits:** This check is not a proof that LK can authenticate, parse or
+inflate the image. The P25 still has zero synthetic load addresses, lacks
+confirmed OEM vendor64 semantics and is neither signer-ready nor flashable.
+The alternative Air6 initramfs is not interchangeable with the QEMU-only
+virtio variant. A green CI here is an engineering artifact, not hardware
+boot evidence. All generated images remain ephemeral.
