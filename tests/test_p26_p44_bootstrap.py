@@ -157,6 +157,26 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertLess(source.index('[ "$observed" = "$expected" ]'),
                         source.index('mount -t tmpfs -o mode=0700,size=64m,nosuid,nodev'))
 
+    def test_rc13_slot_and_userdata_geometry_preflight_before_rw(self):
+        source = maker.BOOT_SCRIPT.read_text()
+        self.assertIn("grep -qw 'bootslot=a' /proc/cmdline", source)
+        self.assertIn("NOT_SLOT_A", source)
+        self.assertIn("USER_DATA_DUPLICATE_GPT_PARTNAME", source)
+        self.assertIn("USER_DATA_NOT_BLOCK", source)
+        self.assertIn("P44_OVERLAPS_USER_DATA", source)
+        self.assertIn("PARTITION_GEOMETRY_INVALID", source)
+        self.assertIn("EMPTY_PARTITION_GEOMETRY", source)
+        self.assertIn("userdata_start + userdata_sectors", source)
+        self.assertLess(source.index("NOT_SLOT_A"), source.index("P26_RO_VERIFIED"))
+        self.assertLess(source.index("P44_OVERLAPS_USER_DATA"),
+                        source.index('mount -t ext4 -o ro,noload'))
+        self.assertLess(source.index("P44_OVERLAPS_USER_DATA"),
+                        source.index('mount -t ext4 -o rw,noatime'))
+        # Device-specific layout is deliberately not hardcoded in source.
+        self.assertNotIn("7634944", source)
+        self.assertNotIn("2392064", source)
+        self.assertNotIn("5242816", source)
+
     def test_p44_cannot_replace_p26_internal_management_entry(self):
         source = maker.BOOT_SCRIPT.read_text()
         self.assertIn('P26_MANAGEMENT_ENTRY_ABSENT', source)
