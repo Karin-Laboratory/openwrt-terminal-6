@@ -147,8 +147,14 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
                         workflow.index('PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS'))
         self.assertLess(workflow.index('PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS'),
                         workflow.index('make -C "$work/openwrt" -j2 V=s target/linux/compile'))
-        # A shell line continuation after a comment can hide the make command.
-        self.assertNotIn('toolchain/install\\\\n', workflow)
+        # A preceding shell comment with a backslash continued onto the
+        # toolchain make command was the actual production regression.
+        lines = workflow.splitlines()
+        toolchain = 'make -C "$work/openwrt" -j1 V=s toolchain/install'
+        location = next(i for i, line in enumerate(lines) if line.strip() == toolchain)
+        self.assertFalse(lines[location - 1].rstrip().endswith(chr(92)),
+                         "toolchain/install swallowed by shell continuation")
+        self.assertFalse(lines[location].lstrip().startswith("#"))
 
     def test_qemu_busybox_direct_target_applet_dispatch(self):
         # OpenWrt BusyBox can omit the 'busybox' dispatcher while retaining
