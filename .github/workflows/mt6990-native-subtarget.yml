@@ -170,6 +170,21 @@ jobs:
             exit 1
           fi
           "$early_compiler" -dumpmachine | grep -Fx 'aarch64-openwrt-linux-musl'
+          # A successful -dumpmachine proves only the GCC driver exists.
+          # Compile a real object and inspect ELF64 little-endian AArch64,
+          # before spending CPU/time on a full kernel build.
+          printf 'int air6_toolchain_probe(void) { return 6; }\n' \
+            | "$early_compiler" -x c -O2 -c -o "$work/air6-toolchain-probe.o" -
+          python3 - "$work/air6-toolchain-probe.o" <<'PY'
+          from pathlib import Path
+          import struct, sys
+          header = Path(sys.argv[1]).read_bytes()[:64]
+          if (len(header) != 64 or header[:4] != b"\x7fELF"
+                  or header[4] != 2 or header[5] != 1
+                  or struct.unpack_from("<H", header, 18)[0] != 183):
+              raise SystemExit("BLOCKED_NATIVE_TOOLCHAIN_BAD_AARCH64_ELF")
+          print("PUBLIC_MT6990_NATIVE_TOOLCHAIN_AARCH64_OBJECT_COMPILE_PASS")
+          PY
           echo 'PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS'
           # The actual OpenWrt procd dependency closure reaches package/kernel/linux
           # even without selected kmod defaults. Build the native MT6990 kernel
