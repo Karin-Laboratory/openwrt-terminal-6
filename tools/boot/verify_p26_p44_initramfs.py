@@ -43,7 +43,19 @@ def verify(rootfs, p26_file, p26_receipt, cpio_file, receipt_file):
         raise ValueError("BOOTSTAGE_CPIO_ENTRIES")
     if any(name in parsed for name in ("etc/air6-owner-p44-rw-go", "etc/air6-p44.partname")):
         raise ValueError("BOOTSTAGE_PRIVATE_CONSENT_INCLUDED")
+    mode = record.get("boot_mode")
+    if mode not in ("ram-experimental", "p44-required"):
+        raise ValueError("BOOTSTAGE_BOOT_MODE_INVALID")
+    if (record.get("p44_required") is not (mode == "p44-required") or
+            record.get("p44_identity_gate") != "EXT4_RO_NOLOAD_MARKER_FS_STATE_UPPER_WORK" or
+            record.get("p44_owner_secret_embedded") is not False):
+        raise ValueError("BOOTSTAGE_P44_MODE_ATTESTATION")
     init = producer.BOOT_SCRIPT.read_bytes()
+    marker = b"BOOT_MODE='ram-experimental'"
+    if init.count(marker) != 1:
+        raise ValueError("BOOTSTAGE_BOOT_MODE_TEMPLATE")
+    if mode == "p44-required":
+        init = init.replace(marker, b"BOOT_MODE='p44-required'")
     if (parsed["init"][1] != init or record.get("init_sha256") != hashlib.sha256(init).hexdigest() or
             not stat.S_ISREG(parsed["init"][0]) or
             not (parsed["init"][0] & 0o111)):
