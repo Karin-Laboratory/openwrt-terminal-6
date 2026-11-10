@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Independent p26 verifier regression tests; synthetic bytes only."""
 import importlib.util
+import json
 from pathlib import Path
 import shutil
 import tempfile
@@ -39,6 +40,52 @@ class IndependentP26Tests(unittest.TestCase):
     def test_synthetic_matching_tree(self):
         with patch.object(mod.subprocess, "run", side_effect=self.fake_unsquashfs):
             self.assertEqual(mod.verify(self.root, self.p26, self.raw), mod.sha(self.p26))
+
+    def _producer_receipt(self):
+        receipt = self.base / "p26-receipt.json"
+        receipt.write_text(json.dumps({
+            "schema": 1,
+            "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
+            "partition_bytes": 128,
+            "p26_sha256": mod.sha(self.p26),
+            "squashfs_sha256": mod.sha(self.raw),
+            "squashfs_bytes": self.raw.stat().st_size,
+            "signed": False,
+            "hardware": "NONE",
+            "public_binary": False
+        }))
+        return receipt
+
+    def test_verified_attestation_binds_exact_p26(self):
+        receipt = self._producer_receipt()
+        attestation = self.base / "verified.json"
+        with patch.object(mod.subprocess, "run", side_effect=self.fake_unsquashfs):
+            checked = mod.verify(self.root, self.p26, self.raw)
+        result = mod.attest(receipt, attestation, self.p26, self.raw, checked)
+        self.assertEqual(result["p26_sha256"], checked)
+        self.assertEqual(json.loads(attestation.read_text())["status"],
+                         "P26_INDEPENDENT_FS_READBACK_VERIFIED")
+        with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
+            mod.attest(receipt, attestation, self.p26, self.raw, checked)
+
+    def test_attestation_rejects_producer_hash_mismatch(self):
+        receipt = self._producer_receipt()
+        doc = json.loads(receipt.read_text())
+        doc["p26_sha256"] = "0" * 64
+        receipt.write_text(json.dumps(doc))
+        with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_IDENTITY"):
+            mod.attest(receipt, self.base / "verified.json", self.p26,
+                       self.raw, mod.sha(self.p26))
+        self.assertFalse((self.base / "verified.json").exists())
+
+    def test_attestation_rejects_false_provenance(self):
+        receipt = self._producer_receipt()
+        doc = json.loads(receipt.read_text())
+        doc["signed"] = True
+        receipt.write_text(json.dumps(doc))
+        with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_SCOPE"):
+            mod.attest(receipt, self.base / "verified.json", self.p26,
+                       self.raw, mod.sha(self.p26))
 
     def test_partition_size_rejected(self):
         self.p26.write_bytes(b"short")
