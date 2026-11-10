@@ -418,6 +418,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_pack_p25_unsigned_v2.py",
+      "component": "boot",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "70a7adaf93fb9bb212b77edda3baf6783230cfc2",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_pack_p26_rootfs.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -585,6 +594,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "671813ada11159aa32f84956992cea356e37bb9e",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/pack_p25_unsigned_v2.py",
+      "component": "boot",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "79b8dc5b641beabf2f9ec229aceceeb195e6009a",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
