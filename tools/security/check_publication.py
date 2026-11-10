@@ -168,6 +168,8 @@ def history_findings(findings: set, object_findings=None) -> int:
             size = int(git("cat-file", "-s", sha))
             if size > MAX_SIZE:
                 findings.add((label, "oversized historical blob"))
+                if object_findings is not None:
+                    object_findings.add((sha, "oversized historical blob"))
                 continue
             local_findings = set()
             scan_tracked_path(path, label, git("cat-file", "blob", sha), local_findings)
