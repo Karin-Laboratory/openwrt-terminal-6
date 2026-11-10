@@ -68,6 +68,17 @@ class IndependentP26Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             mod.attest(receipt, attestation, self.p26, self.raw, checked)
 
+    def test_attestation_rejects_changed_partition_since_readback(self):
+        receipt = self._producer_receipt()
+        verified_sha = mod.sha(self.p26)
+        damaged = bytearray(self.p26.read_bytes())
+        damaged[-1] = 1
+        self.p26.write_bytes(damaged)
+        with self.assertRaisesRegex(ValueError, "ATTEST_P26_CHANGED_AFTER_VERIFY"):
+            mod.attest(receipt, self.base / "verified.json", self.p26,
+                       self.raw, verified_sha)
+        self.assertFalse((self.base / "verified.json").exists())
+
     def test_attestation_rejects_producer_hash_mismatch(self):
         receipt = self._producer_receipt()
         doc = json.loads(receipt.read_text())
