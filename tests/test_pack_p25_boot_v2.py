@@ -35,6 +35,15 @@ class BootV2SpecTests(unittest.TestCase):
             r = maker.build(k, dt, meta, out, receipt)
             self.assertEqual(out.stat().st_size, 33554432)
             self.assertEqual(reader.verify(out, receipt, k, dt), r["p25_sha256"])
+            self.assertEqual(r["kernel"]["inflated_bytes"], 64)
+            self.assertEqual(r["kernel"]["inflated_sha256"],
+                             hashlib.sha256(image).hexdigest())
+            broken = json.loads(receipt.read_text())
+            broken["kernel"]["inflated_sha256"] = "0" * 64
+            receipt.write_text(json.dumps(broken))
+            with self.assertRaisesRegex(ValueError, "gzip kernel readback"):
+                reader.verify(out, receipt, k, dt)
+            receipt.write_text(json.dumps(r))
             self.assertFalse(r["lk_header_and_vendor64_accepted"])
             # A matching receipt digest cannot excuse nonzero page padding.
             gap = 2048 + k.stat().st_size
