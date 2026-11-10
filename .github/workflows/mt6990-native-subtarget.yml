@@ -893,6 +893,48 @@ jobs:
             --receipt "$work/p25-p26-aware-research.json" \
             --kernel "$work/air6-p26-aware-Image.gz" \
             --dtb "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
+          # Exercise the existing independent FDT tree/phandle validator
+          # against this actual research P25 rather than synthetic fixtures.
+          # Metadata is generated from the packer's own receipt: integrity
+          # and structure only, never proof of LK node-injection behavior.
+          python3 - "$work/p25-p26-aware-research.json" \
+            "$work/p25-p26-aware-structural.json" \
+            "$work/p25-p26-aware-provenance.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          receipt = json.loads(Path(sys.argv[1]).read_text())
+          p25_path = Path(sys.argv[1]).with_name("p25-p26-aware-research-unsigned.img")
+          with p25_path.open("rb") as src:
+              header_page = src.read(2048)
+          metadata = {
+              "format": "public-air6-p25-contract-v1",
+              "metadata_provenance": "synthetic-research-only",
+              "expected_header": receipt["header_fields"],
+              "expected_header_page_sha256": hashlib.sha256(header_page).hexdigest(),
+              "expected_dtb_sha256": receipt["dtb"]["sha256"],
+              "lk_injected_nodes": [],
+              "vendor64_prefix_sha256": None,
+          }
+          Path(sys.argv[2]).write_text(json.dumps(metadata, sort_keys=True) + "\\n")
+          Path(sys.argv[3]).write_text(json.dumps({"source": "synthetic-fixture"}) + "\\n")
+          PY
+          python3 "$GITHUB_WORKSPACE/tools/boot/air6_boot_contract.py" \
+            --p25 "$work/p25-p26-aware-research-unsigned.img" \
+            --metadata "$work/p25-p26-aware-structural.json" \
+            --dtb-section "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb" \
+            --provenance "$work/p25-p26-aware-provenance.json" \
+            > "$work/p25-p26-aware-structural-result.json"
+          python3 - "$work/p25-p26-aware-structural-result.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          result = json.loads(Path(sys.argv[1]).read_text())
+          assert result["status"] == "STRUCTURAL_ONLY_LK_UNVERIFIED"
+          assert result["sign_ready"] is False
+          assert result["device_boot_proven"] is False
+          assert result["nodes"] > 0
+          print("PUBLIC_MT6990_P26_AWARE_P25_FDT_STRUCTURAL_CONTRACT_PASS",
+                "nodes=" + str(result["nodes"]))
+          PY
           python3 "$GITHUB_WORKSPACE/tools/build/check_p25_p26_presign.py" \
             --p25 "$work/p25-p26-aware-research-unsigned.img" \
             --p25-receipt "$work/p25-p26-aware-research.json" \
