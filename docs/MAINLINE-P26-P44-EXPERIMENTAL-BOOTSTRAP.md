@@ -156,3 +156,39 @@ gzip as acceptable input when LK may not. It is deliberately **not** a
 claim that the OEM LK inflater will succeed: architecture-specific load
 address, memory overlap, compression path and device boot constraints still
 require private runtime evidence.
+
+## RC14-derived required-P44 manufacturing research path (2026-11-10)
+
+The private RC13/14 observations established a startup sequence involving a
+full padded P26 SHA comparison, read-only SquashFS root, read-only ext4
+`noload` preflight of the persistent rootfs_data partition, mount of
+`upper/work`, then switch_root with exported `INITRAMFS=1` to prevent
+OpenWrt preinit from attempting a second fstools overlay transition.
+
+The public implementation independently implements those *observed facts*:
+
+- The default `ram-experimental` CPIO remains available for existing QEMU
+  testing, but `--boot-mode p44-required` manufactures a **different CPIO**
+  that cannot silently choose the RAM overlay branch.
+- The required path discovers unique `PARTNAME=rootfs_a` and
+  `PARTNAME=rootfs_data` on the same MMC disk, refusing absent, ambiguous,
+  cross-disk or non-block matches. A P44 recognition marker
+  `.sba6d-rootfs-data-v1` containing `SBA6D_ROOTFS_DATA_V1` and a
+  `.fs_state -> 2` symbolic link must exist before any P44 RW mount.
+- Those P44 identity fields and the overlay entry directories are checked
+  with `ro,noload`, and rechecked after the separately owner-authorized
+  persistent mount. No filesystem formatting, repair, script installation
+  on P44, device signing, slot switching or fallback reboot is performed.
+- The native CI manufactures both CPIO variants from the same independently
+  verified source-built P26. Its **alternative research P25** embeds the
+  P44-required variant rather than the RAM-default variant. Independent
+  CPIO readback and P25/P26 hash-binding remain mandatory.
+
+This is **not an RC14 production binary backport**. The public P25 still
+uses synthetic header addresses, the LK-specific vendor64 semantics are
+unverified, and the P26 startup contents have not yet reproduced the
+privately proven RC14 Ethernet/SSH/Wi-Fi orchestration. Moreover the
+private RC14 successful diagnostic boot used a shell PID 1; successful
+ordinary procd handoff is a separate runtime acceptance condition.
+P44 must be safely pre-provisioned by the owner with the documented
+marker/overlay layout; this boot path never initializes a blank partition.
