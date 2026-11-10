@@ -19,6 +19,8 @@ class TestP44Installer(unittest.TestCase):
             init = root / "etc/init.d/air6-p44-extension"
             self.assertEqual(runner.stat().st_mode & 0o777, 0o755)
             self.assertIn("timeout 15", runner.read_text())
+            self.assertIn('"$base/disabled"', runner.read_text())
+            self.assertIn("extension exit status=$status", runner.read_text())
             self.assertIn(" /overlay ext4 ", runner.read_text())
             self.assertIn("|| :", init.read_text())
             self.assertEqual((root / "etc/rc.d/S99air6-p44-extension").readlink(),
