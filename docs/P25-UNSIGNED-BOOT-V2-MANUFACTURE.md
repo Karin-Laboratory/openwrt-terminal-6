@@ -100,12 +100,43 @@ hash record against the entire P26 device, fails closed on mismatch, missing
 inputs or symlinked paths, and has host-only dynamic regression tests.
 It never writes to the P26 device.
 
-**Implementation gap:** the public procd initramfs does not yet **invoke**
-this checker before normal init, or reproduce RC14's verified P44/overlay
-mount, SquashFS `/rom` mount and `switch_root` sequence. P44's late
-optional extension runner is separate. Both the stored binding and the
-checker are present, but **device runtime enforcement is not yet wired**.
-No boot behavior is claimed.
+The earlier standalone procd test CPIO does not invoke this checker.
+The separate experimental first-stage CPIO described below now does; the
+full device boot path has not been tested. P44's late optional extension
+runner remains independent.
+
+## Source-built RC14-style first-stage path (experimental)
+
+The public build now separately creates a **minimal AArch64 first-stage CPIO**
+with `tools/build/build_air6_first_stage.py`, using the native OpenWrt
+BusyBox + associated musl runtime, independently authored
+`tools/boot/air6_first_stage.sh` as `/init`, the standalone full-P26
+SHA checker and a fresh hash of the **same native P26**. There is no private
+initramfs, RC14 shell code, OEM DTB or vendor blob in this new source.
+
+The new `/init` is an experimental, fail-closed handoff:
+1. Mount proc/sys/dev, check A slot and expected block devices.
+2. Validate complete P26 SHA-256 before attempting P44 RW access.
+3. Mount P26 SquashFS read-only, and check pre-existing P44 ext4 with
+   `ro,noload`: marker text, `upper`/`work` directories and `.fs_state`
+   symlink. No formatting, partitioning, repair or provisioning.
+4. Only after the read-only gate, mount P44 RW, construct overlay lower/upper
+   and work, expose `/rom` and `/overlay`, then `switch_root` to
+   P26's `/sbin/init`.
+
+The native job now **keeps its existing procd/QEMU smoke Image separate**.
+After that test it builds a second MT6990 Image using the above first-stage
+CPIO. It explicitly requires kernel built-ins for ext4, SquashFS XZ,
+overlayfs and MMC block (no late module-loading dependency). A caller-supplied
+validated boot-v2 header config is still required for final unsigned P25
+packing and same-run P25/P26 pair identity confirmation.
+
+Safety tests cover CPIO creation, missing/modified P26 input, non-AArch64
+BusyBox, unsafe loader symlinks, first-stage shell syntax and SHA-before-P44
+ordering. These host tests **cannot** prove target BusyBox applet availability,
+MT6990 storage driver bring-up, DTB/LK compatibility or hardware boot. The
+public P26 still lacks RC14's optional UART shell mode, and its network/SSH
+startup is not verified. Neither image is approved for physical flashing.
 
 ## Acceptance still pending
 
