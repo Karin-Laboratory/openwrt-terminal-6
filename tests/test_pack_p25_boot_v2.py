@@ -78,7 +78,7 @@ class BootV2SpecTests(unittest.TestCase):
             root = Path(tmp)
             kernel = root / "Image.gz"
             head = bytearray(64)
-            head[56:60] = b"ARM\\x64"
+            head[56:60] = b"ARM\x64"
             with kernel.open("wb") as dst:
                 with gzip.GzipFile(fileobj=dst, mode="wb", mtime=0) as gz:
                     gz.write(head)
