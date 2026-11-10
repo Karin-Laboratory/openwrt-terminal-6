@@ -42,6 +42,20 @@ class PublicRc14ManagementTests(unittest.TestCase):
         self.assertIn("192.168.1.1:22", self.source)
         self.assertIn("-s -g -j -k", self.source)
 
+    def test_mac1_receive_is_required_before_manual_ssh_start(self):
+        # RC14 observed link-up and TCP/22 readiness despite MAC1 RX=0.
+        # A successful --check must not claim verified bidirectional traffic.
+        self.assertIn("PREFLIGHT_PASS_LINK_ONLY", self.source)
+        self.assertIn("MAC1_RX_ABSENT_WAIT_FOR_TRAFFIC", self.source)
+        self.assertIn("MAC1_RX_COUNTER_UNAVAILABLE", self.source)
+        self.assertIn("MAC1_RX_COUNTER_INVALID", self.source)
+        self.assertIn("MAC1_RX_OBSERVED_NOT_END_TO_END_PROOF", self.source)
+        self.assertIn("/sys/class/net/eth1/statistics/rx_packets", self.source)
+        self.assertLess(self.source.index("PREFLIGHT_PASS_LINK_ONLY"),
+                        self.source.index("MAC1_RX_ABSENT_WAIT_FOR_TRAFFIC"))
+        self.assertLess(self.source.index("MAC1_RX_ABSENT_WAIT_FOR_TRAFFIC"),
+                        self.source.index("DROPBEAR_START"))
+
     def test_p26_stage_and_no_p44_development_script(self):
         self.assertIn("PUBLIC_MT6990_P26_INTERNAL_RC14_MANAGEMENT_SOURCE_STAGED",
                       self.workflow)
