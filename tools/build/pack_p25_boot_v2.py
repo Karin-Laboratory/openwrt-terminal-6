@@ -27,7 +27,7 @@ def file_sha(path):
     return h.hexdigest()
 
 
-def validate_inputs(kernel, dtb):
+def validate_inputs(kernel, dtb, layout="bare-fdt", prefix_sha=None):
     for path in (kernel, dtb):
         if path.is_symlink() or not path.is_file() or path.stat().st_size == 0:
             raise ValueError("inputs must be regular nonempty non-symlink files")
@@ -40,12 +40,24 @@ def validate_inputs(kernel, dtb):
             raise ValueError("gzip payload is not an ARM64 Linux Image")
         while src.read(1 << 20):
             pass
+    if layout not in ("bare-fdt", "opaque-64-prefix-plus-fdt"):
+        raise ValueError("unrecognized DTB section layout")
+    if layout == "bare-fdt" and prefix_sha is not None:
+        raise ValueError("unexpected vendor64 SHA for bare FDT")
     with dtb.open("rb") as src:
+        if layout == "opaque-64-prefix-plus-fdt":
+            if not isinstance(prefix_sha, str) or len(prefix_sha) != 64 or any(
+                    c not in "0123456789abcdef" for c in prefix_sha):
+                raise ValueError("explicit vendor64 prefix SHA required")
+            prefix = src.read(64)
+            if len(prefix) != 64 or hashlib.sha256(prefix).hexdigest() != prefix_sha:
+                raise ValueError("vendor64 prefix SHA mismatch")
         d = src.read(40)
         if len(d) != 40 or d[:4] != b"\xd0\x0d\xfe\xed":
             raise ValueError("bad FDT header")
         size, off_struct, off_strings, off_resv = struct.unpack_from(">IIII", d, 4)
-        if size != dtb.stat().st_size or not (40 <= off_resv < size):
+        expected_size = dtb.stat().st_size - (64 if layout == "opaque-64-prefix-plus-fdt" else 0)
+        if size != expected_size or not (40 <= off_resv < size):
             raise ValueError("bad FDT length / reserve offset")
         sizes = struct.unpack_from(">II", d, 32)
         if any(off > size or n > size - off for off, n in
@@ -58,8 +70,10 @@ def build(kernel, dtb, metadata, output, receipt):
     output, receipt = Path(output), Path(receipt)
     if output == receipt or output.exists() or receipt.exists() or output.is_symlink() or receipt.is_symlink():
         raise ValueError("outputs must be new and distinct")
-    validate_inputs(kernel, dtb)
     cfg = json.loads(metadata.read_text())
+    layout = cfg.get("dtb_layout", "bare-fdt")
+    prefix_sha = cfg.get("vendor64_prefix_sha256")
+    validate_inputs(kernel, dtb, layout, prefix_sha)
     if cfg.get("format") != "aosp-boot-v2-metadata-v1":
         raise ValueError("unrecognized header metadata")
     if cfg.get("metadata_provenance") not in ("synthetic-research-only", "owner-reviewed-public-metadata"):
@@ -124,6 +138,7 @@ def build(kernel, dtb, metadata, output, receipt):
             "format": "aosp-boot-v2-p25-research-receipt-v1",
             "status": "REAL_32M_BYTES_AOSP_V2_STRUCTURE_ONLY_NOT_LK_ACCEPTED",
             "metadata_provenance": cfg["metadata_provenance"],
+            "dtb_layout": layout, "vendor64_prefix_sha256": prefix_sha,
             "header_fields": {"kernel_addr": fields["kernel_addr"],
                 "tags_addr": fields["tags_addr"], "dtb_addr": fields["dtb_addr"],
                 "os_version": fields["os_version"], "board": board,
