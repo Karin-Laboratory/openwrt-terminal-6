@@ -7,7 +7,6 @@ Run in the same fakeroot namespace as package/install, before p26 packing.
 """
 import argparse
 from pathlib import Path
-import os
 
 INIT = """#!/bin/sh /etc/rc.common
 # SPDX-License-Identifier: MIT
@@ -29,6 +28,12 @@ script=$base/boot.sh
 # Do not guess a missing ext4 partition or initialize existing data.
 grep -q ' /overlay ext4 ' /proc/mounts 2>/dev/null || exit 0
 [ -d "$base" ] && [ ! -L "$base" ] || exit 0
+# Owner-controlled emergency switch takes precedence over the enable marker.
+# Any disabled entry, including a dangling symlink, fails closed.
+[ ! -e "$base/disabled" ] && [ ! -L "$base/disabled" ] || {
+    log 'extension disabled'
+    exit 0
+}
 [ -f "$base/enabled" ] && [ ! -L "$base/enabled" ] || exit 0
 [ -f "$script" ] && [ ! -L "$script" ] && [ -x "$script" ] || exit 0
 # Only root-owned, non-group/world-writable components can authorize execution.
@@ -44,9 +49,10 @@ for part in "$base" "$base/enabled" "$script"; do
     esac
 done
 command -v timeout >/dev/null 2>&1 || { log 'timeout unavailable'; exit 0; }
+log 'extension start'
 timeout 15 "$script"
 status=$?
-[ "$status" -eq 0 ] || log "extension exited status=$status"
+log "extension exit status=$status"
 exit 0
 """
 
