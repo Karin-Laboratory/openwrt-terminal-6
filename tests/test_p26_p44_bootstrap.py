@@ -175,6 +175,10 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn("USER_DATA_DUPLICATE_GPT_PARTNAME", source)
         self.assertIn("USER_DATA_NOT_BLOCK", source)
         self.assertIn("P44_OVERLAPS_USER_DATA", source)
+        self.assertIn("P26_PARTITION_SIZE_MISMATCH", source)
+        self.assertIn('[ "$p26_sectors" = 262144 ]', source)
+        self.assertLess(source.index("P26_PARTITION_SIZE_MISMATCH"),
+                        source.index('observed="$(sha256sum "$P26")"'))
         self.assertIn('while [ "$scan_attempt" -lt 80 ]; do', source)
         self.assertIn("sleep 0.25", source)
         self.assertIn('scan_attempt=$((scan_attempt + 1))', source)
