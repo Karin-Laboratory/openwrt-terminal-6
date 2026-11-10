@@ -409,7 +409,22 @@ jobs:
           fakeroot -i "$work/p26-fakeroot.state" -- python3 "$GITHUB_WORKSPACE/tools/build/verify_p26_independent.py" \
             --rootfs "$rootfs" \
             --p26 "$work/private-p26/packed/rootfs_a.p26" \
-            --squashfs "$work/private-p26/packed/rootfs.squashfs"
+            --squashfs "$work/private-p26/packed/rootfs.squashfs" \
+            --producer-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --attestation "$work/private-p26/packed/p26-independent-attestation.json"
+          python3 - "$work/private-p26/packed/p26-receipt.json" \
+            "$work/private-p26/packed/p26-independent-attestation.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          producer, independent = (json.loads(Path(p).read_text()) for p in sys.argv[1:])
+          if (producer["p26_sha256"] != independent["p26_sha256"]
+                  or producer["status"] != "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK"
+                  or independent["status"] != "P26_INDEPENDENT_FS_READBACK_VERIFIED"):
+              raise SystemExit("P26_BLOCKED_ATTESTATION_MISMATCH")
+          print("PUBLIC_P26_PRODUCER_AND_INDEPENDENT_RECEIPT_IDENTITY_PASS",
+                independent["p26_sha256"])
+          PY
           echo 'PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS'
           echo 'LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution'
           # Build an external diagnostic PID1 cpio with the SAME pinned
