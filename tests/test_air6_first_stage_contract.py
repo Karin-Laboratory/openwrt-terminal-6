@@ -17,6 +17,8 @@ class FirstStageContractTests(unittest.TestCase):
         text = FIRST.read_text()
         steps = [
             "grep -qw 'bootslot=a'",
+            "grep -qx 'PARTNAME=rootfs_a'",
+            "grep -qx 'PARTNAME=rootfs_data'",
             "/usr/libexec/air6/verify-bound-p26",
             "mount -t squashfs -o ro",
             "mount -t ext4 -o ro,noload",
