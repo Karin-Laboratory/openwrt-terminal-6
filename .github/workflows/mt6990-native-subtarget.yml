@@ -444,6 +444,33 @@ jobs:
             --cpio "$work/air6-p26-p44-alternative.cpio" \
             --receipt "$work/air6-p26-p44-alternative.json"
           echo 'PUBLIC_MT6990_REAL_ROOTFS_P26_P44_ALTERNATIVE_CPIO_READBACK_PASS'
+          # Separately manufacture the RC14-derived P44-required initramfs
+          # from the SAME source-built P26. This build-time selection is
+          # immutable and has no RAM fallback or preinstalled P44 script.
+          python3 -m tools.boot.build_p26_p44_initramfs \
+            --rootfs "$rootfs" \
+            --p26-file "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --boot-mode p44-required \
+            --output "$work/air6-p26-p44-required.cpio" \
+            --receipt "$work/air6-p26-p44-required.json"
+          python3 -m tools.boot.verify_p26_p44_initramfs \
+            --rootfs "$rootfs" \
+            --p26-file "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --cpio "$work/air6-p26-p44-required.cpio" \
+            --receipt "$work/air6-p26-p44-required.json"
+          python3 - "$work/air6-p26-p44-required.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          report = json.loads(Path(sys.argv[1]).read_text())
+          assert report["boot_mode"] == "p44-required"
+          assert report["p44_required"] is True
+          assert report["p44_owner_secret_embedded"] is False
+          assert report["owner_rw_approval_embedded"] is False
+          assert report["device_boot_proven"] is False
+          print("PUBLIC_MT6990_RC14_P44_REQUIRED_CPIO_READBACK_PASS")
+          PY
           echo 'LIMIT: separate unused initramfs; no P44 owner go, physical boot or signing'
           echo 'LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution'
           # Build an external diagnostic PID1 cpio with the SAME pinned
@@ -905,10 +932,10 @@ jobs:
           # it can mount or write a device. This is NOT switch_root success.
           known_image_sha="$(sha256sum "$kernel/arch/arm64/boot/Image" | cut -d' ' -f1)"
           "$kernel/scripts/config" --file "$kernel/.config" \
-            --set-str INITRAMFS_SOURCE "$work/air6-p26-p44-alternative.cpio"
+            --set-str INITRAMFS_SOURCE "$work/air6-p26-p44-required.cpio"
           PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
             make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
-          grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-p26-p44-alternative.cpio\"" \
+          grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-p26-p44-required.cpio\"" \
             "$kernel/.config"
           PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
             make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
