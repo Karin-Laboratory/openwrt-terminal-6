@@ -209,7 +209,7 @@ with carrier 1000/full; mount topology `/rom` and P44-backed `/overlay`;
 require owner-provisioned per-unit SSH host key and authorized keys with
 root-only permissions; never generate or embed shared secrets. An
 `--start` request requires native network configuration already to have
-placed the selected 192.168.1.1/24 management address on lan2, then binds
+placed the selected publicly documented default management IPv4 address on lan2, then binds
 Dropbear to that address with password/forwarding disabled.
 
 No `/etc/rc.d/S*` autorun link is created: **this candidate does not
