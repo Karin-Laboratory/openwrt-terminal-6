@@ -32,7 +32,7 @@ class FirstStageContractTests(unittest.TestCase):
         ]
         positions = [text.find(t) for t in steps]
         # Two distinct squashfs RO mounts (initial lower and final /rom).
-        positions[9] = text.find("mount -t squashfs -o ro", positions[8] + 1)
+        positions[11] = text.find("mount -t squashfs -o ro", positions[10] + 1)
         self.assertTrue(all(p >= 0 for p in positions), positions)
         self.assertEqual(positions, sorted(positions))
         self.assertIn("while :; do sleep 60; done", text)
