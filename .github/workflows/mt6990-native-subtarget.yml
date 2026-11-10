@@ -370,6 +370,12 @@ jobs:
           cmp "$management" \
             "$GITHUB_WORKSPACE/config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh"
           sh -n "$management"
+          # The OpenWrt package/install fakeroot namespace must retain
+          # root:root 0755 for the new in-P26 management entry. The host
+          # runner UID is not a substitute for the target filesystem UID.
+          fakeroot -i "$work/p26-fakeroot.state" -s "$work/p26-fakeroot.state" -- \
+            stat -c '%u:%g:%a' "$management" | grep -Fx '0:0:755'
+          echo 'PUBLIC_MT6990_P26_INTERNAL_MANAGEMENT_TARGET_ROOT_OWNERSHIP_PASS'
           # No SXXrc14 startup link is installed: an unprovisioned OpenWrt
           # rootfs cannot expose an SSH service without per-unit host keys.
           ! find "$rootfs/etc/rc.d" -maxdepth 1 -name '*rc14*' -print -quit | grep -q .
@@ -445,6 +451,12 @@ jobs:
             --p26 "$work/private-p26/packed/rootfs_a.p26" \
             --squashfs "$work/private-p26/packed/rootfs.squashfs"
           echo 'PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS'
+          # Verify the actual packed SquashFS carries the exact source-borne
+          # startup entry, not merely a staging-root script or receipt claim.
+          unsquashfs -cat "$work/private-p26/packed/rootfs.squashfs" \
+            usr/libexec/sba6d/rc14-management.sh | \
+            cmp - "$GITHUB_WORKSPACE/config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh"
+          echo 'PUBLIC_MT6990_REAL_P26_EMBEDDED_RC14_MANAGEMENT_READBACK_PASS'
           # Alternative *complete* initramfs from THIS exact OpenWrt package
           # rootfs and independently read-back 128MiB p26. Keep current known
           # QEMU/procd initramfs unchanged; the owner P44 RW consent and exact
