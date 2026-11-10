@@ -149,7 +149,10 @@ jobs:
           # Build OpenWrt's actual host tools, cross-toolchain and target
           # packages; no target/install, image recipe, signer or flash step.
           make -C "$work/openwrt" -j2 tools/install
-          # Keep the first failing kernel-headers command visible in the CI log.\n          # This gate previously failed with only a summarized make error;\n          # serial verbose output avoids guessing and blind reruns.\n          make -C "$work/openwrt" -j1 V=s toolchain/install
+          # Keep the first failing kernel-headers command visible in the CI log.
+          # This gate previously failed with only a summarized make error;
+          # serial verbose output avoids guessing and blind reruns.
+          make -C "$work/openwrt" -j1 V=s toolchain/install
           # The actual OpenWrt procd dependency closure reaches package/kernel/linux
           # even without selected kmod defaults. Build the native MT6990 kernel
           # first rather than hiding or bypassing its dependency. This is still
