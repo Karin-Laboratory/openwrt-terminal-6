@@ -30,6 +30,14 @@ NEWROOT=/mnt/air6-newroot
 EXPECTED=/etc/air6-p26.sha256
 P44_PARTNAME=/etc/air6-p44.partname
 OWNER_GO=/etc/air6-owner-p44-rw-go
+# Manufacturer-selected, immutable initramfs mode. The optional RAM path
+# remains research-only; RC14-style persistent boot requires an explicit
+# second build of the P44-required variant, never a runtime fallback.
+BOOT_MODE='ram-experimental'
+case "$BOOT_MODE" in
+    ram-experimental|p44-required) : ;;
+    *) halt_boot UNRECOGNIZED_BOOT_MODE ;;
+esac
 
 # Mount pseudo-filesystems first, then inspect actual device nodes and GPT.
 mkdir -p /proc /sys /dev "$ROM" "$NEWROOT" ||
@@ -65,7 +73,8 @@ log P26_ROM_MOUNT_PASS
 
 # Default is *volatile*: no P44 open, mount, journal replay or writes.
 # To opt in to P44, a separately provisioned owner consent file is required.
-if [ ! -e "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ]; then
+if [ "$BOOT_MODE" = ram-experimental ] &&
+    [ ! -e "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ]; then
     mkdir -p "$RAM" || halt_boot RAM_MOUNTPOINT
     mount -t tmpfs -o mode=0700,size=64m,nosuid,nodev tmpfs "$RAM" ||
         halt_boot RAM_TMPFS_MOUNT
@@ -73,20 +82,28 @@ if [ ! -e "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ]; then
     BACKING="$RAM"
     log P26_RAM_OVERLAY_DEFAULT
 else
-    # Existing approval path: unknown or malformed owner consent halts.
-    [ -f "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ] ||
-        halt_boot P44_RW_NOT_APPROVED
-    [ "$(cat "$OWNER_GO" 2>/dev/null)" = AIR6_P44_RW_OWNER_APPROVED_FOR_THIS_PAIR ] ||
-        halt_boot P44_RW_TOKEN_NOT_MATCHED
+    # Manufacturing P44-required mode is opt-in at build time. It never
+    # depends on a consent script preinstalled on P44 and never falls back
+    # to volatile RAM. Initial P44 formatting/provisioning is a separate
+    # owner-approved operation, never performed during boot.
     [ -b "$P44" ] || halt_boot P44_NOT_BLOCK
-    [ -s "$P44_PARTNAME" ] && [ ! -L "$P44_PARTNAME" ] ||
-        halt_boot P44_PARTNAME_UNREVIEWED
-    read -r partname < "$P44_PARTNAME" || halt_boot P44_PARTNAME_UNREADABLE
-    case "$partname" in
-        ''|*[!a-zA-Z0-9_-]*) halt_boot P44_PARTNAME_INVALID ;;
-    esac
-    grep -qx "PARTNAME=$partname" /sys/class/block/mmcblk0p44/uevent ||
-        halt_boot P44_GPT_PARTNAME
+    if [ "$BOOT_MODE" = p44-required ]; then
+        grep -qx 'PARTNAME=rootfs_data' /sys/class/block/mmcblk0p44/uevent ||
+            halt_boot P44_ROOTFS_DATA_GPT_MISMATCH
+    else
+        [ -f "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ] ||
+            halt_boot P44_RW_NOT_APPROVED
+        [ "$(cat "$OWNER_GO" 2>/dev/null)" = AIR6_P44_RW_OWNER_APPROVED_FOR_THIS_PAIR ] ||
+            halt_boot P44_RW_TOKEN_NOT_MATCHED
+        [ -s "$P44_PARTNAME" ] && [ ! -L "$P44_PARTNAME" ] ||
+            halt_boot P44_PARTNAME_UNREVIEWED
+        read -r partname < "$P44_PARTNAME" || halt_boot P44_PARTNAME_UNREADABLE
+        case "$partname" in
+            ''|*[!a-zA-Z0-9_-]*) halt_boot P44_PARTNAME_INVALID ;;
+        esac
+        grep -qx "PARTNAME=$partname" /sys/class/block/mmcblk0p44/uevent ||
+            halt_boot P44_GPT_PARTNAME
+    fi
     mkdir -p "$UPPER" || halt_boot P44_MOUNTPOINT
     # Check P44 with journal replay disabled before owner-authorized RW mount.
     mount -t ext4 -o ro,noload "$P44" "$UPPER" ||
