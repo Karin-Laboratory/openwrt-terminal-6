@@ -141,3 +141,18 @@ prefix-generation recipes to the public repository. Tests use a synthetic
 meaning of the prefix, load-address correctness, or LK acceptance**.
 No vendor64 sample is shipped or assumed. The current public CI research P25
 continues to pack a bare FDT.
+
+## Strict LK-inflate-oriented kernel input checks
+
+The P25 research builder rejects concatenated gzip members, trailing bytes,
+truncated members, invalid gzip CRC/ISIZE, oversized expanded kernels and
+non-ARM64 Linux Image payloads. It records the **uncompressed** Image length
+and SHA-256 alongside the compressed kernel hash in the P25 receipt.
+The independent P25 reader re-inflates and verifies both fields without
+trusting the builder's gzip parsing.
+
+This prevents a permissive userspace decompressor from treating multi-member
+gzip as acceptable input when LK may not. It is deliberately **not** a
+claim that the OEM LK inflater will succeed: architecture-specific load
+address, memory overlap, compression path and device boot constraints still
+require private runtime evidence.
