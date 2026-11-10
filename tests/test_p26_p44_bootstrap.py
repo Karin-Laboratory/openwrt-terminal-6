@@ -244,7 +244,12 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         # Native kernel must embed the alternate verified CPIO AFTER the
         # known-good research p25/QEMU stages, without changing their receipts.
         wf = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
-        self.assertIn('--set-str INITRAMFS_SOURCE "$work/air6-p26-p44-alternative.cpio"', wf)
+        self.assertIn('--set-str INITRAMFS_SOURCE "$work/air6-p26-p44-required.cpio"', wf)
+        self.assertIn('--boot-mode p44-required', wf)
+        self.assertIn('PUBLIC_MT6990_RC14_P44_REQUIRED_CPIO_READBACK_PASS', wf)
+        self.assertIn('--cpio "$work/air6-p26-p44-required.cpio"', wf)
+        self.assertLess(wf.index('PUBLIC_MT6990_RC14_P44_REQUIRED_CPIO_READBACK_PASS'),
+                        wf.index('--set-str INITRAMFS_SOURCE "$work/air6-p26-p44-required.cpio"'))
         self.assertIn('AIR6_RAM_INIT_ENTER', wf)
         self.assertIn('AIR6_BOOT_BLOCKED_P26_NOT_BLOCK', wf)
         self.assertIn('PUBLIC_MT6990_QEMU_VIRT_ALTERNATIVE_INIT_MISSING_P26_FAILCLOSED_PASS', wf)
