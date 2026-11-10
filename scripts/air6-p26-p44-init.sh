@@ -122,6 +122,12 @@ fi
 [ -b "$P26" ] || halt_boot P26_NOT_BLOCK
 grep -qx 'PARTNAME=rootfs_a' "/sys/class/block/${P26##*/}/uevent" ||
     halt_boot P26_GPT_PARTNAME
+# sysfs block sizes are 512-byte sectors. The p26 manufacturing contract
+# is exactly 134,217,728 bytes, so reject a wrong-sized GPT target before
+# streaming any partition bytes for the SHA gate.
+read -r p26_sectors < "/sys/class/block/${P26##*/}/size" ||
+    halt_boot P26_SIZE_UNREADABLE
+[ "$p26_sectors" = 262144 ] || halt_boot P26_PARTITION_SIZE_MISMATCH
 
 [ -s "$EXPECTED" ] && [ ! -L "$EXPECTED" ] ||
     halt_boot P26_EXPECTED_SHA_MISSING
