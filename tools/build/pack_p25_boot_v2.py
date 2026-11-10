@@ -17,6 +17,9 @@ import struct
 PARTITION = 33_554_432
 HEADER_SIZE = 1660
 PAGE = 2048
+# Owner-observed C-unit LK inflate avail_out=0x02300000 (35MiB).
+# Equal to capacity is rejected, as in the RC8 proven-source gate.
+LK_OUTPUT_CAP = 0x02300000
 
 
 def file_sha(path):
@@ -38,7 +41,7 @@ def validate_inputs(kernel, dtb, layout="bare-fdt", prefix_sha=None):
     # accepts concatenated members. Require exactly ONE CRC-valid gzip
     # member, no trailing bytes, and a bounded real ARM64 Image payload.
     decoder = zlib.decompressobj(wbits=16 + zlib.MAX_WBITS)
-    limit = 256 * 1024 * 1024
+    limit = LK_OUTPUT_CAP
     expanded, header = 0, bytearray()
     inflated_sha256 = hashlib.sha256()
     with kernel.open("rb") as src:
@@ -51,8 +54,8 @@ def validate_inputs(kernel, dtb, layout="bare-fdt", prefix_sha=None):
                 raise ValueError("invalid gzip member or CRC") from exc
             expanded += len(decoded)
             inflated_sha256.update(decoded)
-            if expanded > limit or decoder.unconsumed_tail:
-                raise ValueError("gzip Image exceeds expanded size limit")
+            if expanded >= limit or decoder.unconsumed_tail:
+                raise ValueError("LK_OUTPUT_CAP_EXCEEDED: uncompressed Image reaches 35MiB")
             if len(header) < 64:
                 header.extend(decoded[:64 - len(header)])
             if decoder.unused_data:
@@ -170,7 +173,9 @@ def build(kernel, dtb, metadata, output, receipt):
             "page_size": PAGE, "kernel": {"offset": koff, "bytes": ksize,
                 "sha256": file_sha(kernel),
                 "inflated_bytes": inflated["bytes"],
-                "inflated_sha256": inflated["sha256"]},
+                "inflated_sha256": inflated["sha256"],
+                "lk_output_cap_bytes": LK_OUTPUT_CAP,
+                "lk_headroom_bytes": LK_OUTPUT_CAP - inflated["bytes"]},
             "dtb": {"offset": doff, "bytes": dsize, "sha256": file_sha(dtb)},
             "body_end": end, "zero_tail_bytes": PARTITION - end,
             "android_image_id_sha1": sha1.hexdigest(),
