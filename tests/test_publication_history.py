@@ -203,6 +203,18 @@ class HistoryScannerTests(unittest.TestCase):
         gate.history_findings(issues, objects)
         self.assertIn((sha, "restricted artifact filename/type"), objects)
 
+    def test_object_ids_include_oversized_historical_blob(self):
+        p = self.root / "large.txt"
+        p.write_bytes(b"x" * (gate.MAX_SIZE + 1))
+        self.commit("synthetic oversized history")
+        sha = subprocess.check_output(
+            ["git", "rev-parse", "HEAD:large.txt"], cwd=self.root
+        ).decode().strip()
+        issues, objects = set(), set()
+        gate.history_findings(issues, objects)
+        self.assertIn(("large.txt", "oversized historical blob"), issues)
+        self.assertIn((sha, "oversized historical blob"), objects)
+
     def test_benign_history_stays_clean(self):
         (self.root / "first.txt").write_text("hello\n")
         self.commit("first safe document")
