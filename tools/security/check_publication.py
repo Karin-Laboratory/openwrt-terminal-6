@@ -159,9 +159,11 @@ def history_findings(findings: set, object_findings=None) -> int:
             if kind != b"blob":
                 findings.add((label, "gitlink or unsupported object requires review"))
                 continue
+            sha = sha_raw.decode("ascii")
             if mode == b"120000":
                 findings.add((label, "symlink requires manual review"))
-            sha = sha_raw.decode("ascii")
+                if object_findings is not None:
+                    object_findings.add((sha, "symlink requires manual review"))
             if (sha, path) in pairs:
                 continue
             pairs.add((sha, path))
