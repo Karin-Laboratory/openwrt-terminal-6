@@ -891,6 +891,28 @@ jobs:
             --receipt "$work/p25-p26-aware-research.json" \
             --kernel "$work/air6-p26-aware-Image.gz" \
             --dtb "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
+          # Tie the packed P25's independently re-inflated kernel receipt to
+          # the exact alternative Image that was compiled in this same run.
+          # This detects stale Image.gz/receipt substitution without any
+          # bootloader or device access.
+          python3 - "$alternate_image" "$work/p25-p26-aware-research.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          image = Path(sys.argv[1])
+          receipt = json.loads(Path(sys.argv[2]).read_text())
+          h = hashlib.sha256()
+          size = 0
+          with image.open("rb") as stream:
+              for chunk in iter(lambda: stream.read(1 << 20), b""):
+                  size += len(chunk)
+                  h.update(chunk)
+          kernel = receipt["kernel"]
+          assert size == kernel["inflated_bytes"], "ALTERNATE_IMAGE_EXPANDED_LENGTH_MISMATCH"
+          assert h.hexdigest() == kernel["inflated_sha256"], "ALTERNATE_IMAGE_EXPANDED_SHA_MISMATCH"
+          assert receipt["signed"] is False and receipt["device_boot_proven"] is False
+          print("PUBLIC_MT6990_P26_AWARE_P25_INFLATED_IMAGE_IDENTITY_PASS",
+                "bytes=" + str(size), "sha256=" + h.hexdigest())
+          PY
           # Exercise the existing independent FDT tree/phandle validator
           # against this actual research P25 rather than synthetic fixtures.
           # Metadata is generated from the packer's own receipt: integrity
