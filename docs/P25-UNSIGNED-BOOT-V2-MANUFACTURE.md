@@ -59,6 +59,24 @@ acceptance, real memory map, init transition and Air6 DTB compatibility must be
 proven separately. Do not treat the synthetic layout gate as an RC14 boot
 reproduction.
 
+## Same-run unsigned P25/P26 pair identity
+
+Once the real native P26 has passed independent 128 MiB extracted-tree readback,
+and ONLY if independently validated owner-private boot-v2 address/config is
+provided, the native job now builds an unsigned P25 and invokes
+`tools/build/verify_unsigned_pair.py`. This tool independently rechecks P25
+kernel/ramdisk/DTB, full 32 MiB layout and command-line/config identity,
+rehashes the actual 128 MiB P26, and compares that hash with **both** the
+P26 producer receipt and its separate independently verified readback
+attestation. It requires matching SquashFS metadata and producer receipt
+identity, then creates one exclusive-creation pair receipt.
+
+The resulting `UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED` means the two candidate
+images have consistent byte identity within the same native job, **not** that
+either is signed, fits the device's proprietary boot extension, boots the Air6,
+or has cleared distribution rights. Without an explicit accepted P25 config
+the pair step is skipped/blocked, not silently represented by synthetic inputs.
+
 ## Acceptance still pending
 
 1. An independently verified public-source ARM64 kernel, correct C-unit DTB
