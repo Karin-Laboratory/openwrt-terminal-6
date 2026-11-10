@@ -11,6 +11,8 @@ on:
       - 'tests/test_air6_first_stage_contract.py'
       - 'tests/test_verify_bound_p26.py'
       - 'tests/test_pack_p25_unsigned_v2.py'
+      - 'tools/boot/audit_p25_reference_v2.py'
+      - 'tests/test_audit_p25_reference_v2.py'
       - 'tools/boot/verify_kernel_initramfs.py'
       - 'tools/build/verify_unsigned_pair.py'
       - 'tests/test_verify_kernel_initramfs.py'
@@ -32,6 +34,8 @@ jobs:
         run: |
           python3 -m py_compile tools/boot/pack_p25_unsigned_v2.py tools/boot/verify_p25_independent.py tests/test_pack_p25_unsigned_v2.py
           python3 -m unittest discover -s tests -p test_pack_p25_unsigned_v2.py -v
+          python3 -m py_compile tools/boot/audit_p25_reference_v2.py tests/test_audit_p25_reference_v2.py
+          python3 -m unittest discover -s tests -p test_audit_p25_reference_v2.py -v
           python3 -m py_compile tools/boot/verify_kernel_initramfs.py tools/build/verify_unsigned_pair.py
           python3 -m unittest discover -s tests -p test_verify_kernel_initramfs.py -v
           python3 -m unittest discover -s tests -p test_verify_unsigned_pair.py -v
