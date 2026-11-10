@@ -11,6 +11,10 @@ PATH = Path(__file__).resolve().parents[1] / "tools/boot/pack_p25_unsigned_v2.py
 spec = importlib.util.spec_from_file_location("p25", PATH)
 p25 = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(p25)
+VPATH = PATH.with_name('verify_p25_independent.py')
+vspec = importlib.util.spec_from_file_location('p25_verify', VPATH)
+p25verify = importlib.util.module_from_spec(vspec)
+vspec.loader.exec_module(p25verify)
 
 
 class TestP25BootV2(unittest.TestCase):
@@ -43,6 +47,16 @@ class TestP25BootV2(unittest.TestCase):
         self.assertEqual(receipt["partition_bytes"], len(content))
         with self.assertRaises(ValueError):
             p25.build(self.kernel, self.ramdisk, self.dtb, self.cfg, self.output)
+
+    def test_independent_full_readback(self):
+        p25.build(self.kernel, self.ramdisk, self.dtb, self.cfg, self.output)
+        result = p25verify.verify(self.output, self.kernel, self.ramdisk, self.dtb)
+        self.assertEqual(result["partition_bytes"], 33554432)
+        damaged = bytearray(self.output.read_bytes())
+        damaged[-1] = 1
+        self.output.write_bytes(damaged)
+        with self.assertRaisesRegex(ValueError, "NONZERO_PARTITION_PADDING"):
+            p25verify.verify(self.output, self.kernel, self.ramdisk, self.dtb)
 
     def test_rejects_invalid_kernel(self):
         self.kernel.write_bytes(b"not gzip")
