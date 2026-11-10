@@ -115,6 +115,11 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     if (attestation.exists() or attestation.is_symlink()
             or any(parent.is_symlink() for parent in attestation.parents)):
         raise ValueError("ATTEST_OUTPUT_EXISTS_OR_SYMLINK")
+    # Independent verification happened before this call. Rehash the actual
+    # partition again immediately before attestation so an intervening
+    # modification cannot inherit an obsolete verified_sha from the caller.
+    if p26.stat().st_size != SIZE or sha(p26) != verified_sha:
+        raise ValueError("ATTEST_P26_CHANGED_AFTER_VERIFY")
     record = json.loads(producer_receipt.read_text())
     required = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
                 "partition_bytes": SIZE, "signed": False,
