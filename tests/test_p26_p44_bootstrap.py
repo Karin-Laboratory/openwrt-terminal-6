@@ -145,6 +145,8 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn('qemu-aarch64 -L /rootfs -0 "$applet" /rootfs/bin/busybox --help', workflow)
         self.assertIn('PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_DIRECT_APPLET_PROBES_PASS', workflow)
         self.assertIn('BLOCKED_TARGET_BUSYBOX_QEMU_APPLET_RUNTIME_$applet', workflow)
+        self.assertIn("BLOCKED_TARGET_BUSYBOX_HELP_OUTPUT_NOT_VERIFIED_$applet", workflow)
+        self.assertIn("grep -Fq 'BusyBox v'", workflow)
         self.assertIn('--target-busybox-applets "$work/target-openwrt-busybox-applets.txt"', workflow)
         self.assertIn('--network none --read-only', workflow)
         self.assertIn('--cap-drop ALL --security-opt no-new-privileges', workflow)
