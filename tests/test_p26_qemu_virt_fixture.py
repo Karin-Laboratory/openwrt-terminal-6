@@ -46,6 +46,17 @@ class SyntheticVirtioBootTests(unittest.TestCase):
             return verifier.verify(self.original, self.output, self.receipt,
                                    self.p26, self.p26_receipt)
 
+    def test_virtio_patch_is_scoped_to_ram_mode_active_p26_probe(self):
+        source = producer.BOOT_SCRIPT.read_bytes()
+        active = b'''grep -qx 'PARTNAME=rootfs_a' "/sys/class/block/${P26##*/}/uevent"'''
+        self.assertEqual(source.count(active), 1)
+        self.assertEqual(source.count(b"BOOT_MODE='ram-experimental'"), 1)
+        self.assertEqual(len(fixture.PATCHES), 2)
+        self.assertEqual(fixture.PATCHES[1][0], active.removeprefix(b"grep -qx "))
+        # The portable P44-required GPT scan stays in the source, but
+        # cannot be activated by the virtio test's RAM-default fixture.
+        self.assertIn(b'if [ "$BOOT_MODE" = p44-required ]; then', source)
+
     def test_real_newc_fixture_provenance_independent_readback(self):
         data = self.build()
         self.assertEqual(data["virtual_block"], "/dev/vda")

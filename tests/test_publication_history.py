@@ -171,6 +171,45 @@ class HistoryScannerTests(unittest.TestCase):
                             for path, category in issues), issues)
         self.assertNotIn(fake_name, repr(issues))
 
+    def test_only_documented_generic_lan_profile_address_is_exempt(self):
+        path = "config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh"
+        gateway = b"192.168." + b"1.1"
+        different = b"192.168." + b"7.71"
+        findings = set()
+        gate.scan(path, b"bind " + gateway + b":22", findings)
+        self.assertEqual(findings, set())
+        gate.scan(path, b"bind " + gateway + b"; peer " + different, findings)
+        self.assertIn((path, "private network endpoint"), findings)
+        findings.clear()
+        gate.scan("other-script.sh", b"bind " + gateway + b":22", findings)
+        self.assertIn(("other-script.sh", "private network endpoint"), findings)
+        findings.clear()
+        gate.scan(path, b"root@" + gateway, findings)
+        self.assertIn((path, "device login endpoint"), findings)
+        findings.clear()
+        gate.scan("tests/test_public_rc14_management.py",
+                  b"literal " + gateway, findings)
+        self.assertEqual(findings, set())
+
+    def test_historical_waivers_are_exact_blob_identifiers_only(self):
+        self.assertEqual(len(gate.KNOWN_PUBLIC_FIXTURE_BLOBS), 3)
+        self.assertIn(("docs/MAINLINE-P26-P44-EXPERIMENTAL-BOOTSTRAP.md",
+                       "d49ccd70fca3a782154ec2311a5c7893be7f7eb6"),
+                      gate.KNOWN_PUBLIC_FIXTURE_BLOBS)
+        self.assertIn(("tools/security/check_publication.py",
+                       "20339d624278a436450d35cd1ce0066713816bcc"),
+                      gate.KNOWN_PUBLIC_FIXTURE_BLOBS)
+        self.assertIn(("tests/test_publication_history.py",
+                       "bef753648c68721448bdd83d73e0b79cf3082efa"),
+                      gate.KNOWN_PUBLIC_FIXTURE_BLOBS)
+        # Test fixture source revisions are never a global source/path waiver:
+        # an unrelated endpoint under the same path must be rejected.
+        token = b"10." + b"2.3.4"
+        problems = set()
+        gate.scan("tests/test_publication_history.py", b"peer " + token, problems)
+        self.assertIn(("tests/test_publication_history.py",
+                       "private network endpoint"), problems)
+
     def test_benign_history_stays_clean(self):
         (self.root / "first.txt").write_text("hello\n")
         self.commit("first safe document")

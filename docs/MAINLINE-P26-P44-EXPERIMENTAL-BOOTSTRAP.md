@@ -104,3 +104,164 @@ P26 and CPIO remain unchanged. The expected result is
 early-start log *after* `switch_root` begins. None of these are treated as
 Air6 hardware acceptance, and passing source unit tests is not itself
 runtime success.
+
+## Same-run alternative initramfs research P25 (2026-11-10)
+
+The native build now attempts a **second, separate unsigned research P25**
+after compiling the actual alternative-initramfs kernel Image. Unlike the
+original QEMU/procd P25, this Image contains the P26-hash-aware `/init`
+and is compressed with `gzip -n` before boot-v2 packing.
+
+The CI reuses the *same* synthetic AOSP-v2 metadata and same compiled
+Air6 DTB, independently verifies the 32MiB P25 byte layout and checks its
+pair receipt against the same-run source-built 128MiB P26 and the alternative
+CPIO's embedded P26 SHA. This catches packaging/pairing drift without
+disclosing or consuming any owner-only device metadata.
+
+**Limits:** This check is not a proof that LK can authenticate, parse or
+inflate the image. The P25 still has zero synthetic load addresses, lacks
+confirmed OEM vendor64 semantics and is neither signer-ready nor flashable.
+The alternative Air6 initramfs is not interchangeable with the QEMU-only
+virtio variant. A green CI here is an engineering artifact, not hardware
+boot evidence. All generated images remain ephemeral.
+
+## Optional external 64-byte-prefixed FDT section support
+
+The public boot-v2 research packer now accepts an **externally supplied**
+64-byte-prefixed FDT *section* when its metadata explicitly sets
+`dtb_layout=opaque-64-prefix-plus-fdt` and a matching
+`vendor64_prefix_sha256`. The builder validates the prefix hash and the
+inner FDT header/size; the independent reader repeats those checks against
+the packed 32MiB P25. The default remains the original bare FDT layout.
+
+This enables private experiments with an independently reviewed, lawfully
+obtained section without adding OEM bytes, device identifiers or proprietary
+prefix-generation recipes to the public repository. Tests use a synthetic
+64-byte prefix only. The 64-byte boundary and SHA **do not establish the
+meaning of the prefix, load-address correctness, or LK acceptance**.
+No vendor64 sample is shipped or assumed. The current public CI research P25
+continues to pack a bare FDT.
+
+## Strict LK-inflate-oriented kernel input checks
+
+The P25 research builder rejects concatenated gzip members, trailing bytes,
+truncated members, invalid gzip CRC/ISIZE, oversized expanded kernels and
+non-ARM64 Linux Image payloads. It records the **uncompressed** Image length
+and SHA-256 alongside the compressed kernel hash in the P25 receipt.
+The independent P25 reader re-inflates and verifies both fields without
+trusting the builder's gzip parsing.
+
+This prevents a permissive userspace decompressor from treating multi-member
+gzip as acceptable input when LK may not. It is deliberately **not** a
+claim that the OEM LK inflater will succeed: architecture-specific load
+address, memory overlap, compression path and device boot constraints still
+require private runtime evidence.
+
+## RC14-derived required-P44 manufacturing research path (2026-11-10)
+
+The private RC13/14 observations established a startup sequence involving a
+full padded P26 SHA comparison, read-only SquashFS root, read-only ext4
+`noload` preflight of the persistent rootfs_data partition, mount of
+`upper/work`, then switch_root with exported `INITRAMFS=1` to prevent
+OpenWrt preinit from attempting a second fstools overlay transition.
+
+The public implementation independently implements those *observed facts*:
+
+- The default `ram-experimental` CPIO remains available for existing QEMU
+  testing, but `--boot-mode p44-required` manufactures a **different CPIO**
+  that cannot silently choose the RAM overlay branch.
+- The required path discovers unique `PARTNAME=rootfs_a` and
+  `PARTNAME=rootfs_data` on the same MMC disk, refusing absent, ambiguous,
+  cross-disk or non-block matches. A P44 recognition marker
+  `.sba6d-rootfs-data-v1` containing `SBA6D_ROOTFS_DATA_V1` and a
+  `.fs_state -> 2` symbolic link must exist before any P44 RW mount.
+- Those P44 identity fields and the overlay entry directories are checked
+  with `ro,noload`, and rechecked after the separately owner-authorized
+  persistent mount. No filesystem formatting, repair, script installation
+  on P44, device signing, slot switching or fallback reboot is performed.
+- The native CI manufactures both CPIO variants from the same independently
+  verified source-built P26. Its **alternative research P25** embeds the
+  P44-required variant rather than the RAM-default variant. Independent
+  CPIO readback and P25/P26 hash-binding remain mandatory.
+
+This is **not an RC14 production binary backport**. The public P25 still
+uses synthetic header addresses, the LK-specific vendor64 semantics are
+unverified, and the P26 startup contents have not yet reproduced the
+privately proven RC14 Ethernet/SSH/Wi-Fi orchestration. Moreover the
+private RC14 successful diagnostic boot used a shell PID 1; successful
+ordinary procd handoff is a separate runtime acceptance condition.
+P44 must be safely pre-provisioned by the owner with the documented
+marker/overlay layout; this boot path never initializes a blank partition.
+
+## P26-internal RC14-derived management candidate
+
+The public native rootfs stage now includes the independently authored
+`/usr/libexec/sba6d/rc14-management.sh` (source:
+`config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh`).
+It is installed **inside source-built P26**, not on P44. The workflow
+checks exact source identity, root:root/0755 in the retained fakeroot
+namespace, and performs an independent `unsquashfs -cat` byte comparison
+against the real packed SquashFS.
+
+The observed RC14 LAN2 management role informs an explicit, manual-only
+`--check` / `--start` candidate: require a real MAC1/DSA LAN2 interface
+with carrier 1000/full; mount topology `/rom` and P44-backed `/overlay`;
+require owner-provisioned per-unit SSH host key and authorized keys with
+root-only permissions; never generate or embed shared secrets. An
+`--start` request requires native network configuration already to have
+placed the selected publicly documented default management IPv4 address on lan2, then binds
+Dropbear to that address with password/forwarding disabled.
+
+No `/etc/rc.d/S*` autorun link is created: **this candidate does not
+auto-enable SSH or provision per-device keys**. The P44-required initramfs
+checks that P44 overlay has not replaced or hidden its P26 management script
+before `switch_root`. It does not load RC14's experimental NETSYS/MDIO
+modules or write SGMII registers, and therefore does **not** yet provide
+RC14's proven LAN hardware initialization. Successful boot, packet
+forwarding, multi-unit MAC assignment, per-unit calibration, Wi-Fi AP
+bring-up, and post-reboot management are all still unverified on the public
+image. Do not sign/flash this research P25/P26 based on these checks alone.
+
+## RC13/14 boot-safety and LAN receive evidence backport (2026-11-10)
+
+The private RC13's working startup script required `bootslot=a`,
+allowed a bounded 80 × 0.25-second eMMC/GPT enumeration period, checked
+unique `rootfs_a`, `rootfs_data`, and preserved `user_data` partition
+identities on the same disk, verified the layout, and used
+`rw,noatime,nosuid,nodev` for P44 after a read-only preflight.
+The public source now independently implements those conditions without
+copying private device image headers or hardcoding C-unit GPT sector offsets.
+It also requires the 128MiB manufactured P26 target size before full SHA
+readback. These checks are fail-closed, not a positive hardware boot proof.
+
+The private RC14 cold-boot observations also showed a false-positive
+management readiness case: LAN2 carrier 1000/full and TCP/22 listening while
+the SoC MAC1 RX statistic remained at zero; host ARP/SSH failed.
+The P26-embedded manual management entry therefore reports
+`PREFLIGHT_PASS_LINK_ONLY` from `--check`, whereas `--start` requires
+a nonzero MAC1 RX counter and refuses startup otherwise. This observation
+only establishes receive activity, not bidirectional reachability or
+verified host-key SSH. No automatic network probing, register writes, SSH
+key distribution, or live target changes were added.
+
+The isolated QEMU virt tests explicitly supply synthetic `bootslot=a`,
+preserving the full P26 hash-corruption and RAM-positive assertions after
+the new real-device slot preflight. These QEMU tests are not a substitute
+for source-built Air6 DTB MMC enablement, LK acceptance or a cold-boot test.
+
+
+## Observed C-LK kernel inflate capacity backport
+
+RC8 private source documented the owner-observed genuine C-unit LK
+`avail_out=0x02300000` when decompressing the ARM64 kernel. This is a
+**35MiB output buffer**, not a limit on compressed `Image.gz` length.
+The independently implemented public P25 packer and reader now reject
+an uncompressed Image of **35MiB or larger**, reject malformed or
+multi-member gzip, and record the actual output count, SHA-256, fixed
+LK capacity and remaining headroom. A synthetic boundary regression
+builds a valid gzip member that expands to exactly the limit and
+requires both tools to fail closed.
+
+The observation constrains one known LK failure mode. It does **not**
+prove correct P25 load addresses, vendor64 field interpretation,
+MMC-capable DTB, signed LK acceptance, or actual hardware boot.

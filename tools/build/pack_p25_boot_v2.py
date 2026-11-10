@@ -7,7 +7,7 @@ No Air6 LK addresses, vendor64 DTB wrapper, signer, flash or release approval
 is inferred. Synthetic header metadata yields a NONBOOTABLE research candidate.
 """
 import argparse
-import gzip
+import zlib
 import hashlib
 import json
 import os
@@ -17,6 +17,9 @@ import struct
 PARTITION = 33_554_432
 HEADER_SIZE = 1660
 PAGE = 2048
+# Owner-observed C-unit LK inflate avail_out=0x02300000 (35MiB).
+# Equal to capacity is rejected, as in the RC8 proven-source gate.
+LK_OUTPUT_CAP = 0x02300000
 
 
 def file_sha(path):
@@ -27,30 +30,65 @@ def file_sha(path):
     return h.hexdigest()
 
 
-def validate_inputs(kernel, dtb):
+def validate_inputs(kernel, dtb, layout="bare-fdt", prefix_sha=None):
     for path in (kernel, dtb):
         if path.is_symlink() or not path.is_file() or path.stat().st_size == 0:
             raise ValueError("inputs must be regular nonempty non-symlink files")
     with kernel.open("rb") as src:
         if src.read(2) != b"\x1f\x8b":
             raise ValueError("kernel must be Image.gz, not uncompressed Image")
-    with gzip.open(kernel, "rb") as src:
-        header = src.read(64)
-        if len(header) != 64 or header[56:60] != b"ARM\x64":
-            raise ValueError("gzip payload is not an ARM64 Linux Image")
-        while src.read(1 << 20):
-            pass
+    # LK's inflate path is not equivalent to Python gzip.open(), which
+    # accepts concatenated members. Require exactly ONE CRC-valid gzip
+    # member, no trailing bytes, and a bounded real ARM64 Image payload.
+    decoder = zlib.decompressobj(wbits=16 + zlib.MAX_WBITS)
+    limit = LK_OUTPUT_CAP
+    expanded, header = 0, bytearray()
+    inflated_sha256 = hashlib.sha256()
+    with kernel.open("rb") as src:
+        for chunk in iter(lambda: src.read(1 << 20), b""):
+            if decoder.eof:
+                raise ValueError("trailing bytes after gzip member")
+            try:
+                decoded = decoder.decompress(chunk, limit - expanded + 1)
+            except zlib.error as exc:
+                raise ValueError("invalid gzip member or CRC") from exc
+            expanded += len(decoded)
+            inflated_sha256.update(decoded)
+            if expanded >= limit or decoder.unconsumed_tail:
+                raise ValueError("LK_OUTPUT_CAP_EXCEEDED: uncompressed Image reaches 35MiB")
+            if len(header) < 64:
+                header.extend(decoded[:64 - len(header)])
+            if decoder.unused_data:
+                raise ValueError("trailing bytes after gzip member")
+    if not decoder.eof:
+        raise ValueError("truncated gzip Image member")
+    if len(header) != 64 or header[56:60] != b"ARM\x64":
+        raise ValueError("gzip payload is not an ARM64 Linux Image")
+    if layout not in ("bare-fdt", "opaque-64-prefix-plus-fdt"):
+        raise ValueError("unrecognized DTB section layout")
+    if layout == "bare-fdt" and prefix_sha is not None:
+        raise ValueError("unexpected vendor64 SHA for bare FDT")
+    inflated = {"bytes": expanded, "sha256": inflated_sha256.hexdigest()}
     with dtb.open("rb") as src:
+        if layout == "opaque-64-prefix-plus-fdt":
+            if not isinstance(prefix_sha, str) or len(prefix_sha) != 64 or any(
+                    c not in "0123456789abcdef" for c in prefix_sha):
+                raise ValueError("explicit vendor64 prefix SHA required")
+            prefix = src.read(64)
+            if len(prefix) != 64 or hashlib.sha256(prefix).hexdigest() != prefix_sha:
+                raise ValueError("vendor64 prefix SHA mismatch")
         d = src.read(40)
         if len(d) != 40 or d[:4] != b"\xd0\x0d\xfe\xed":
             raise ValueError("bad FDT header")
         size, off_struct, off_strings, off_resv = struct.unpack_from(">IIII", d, 4)
-        if size != dtb.stat().st_size or not (40 <= off_resv < size):
+        expected_size = dtb.stat().st_size - (64 if layout == "opaque-64-prefix-plus-fdt" else 0)
+        if size != expected_size or not (40 <= off_resv < size):
             raise ValueError("bad FDT length / reserve offset")
         sizes = struct.unpack_from(">II", d, 32)
         if any(off > size or n > size - off for off, n in
                ((off_struct, sizes[1]), (off_strings, sizes[0]))):
             raise ValueError("invalid FDT block")
+    return inflated
 
 
 def build(kernel, dtb, metadata, output, receipt):
@@ -58,8 +96,10 @@ def build(kernel, dtb, metadata, output, receipt):
     output, receipt = Path(output), Path(receipt)
     if output == receipt or output.exists() or receipt.exists() or output.is_symlink() or receipt.is_symlink():
         raise ValueError("outputs must be new and distinct")
-    validate_inputs(kernel, dtb)
     cfg = json.loads(metadata.read_text())
+    layout = cfg.get("dtb_layout", "bare-fdt")
+    prefix_sha = cfg.get("vendor64_prefix_sha256")
+    inflated = validate_inputs(kernel, dtb, layout, prefix_sha)
     if cfg.get("format") != "aosp-boot-v2-metadata-v1":
         raise ValueError("unrecognized header metadata")
     if cfg.get("metadata_provenance") not in ("synthetic-research-only", "owner-reviewed-public-metadata"):
@@ -124,13 +164,18 @@ def build(kernel, dtb, metadata, output, receipt):
             "format": "aosp-boot-v2-p25-research-receipt-v1",
             "status": "REAL_32M_BYTES_AOSP_V2_STRUCTURE_ONLY_NOT_LK_ACCEPTED",
             "metadata_provenance": cfg["metadata_provenance"],
+            "dtb_layout": layout, "vendor64_prefix_sha256": prefix_sha,
             "header_fields": {"kernel_addr": fields["kernel_addr"],
                 "tags_addr": fields["tags_addr"], "dtb_addr": fields["dtb_addr"],
                 "os_version": fields["os_version"], "board": board,
                 "cmdline": cmdline, "extra_cmdline": extra_cmdline},
             "partition_bytes": PARTITION, "header_bytes": HEADER_SIZE,
             "page_size": PAGE, "kernel": {"offset": koff, "bytes": ksize,
-                "sha256": file_sha(kernel)},
+                "sha256": file_sha(kernel),
+                "inflated_bytes": inflated["bytes"],
+                "inflated_sha256": inflated["sha256"],
+                "lk_output_cap_bytes": LK_OUTPUT_CAP,
+                "lk_headroom_bytes": LK_OUTPUT_CAP - inflated["bytes"]},
             "dtb": {"offset": doff, "bytes": dsize, "sha256": file_sha(dtb)},
             "body_end": end, "zero_tail_bytes": PARTITION - end,
             "android_image_id_sha1": sha1.hexdigest(),

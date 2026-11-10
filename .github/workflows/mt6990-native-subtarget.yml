@@ -11,6 +11,8 @@ on:
       - tools/build/pack_p26_rootfs.py
       - tools/build/pack_p25_boot_v2.py
       - tools/build/verify_p25_boot_v2.py
+      - tools/build/check_p25_p26_presign.py
+      - tests/test_p25_p26_presign.py
       - tests/test_pack_p25_boot_v2.py
       - scripts/air6-p26-p44-init.sh
       - tools/boot/build_p26_p44_initramfs.py
@@ -45,6 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests -p 'test_mt6990_native_subtarget.py' -v
+          python3 -m unittest discover -s tests -p 'test_p25_p26_presign.py' -v
           python3 tools/build/verify_source_catalog.py
       - name: Pin clean upstream OpenWrt and register noninstallable target
         shell: bash
@@ -96,6 +99,12 @@ jobs:
     name: Compile real OpenWrt procd/netifd packages (noninstallable)
     needs: native-defconfig
     runs-on: ubuntu-latest
+    # Several source commits per hour previously launched overlapping multi-hour
+    # GCC toolchains. Finish the current compile, then retain the newest pending
+    # revision. Never cancel a running build before its final result is recorded.
+    concurrency:
+      group: public-air6-native-package-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: false
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -146,7 +155,43 @@ jobs:
           # Build OpenWrt's actual host tools, cross-toolchain and target
           # packages; no target/install, image recipe, signer or flash step.
           make -C "$work/openwrt" -j2 tools/install
-          make -C "$work/openwrt" -j2 toolchain/install
+          # Keep the first failing kernel-headers command visible in the CI log.
+          # This gate previously failed with only a summarized make error;
+          # serial verbose output avoids guessing and blind reruns.
+          make -C "$work/openwrt" -j1 V=s toolchain/install
+          # Toolchain was previously skipped by an accidental shell-comment
+          # continuation. Check the real staged AArch64 GCC *before* the long
+          # target/linux/compile so this cannot fail with an opaque Kbuild
+          # "C compiler ... not found" after kernel patch extraction.
+          early_compiler="$(find "$work/openwrt/staging_dir" -maxdepth 5 \
+            -name 'aarch64-openwrt-linux-musl-gcc' -print -quit)"
+          if [ -z "$early_compiler" ] || [ ! -x "$early_compiler" ]; then
+            echo 'BLOCKED_NATIVE_TOOLCHAIN_GCC_NOT_INSTALLED' >&2
+            find "$work/openwrt/staging_dir" -maxdepth 5 -name '*gcc*' -print >&2
+            exit 1
+          fi
+          early_bin="$(dirname "$early_compiler")"
+          if [ ! -x "$early_bin/aarch64-openwrt-linux-musl-ld" ]; then
+            echo 'BLOCKED_NATIVE_TOOLCHAIN_LD_NOT_INSTALLED' >&2
+            exit 1
+          fi
+          "$early_compiler" -dumpmachine | grep -Fx 'aarch64-openwrt-linux-musl'
+          # A successful -dumpmachine proves only the GCC driver exists.
+          # Compile a real object and inspect ELF64 little-endian AArch64,
+          # before spending CPU/time on a full kernel build.
+          printf 'int air6_toolchain_probe(void) { return 6; }\n' \
+            | "$early_compiler" -x c -O2 -c -o "$work/air6-toolchain-probe.o" -
+          python3 - "$work/air6-toolchain-probe.o" <<'PY'
+          from pathlib import Path
+          import struct, sys
+          header = Path(sys.argv[1]).read_bytes()[:64]
+          if (len(header) != 64 or header[:4] != b"\x7fELF"
+                  or header[4] != 2 or header[5] != 1
+                  or struct.unpack_from("<H", header, 18)[0] != 183):
+              raise SystemExit("BLOCKED_NATIVE_TOOLCHAIN_BAD_AARCH64_ELF")
+          print("PUBLIC_MT6990_NATIVE_TOOLCHAIN_AARCH64_OBJECT_COMPILE_PASS")
+          PY
+          echo 'PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS'
           # The actual OpenWrt procd dependency closure reaches package/kernel/linux
           # even without selected kmod defaults. Build the native MT6990 kernel
           # first rather than hiding or bypassing its dependency. This is still
@@ -311,6 +356,30 @@ jobs:
           test -x "$rootfs/etc/rc.d/S10netifd"
           grep -Fq "config interface 'loopback'" "$rootfs/etc/config/network"
           echo 'PUBLIC_MT6990_NATIVE_QEMU_NETIFD_BRIDGE_BOOT_POLICY_STAGED'
+          # Ship the independently authored RC14-derived LAN2/SSH candidate
+          # INSIDE P26, not on P44. Deliberately not connected to procd auto
+          # start until native driver, NIC and per-device provisioning pass.
+          # Use the retained fakeroot metadata state to stage target UID/GID.
+          management="$rootfs/usr/libexec/sba6d/rc14-management.sh"
+          test ! -e "$management" && test ! -L "$management"
+          fakeroot -i "$work/p26-fakeroot.state" -s "$work/p26-fakeroot.state" -- \
+            install -D -m 0755 \
+              "$GITHUB_WORKSPACE/config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh" \
+              "$management"
+          test -s "$management" && test -x "$management"
+          cmp "$management" \
+            "$GITHUB_WORKSPACE/config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh"
+          sh -n "$management"
+          # The OpenWrt package/install fakeroot namespace must retain
+          # root:root 0755 for the new in-P26 management entry. The host
+          # runner UID is not a substitute for the target filesystem UID.
+          fakeroot -i "$work/p26-fakeroot.state" -s "$work/p26-fakeroot.state" -- \
+            stat -c '%u:%g:%a' "$management" | grep -Fx '0:0:755'
+          echo 'PUBLIC_MT6990_P26_INTERNAL_MANAGEMENT_TARGET_ROOT_OWNERSHIP_PASS'
+          # No SXXrc14 startup link is installed: an unprovisioned OpenWrt
+          # rootfs cannot expose an SSH service without per-unit host keys.
+          ! find "$rootfs/etc/rc.d" -maxdepth 1 -name '*rc14*' -print -quit | grep -q .
+          echo 'PUBLIC_MT6990_P26_INTERNAL_RC14_MANAGEMENT_SOURCE_STAGED'
           tar --sort=name --mtime='@0' --owner=0 --group=0 \
             --numeric-owner -C "$rootfs" -czf "$work/sbat6-rootfs-stage.tar.gz" .
           test -s "$work/sbat6-rootfs-stage.tar.gz"
@@ -382,6 +451,12 @@ jobs:
             --p26 "$work/private-p26/packed/rootfs_a.p26" \
             --squashfs "$work/private-p26/packed/rootfs.squashfs"
           echo 'PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS'
+          # Verify the actual packed SquashFS carries the exact source-borne
+          # startup entry, not merely a staging-root script or receipt claim.
+          unsquashfs -cat "$work/private-p26/packed/rootfs.squashfs" \
+            usr/libexec/sba6d/rc14-management.sh | \
+            cmp - "$GITHUB_WORKSPACE/config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh"
+          echo 'PUBLIC_MT6990_REAL_P26_EMBEDDED_RC14_MANAGEMENT_READBACK_PASS'
           # Alternative *complete* initramfs from THIS exact OpenWrt package
           # rootfs and independently read-back 128MiB p26. Keep current known
           # QEMU/procd initramfs unchanged; the owner P44 RW consent and exact
@@ -399,6 +474,33 @@ jobs:
             --cpio "$work/air6-p26-p44-alternative.cpio" \
             --receipt "$work/air6-p26-p44-alternative.json"
           echo 'PUBLIC_MT6990_REAL_ROOTFS_P26_P44_ALTERNATIVE_CPIO_READBACK_PASS'
+          # Separately manufacture the RC14-derived P44-required initramfs
+          # from the SAME source-built P26. This build-time selection is
+          # immutable and has no RAM fallback or preinstalled P44 script.
+          python3 -m tools.boot.build_p26_p44_initramfs \
+            --rootfs "$rootfs" \
+            --p26-file "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --boot-mode p44-required \
+            --output "$work/air6-p26-p44-required.cpio" \
+            --receipt "$work/air6-p26-p44-required.json"
+          python3 -m tools.boot.verify_p26_p44_initramfs \
+            --rootfs "$rootfs" \
+            --p26-file "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --cpio "$work/air6-p26-p44-required.cpio" \
+            --receipt "$work/air6-p26-p44-required.json"
+          python3 - "$work/air6-p26-p44-required.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          report = json.loads(Path(sys.argv[1]).read_text())
+          assert report["boot_mode"] == "p44-required"
+          assert report["p44_required"] is True
+          assert report["p44_owner_secret_embedded"] is False
+          assert report["owner_rw_approval_embedded"] is False
+          assert report["device_boot_proven"] is False
+          print("PUBLIC_MT6990_RC14_P44_REQUIRED_CPIO_READBACK_PASS")
+          PY
           echo 'LIMIT: separate unused initramfs; no P44 owner go, physical boot or signing'
           echo 'LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution'
           # Build an external diagnostic PID1 cpio with the SAME pinned
@@ -719,6 +821,14 @@ jobs:
           print("LIMIT: p25 synthetic header addresses/vendor64 not LK-verified;",
                 "p26 rights pending; neither image distributable or flashable")
           PY
+          # Independently inspect the exact same-run full partitions. A
+          # matching receipt is integrity evidence, NOT permission to sign.
+          python3 "$GITHUB_WORKSPACE/tools/build/check_p25_p26_presign.py" \
+            --p25 "$work/p25-AOSP-v2-research-unsigned.img" \
+            --p25-receipt "$work/p25-AOSP-v2-research.json" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json"
+          echo 'PUBLIC_MT6990_EPHEMERAL_PAIR_INTEGRITY_PASS_SIGNING_BLOCKED'
           # Boot this exact native OpenWrt Image (with its real procd rootfs)
           # under QEMU virt. No Air6 DTB is passed: virt uses QEMU-generated
           # DT and PL011 console. Require real PID1, netifd and bridge runtime.
@@ -738,24 +848,46 @@ jobs:
           EOF
           docker build --pull --file "$work/Dockerfile.native-qemu" \
             --tag sbat6-native-procd-qemu:ci "$work"
-          # Run the *actual native OpenWrt AArch64 BusyBox* with QEMU user
-          # emulation, not the runner's BusyBox, before assessing /init
-          # prerequisites. This is command availability only, not boot proof.
-          # QEMU-user normally injects its own argv[0]. BusyBox dispatches
-          # applets on argv[0], so WITHOUT "-0 busybox" even --list returns 127
-          # with "busybox: applet not found"; never relax this flag.
-          if ! docker run --rm --network none --read-only \
-            --cap-drop ALL --security-opt no-new-privileges \
-            --pids-limit 64 --memory 512m --cpus 1 \
-            --user 1001:1001 \
-            --mount "type=bind,src=$rootfs,dst=/rootfs,readonly" \
-            sbat6-native-procd-qemu:ci \
-            qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox --list \
-            > "$work/target-openwrt-busybox-applets.txt"; then
-            echo 'BLOCKED_TARGET_BUSYBOX_QEMU_ARGV0_OR_APPLET_DISPATCH' >&2
-            exit 1
-          fi
-          test -s "$work/target-openwrt-busybox-applets.txt"
+          # OpenWrt can omit the BusyBox "busybox" dispatcher applet while
+          # retaining the individual applets. Both "busybox --list" and
+          # "busybox --help" then fail with "busybox: applet not found".
+          # Probe each REQUIRED applet using QEMU's explicit TARGET argv[0],
+          # not the host executable and not a guessed BusyBox dispatcher.
+          # An absent BusyBox applet is acceptable only when the independent
+          # validator locates a separate executable inside this target rootfs.
+          : > "$work/target-openwrt-busybox-applets.txt"
+          for applet in sh mount umount sha256sum switch_root grep cat readlink cmp mkdir sleep; do
+            if docker run --rm --network none --read-only \
+              --cap-drop ALL --security-opt no-new-privileges \
+              --pids-limit 64 --memory 512m --cpus 1 \
+              --user 1001:1001 \
+              --mount "type=bind,src=$rootfs,dst=/rootfs,readonly" \
+              sbat6-native-procd-qemu:ci \
+              qemu-aarch64 -L /rootfs -0 "$applet" /rootfs/bin/busybox --help \
+              > "$work/busybox-$applet.stdout" \
+              2> "$work/busybox-$applet.stderr"; then
+              if grep -Fq 'applet not found' "$work/busybox-$applet.stdout" \
+                "$work/busybox-$applet.stderr"; then
+                echo "BLOCKED_TARGET_BUSYBOX_FALSE_SUCCESS_$applet" >&2
+                exit 1
+              fi
+              if ! grep -Fq 'BusyBox v' "$work/busybox-$applet.stdout" \
+                  "$work/busybox-$applet.stderr"; then
+                echo "BLOCKED_TARGET_BUSYBOX_HELP_OUTPUT_NOT_VERIFIED_$applet" >&2
+                cat "$work/busybox-$applet.stdout" "$work/busybox-$applet.stderr" >&2
+                exit 1
+              fi
+              printf '%s\n' "$applet" >> "$work/target-openwrt-busybox-applets.txt"
+            elif grep -Fq 'applet not found' "$work/busybox-$applet.stdout" \
+                 "$work/busybox-$applet.stderr"; then
+              echo "TARGET_BUSYBOX_APPLET_ABSENT_$applet"
+            else
+              echo "BLOCKED_TARGET_BUSYBOX_QEMU_APPLET_RUNTIME_$applet" >&2
+              cat "$work/busybox-$applet.stdout" "$work/busybox-$applet.stderr" >&2
+              exit 1
+            fi
+          done
+          echo 'PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_DIRECT_APPLET_PROBES_PASS'
           python3 "$GITHUB_WORKSPACE/tools/boot/verify_p26_p44_target_tools.py" \
             --rootfs "$rootfs" \
             --target-busybox-applets "$work/target-openwrt-busybox-applets.txt"
@@ -771,8 +903,8 @@ jobs:
             --mount "type=bind,src=$GITHUB_WORKSPACE/scripts/air6-p26-p44-init.sh,dst=/air6-init.sh,readonly" \
             sbat6-native-procd-qemu:ci bash -c '
               set -euo pipefail
-              qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh -n /air6-init.sh
-              qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh /air6-init.sh --capabilities \
+              qemu-aarch64 -L /rootfs -0 sh /rootfs/bin/busybox -n /air6-init.sh
+              qemu-aarch64 -L /rootfs -0 sh /rootfs/bin/busybox /air6-init.sh --capabilities \
                 | grep -Fq P26_RAM_OVERLAY_DEFAULT
               echo PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_RAM_BOOT_SCRIPT_PARSE_PASS
             '
@@ -830,10 +962,10 @@ jobs:
           # it can mount or write a device. This is NOT switch_root success.
           known_image_sha="$(sha256sum "$kernel/arch/arm64/boot/Image" | cut -d' ' -f1)"
           "$kernel/scripts/config" --file "$kernel/.config" \
-            --set-str INITRAMFS_SOURCE "$work/air6-p26-p44-alternative.cpio"
+            --set-str INITRAMFS_SOURCE "$work/air6-p26-p44-required.cpio"
           PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
             make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
-          grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-p26-p44-alternative.cpio\"" \
+          grep -Fx "CONFIG_INITRAMFS_SOURCE=\"$work/air6-p26-p44-required.cpio\"" \
             "$kernel/.config"
           PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
             make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
@@ -843,6 +975,111 @@ jobs:
           test "$(sha256sum "$alternate_image" | cut -d' ' -f1)" != "$known_image_sha"
           sha256sum "$alternate_image"
           echo 'PUBLIC_MT6990_NATIVE_ALTERNATIVE_RAM_INITRAMFS_IMAGE_BUILD_PASS'
+          # Bind the actual kernel containing the P26 SHA-aware /init to a
+          # separate unsigned 32MiB research P25. The earlier P25 uses the
+          # legacy QEMU procd initramfs, so it cannot test this boot path.
+          # Retain synthetic addresses: this is NOT signer/LK-ready.
+          gzip -n -c "$alternate_image" > "$work/air6-p26-aware-Image.gz"
+          # Independently prove the exact alternate Image is what the
+          # research P25 kernel gzip contains, not an older QEMU Image.
+          gzip -t "$work/air6-p26-aware-Image.gz"
+          gzip -dc "$work/air6-p26-aware-Image.gz" | cmp - "$alternate_image"
+          echo 'PUBLIC_MT6990_ALTERNATIVE_IMAGE_GZIP_IDENTITY_PASS'
+          python3 "$GITHUB_WORKSPACE/tools/build/pack_p25_boot_v2.py" \
+            --kernel "$work/air6-p26-aware-Image.gz" \
+            --dtb "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb" \
+            --metadata "$work/public-p25-metadata.json" \
+            --output "$work/p25-p26-aware-research-unsigned.img" \
+            --receipt "$work/p25-p26-aware-research.json"
+          python3 "$GITHUB_WORKSPACE/tools/build/verify_p25_boot_v2.py" \
+            --p25 "$work/p25-p26-aware-research-unsigned.img" \
+            --receipt "$work/p25-p26-aware-research.json" \
+            --kernel "$work/air6-p26-aware-Image.gz" \
+            --dtb "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
+          # Tie the packed P25's independently re-inflated kernel receipt to
+          # the exact alternative Image that was compiled in this same run.
+          # This detects stale Image.gz/receipt substitution without any
+          # bootloader or device access.
+          python3 - "$alternate_image" "$work/p25-p26-aware-research.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          image = Path(sys.argv[1])
+          receipt = json.loads(Path(sys.argv[2]).read_text())
+          h = hashlib.sha256()
+          size = 0
+          with image.open("rb") as stream:
+              for chunk in iter(lambda: stream.read(1 << 20), b""):
+                  size += len(chunk)
+                  h.update(chunk)
+          kernel = receipt["kernel"]
+          assert size == kernel["inflated_bytes"], "ALTERNATE_IMAGE_EXPANDED_LENGTH_MISMATCH"
+          assert h.hexdigest() == kernel["inflated_sha256"], "ALTERNATE_IMAGE_EXPANDED_SHA_MISMATCH"
+          assert receipt["signed"] is False and receipt["device_boot_proven"] is False
+          print("PUBLIC_MT6990_P26_AWARE_P25_INFLATED_IMAGE_IDENTITY_PASS",
+                "bytes=" + str(size), "sha256=" + h.hexdigest())
+          PY
+          # Exercise the existing independent FDT tree/phandle validator
+          # against this actual research P25 rather than synthetic fixtures.
+          # Metadata is generated from the packer's own receipt: integrity
+          # and structure only, never proof of LK node-injection behavior.
+          python3 - "$work/p25-p26-aware-research.json" \
+            "$work/p25-p26-aware-structural.json" \
+            "$work/p25-p26-aware-provenance.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          receipt = json.loads(Path(sys.argv[1]).read_text())
+          p25_path = Path(sys.argv[1]).with_name("p25-p26-aware-research-unsigned.img")
+          with p25_path.open("rb") as src:
+              header_page = src.read(2048)
+          metadata = {
+              "format": "public-air6-p25-contract-v1",
+              "metadata_provenance": "synthetic-research-only",
+              "expected_header": receipt["header_fields"],
+              "expected_header_page_sha256": hashlib.sha256(header_page).hexdigest(),
+              "expected_dtb_sha256": receipt["dtb"]["sha256"],
+              "lk_injected_nodes": [],
+              "vendor64_prefix_sha256": None,
+          }
+          Path(sys.argv[2]).write_text(json.dumps(metadata, sort_keys=True) + "\n")
+          Path(sys.argv[3]).write_text(json.dumps({"source": "synthetic-fixture"}) + "\n")
+          PY
+          python3 "$GITHUB_WORKSPACE/tools/boot/air6_boot_contract.py" \
+            --p25 "$work/p25-p26-aware-research-unsigned.img" \
+            --metadata "$work/p25-p26-aware-structural.json" \
+            --dtb-section "$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb" \
+            --provenance "$work/p25-p26-aware-provenance.json" \
+            > "$work/p25-p26-aware-structural-result.json"
+          python3 - "$work/p25-p26-aware-structural-result.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          result = json.loads(Path(sys.argv[1]).read_text())
+          assert result["status"] == "STRUCTURAL_ONLY_LK_UNVERIFIED"
+          assert result["sign_ready"] is False
+          assert result["device_boot_proven"] is False
+          assert result["nodes"] > 0
+          print("PUBLIC_MT6990_P26_AWARE_P25_FDT_STRUCTURAL_CONTRACT_PASS",
+                "nodes=" + str(result["nodes"]))
+          PY
+          python3 "$GITHUB_WORKSPACE/tools/build/check_p25_p26_presign.py" \
+            --p25 "$work/p25-p26-aware-research-unsigned.img" \
+            --p25-receipt "$work/p25-p26-aware-research.json" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --p26-receipt "$work/private-p26/packed/p26-receipt.json" \
+            > "$work/p26-aware-pair-intake.json"
+          python3 - "$work/p26-aware-pair-intake.json" \
+            "$work/air6-p26-p44-alternative.json" \
+            "$work/private-p26/packed/p26-receipt.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          pair, cpio, p26 = (json.loads(Path(p).read_text()) for p in sys.argv[1:])
+          assert pair["p26_sha256"] == cpio["p26_sha256"] == p26["p26_sha256"]
+          assert pair["pair_integrity"] == "PASS_RECEIPT_HASHES_ONLY"
+          assert pair["signing_readiness"] == "BLOCKED_SYNTHETIC_OR_UNREVIEWED_P25_METADATA"
+          assert pair["safe_to_flash"] is False and pair["hardware_boot_proven"] is False
+          print("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS",
+                "p25=" + pair["p25_sha256"], "p26=" + pair["p26_sha256"])
+          PY
+          echo 'LIMIT: alternative initramfs kernel packed into research P25 only; LK/vendor64/signing and real MMC boot unproven'
           docker run --rm --network none --read-only \
             --cap-drop ALL --security-opt no-new-privileges \
             --pids-limit 128 --memory 2g --cpus 2 \
@@ -856,7 +1093,7 @@ jobs:
                 -machine virt -cpu cortex-a57 -accel tcg -m 1024 -smp 2 \
                 -display none -serial stdio -monitor none -nic none -no-reboot \
                 -kernel /AlternativeImage \
-                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init" \
+                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init bootslot=a" \
                 >/tmp/alternative-ram-boot.log 2>&1 || status=$?
               cat /tmp/alternative-ram-boot.log
               if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
@@ -958,7 +1195,7 @@ jobs:
                 -kernel /VirtioImage \
                 -drive file=/CorruptP26,if=none,id=testp26,format=raw,readonly=on \
                 -device virtio-blk-device,drive=testp26 \
-                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init" \
+                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init bootslot=a" \
                 >/tmp/qemu-virtio-sha-mismatch.log 2>&1 || status=$?
               cat /tmp/qemu-virtio-sha-mismatch.log
               if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
@@ -1000,7 +1237,7 @@ jobs:
                 -kernel /VirtioImage \
                 -drive file=/SyntheticP26,if=none,id=testp26,format=raw,readonly=on \
                 -device virtio-blk-device,drive=testp26 \
-                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init" \
+                -append "console=ttyAMA0 loglevel=7 panic=1 init=/init bootslot=a" \
                 >/tmp/qemu-virtio-ram-positive.log 2>&1 || status=$?
               cat /tmp/qemu-virtio-ram-positive.log
               if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then

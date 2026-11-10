@@ -23,6 +23,10 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         (self.root / "sbin/procd").write_bytes(b"synthetic target procd")
         (self.root / "sbin/init").symlink_to("procd")
         (self.root / "etc/preinit").write_text("#!/bin/sh\nexit 0\n")
+        entry = self.root / maker.MANAGEMENT_REL
+        entry.parent.mkdir(parents=True)
+        entry.write_bytes(maker.MANAGEMENT_SOURCE.read_bytes())
+        entry.chmod(0o755)
         self.p26 = self.base / "p26.img"
         self.p26.write_bytes(b"x" * 4096)
         self.p26_receipt = self.base / "p26.json"
@@ -50,6 +54,68 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertEqual(result["status"], "P26_P44_CPIO_INDEPENDENT_FULL_READBACK_PASS")
         self.assertFalse(result["device_boot_proven"])
         self.assertFalse(record["owner_rw_approval_embedded"])
+
+    def test_p44_required_initramfs_is_self_contained_and_independently_verified(self):
+        with mock.patch.object(maker, "PARTITION_BYTES", 4096):
+            record = maker.package(
+                self.root, self.p26, self.p26_receipt, self.cpio,
+                self.receipt, boot_mode="p44-required")
+            result = reader.verify(self.root, self.p26, self.p26_receipt,
+                                   self.cpio, self.receipt)
+        self.assertEqual(result["status"], "P26_P44_CPIO_INDEPENDENT_FULL_READBACK_PASS")
+        self.assertEqual(record["boot_mode"], "p44-required")
+        self.assertTrue(record["p44_required"])
+        self.assertFalse(record["p44_owner_secret_embedded"])
+        self.assertEqual(record["management_entry"], maker.MANAGEMENT_REL)
+        self.assertEqual(record["management_sha256"],
+                         hashlib.sha256(maker.MANAGEMENT_SOURCE.read_bytes()).hexdigest())
+        self.assertFalse(record["management_autostart"])
+        self.assertFalse(record["owner_rw_approval_embedded"])
+        self.assertFalse(record["device_boot_proven"])
+        self.assertNotEqual(record["init_sha256"],
+                            hashlib.sha256(maker.BOOT_SCRIPT.read_bytes()).hexdigest())
+
+    def test_required_p44_rejects_unaudited_management_entry(self):
+        candidate = self.root / maker.MANAGEMENT_REL
+        candidate.write_text("#!/bin/sh\\nexit 0\\n")
+        with mock.patch.object(maker, "PARTITION_BYTES", 4096):
+            with self.assertRaisesRegex(ValueError, "P26_MANAGEMENT_SOURCE_MISMATCH"):
+                maker.package(self.root, self.p26, self.p26_receipt,
+                              self.cpio, self.receipt, boot_mode="p44-required")
+        self.assertFalse(self.cpio.exists())
+
+    def test_p44_required_mode_receipt_tampering_fails_closed(self):
+        with mock.patch.object(maker, "PARTITION_BYTES", 4096):
+            maker.package(self.root, self.p26, self.p26_receipt,
+                          self.cpio, self.receipt, boot_mode="p44-required")
+        receipt = json.loads(self.receipt.read_text())
+        receipt["boot_mode"] = "ram-experimental"
+        receipt["p44_required"] = False
+        self.receipt.write_text(json.dumps(receipt))
+        with self.assertRaisesRegex(ValueError, "BOOTSTAGE_(RAM_MANAGEMENT_ATTESTATION|INIT_MISMATCH)"):
+            self.verify()
+
+    def test_rc14_p44_mode_script_has_no_ram_fallback(self):
+        source = maker.BOOT_SCRIPT.read_text()
+        self.assertIn("BOOT_MODE='ram-experimental'", source)
+        self.assertIn('if [ "$BOOT_MODE" = ram-experimental ] &&', source)
+        self.assertIn('if [ "$BOOT_MODE" = p44-required ]; then', source)
+        self.assertIn('P44_ROOTFS_DATA_GPT_MISMATCH', source)
+        self.assertIn("P26_DUPLICATE_GPT_PARTNAME", source)
+        self.assertIn("P44_DUPLICATE_GPT_PARTNAME", source)
+        self.assertIn("REQUIRED_GPT_PARTITIONS_NOT_FOUND", source)
+        self.assertIn("REQUIRED_GPT_CROSS_DISK", source)
+        self.assertIn('P26="$found_p26"', source)
+        self.assertIn('P44="$found_p44"', source)
+        self.assertIn('"/sys/class/block/${P26##*/}/uevent"', source)
+        self.assertIn('"/sys/class/block/${P44##*/}/uevent"', source)
+        self.assertLess(source.index("REQUIRED_GPT_CROSS_DISK"),
+                        source.index('[ -b "$P26" ] || halt_boot P26_NOT_BLOCK'))
+
+        self.assertIn("P44_MARKER_MISMATCH", source)
+        self.assertIn("P44_FS_STATE_NOT_READY", source)
+        self.assertIn("export INITRAMFS=1", source)
+        self.assertNotIn("mkfs.", source)
 
     def test_tampered_cpio_fails_even_with_unchanged_p26(self):
         self.build()
@@ -85,11 +151,78 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn('mount -t tmpfs -o mode=0700,size=64m,nosuid,nodev', source)
         self.assertIn('BACKING="$RAM"', source)
         self.assertIn('mount --move "$BACKING" "$NEWROOT/overlay"', source)
-        owner_guard = source.index('if [ ! -e "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ]; then')
+        owner_guard = source.index('if [ "$BOOT_MODE" = ram-experimental ] &&')
         p44_mount = source.index('mount -t ext4 -o ro,noload "$P44" "$UPPER"')
         self.assertLess(owner_guard, p44_mount)
         self.assertLess(source.index('[ "$observed" = "$expected" ]'),
                         source.index('mount -t tmpfs -o mode=0700,size=64m,nosuid,nodev'))
+
+    def test_qemu_p26_cases_explicitly_simulate_slot_a(self):
+        workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
+        self.assertEqual(workflow.count(
+            '-append "console=ttyAMA0 loglevel=7 panic=1 init=/init bootslot=a"'
+        ), 3)
+        for case in ("alternative-ram-boot.log", "qemu-virtio-sha-mismatch.log",
+                     "qemu-virtio-ram-positive.log"):
+            self.assertIn(case, workflow)
+        self.assertNotIn(
+            '-append "console=ttyAMA0 loglevel=7 panic=1 init=/init"', workflow)
+
+    def test_rc13_slot_and_userdata_geometry_preflight_before_rw(self):
+        source = maker.BOOT_SCRIPT.read_text()
+        self.assertIn("grep -qw 'bootslot=a' /proc/cmdline", source)
+        self.assertIn("NOT_SLOT_A", source)
+        self.assertIn("USER_DATA_DUPLICATE_GPT_PARTNAME", source)
+        self.assertIn("USER_DATA_NOT_BLOCK", source)
+        self.assertIn("P44_OVERLAPS_USER_DATA", source)
+        self.assertIn("P26_PARTITION_SIZE_MISMATCH", source)
+        self.assertIn('[ "$p26_sectors" = 262144 ]', source)
+        self.assertLess(source.index("P26_PARTITION_SIZE_MISMATCH"),
+                        source.index('observed="$(sha256sum "$P26")"'))
+        self.assertIn('while [ "$scan_attempt" -lt 80 ]; do', source)
+        self.assertIn("sleep 0.25", source)
+        self.assertIn('scan_attempt=$((scan_attempt + 1))', source)
+        self.assertLess(source.index('while [ "$scan_attempt" -lt 80 ]; do'),
+                        source.index("REQUIRED_GPT_PARTITIONS_NOT_FOUND"))
+        self.assertLess(source.index("P26_DUPLICATE_GPT_PARTNAME"),
+                        source.index("REQUIRED_GPT_PARTITIONS_NOT_FOUND"))
+        self.assertIn('mount -t ext4 -o rw,noatime,nosuid,nodev "$P44" "$UPPER"', source)
+        self.assertIn("PARTITION_GEOMETRY_INVALID", source)
+        self.assertIn("EMPTY_PARTITION_GEOMETRY", source)
+        self.assertIn("userdata_start + userdata_sectors", source)
+        self.assertLess(source.index("NOT_SLOT_A"), source.index("P26_RO_VERIFIED"))
+        self.assertLess(source.index("P44_OVERLAPS_USER_DATA"),
+                        source.index('mount -t ext4 -o ro,noload'))
+        self.assertLess(source.index("P44_OVERLAPS_USER_DATA"),
+                        source.index('mount -t ext4 -o rw,noatime'))
+        # Device-specific layout is deliberately not hardcoded in source.
+        self.assertNotIn("7634944", source)
+        self.assertNotIn("2392064", source)
+        self.assertNotIn("5242816", source)
+
+    def test_p44_cannot_replace_p26_internal_management_entry(self):
+        source = maker.BOOT_SCRIPT.read_text()
+        self.assertIn('P26_MANAGEMENT_ENTRY_ABSENT', source)
+        self.assertIn('P44_MANAGEMENT_ENTRY_SHADOW', source)
+        self.assertIn('P44_MANAGEMENT_ENTRY_REPLACED', source)
+        self.assertIn('cmp -s "$ROM/$management" "$NEWROOT/$management"', source)
+        self.assertLess(source.index('P44_MANAGEMENT_ENTRY_REPLACED'),
+                        source.index('exec switch_root -c /dev/console'))
+
+    def test_rc14_observed_p44_marker_fs_state_and_preinit_handoff(self):
+        source = maker.BOOT_SCRIPT.read_text()
+        self.assertIn("SBA6D_ROOTFS_DATA_V1", source)
+        self.assertIn('P44_MARKER_MISSING_OR_LINK', source)
+        self.assertIn('P44_MARKER_MISMATCH', source)
+        self.assertIn('P44_FS_STATE_NOT_SYMLINK', source)
+        self.assertIn('P44_FS_STATE_NOT_READY', source)
+        self.assertIn('P44_POST_JOURNAL_MARKER_CHANGED', source)
+        self.assertIn('P44_POST_JOURNAL_FS_STATE_CHANGED', source)
+        self.assertIn('export INITRAMFS=1', source)
+        self.assertLess(source.index("P44_MARKER_MISMATCH"),
+                        source.index('mount -t ext4 -o rw,noatime'))
+        self.assertLess(source.index('export INITRAMFS=1'),
+                        source.index('exec switch_root -c /dev/console'))
 
     def test_invalid_owner_marker_still_fails_closed(self):
         source = maker.BOOT_SCRIPT.read_text()
@@ -97,33 +230,106 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertIn('halt_boot P44_GPT_PARTNAME', source)
         self.assertIn('halt_boot P44_POST_JOURNAL_BOOT_SHADOW', source)
         self.assertIn('log P44_OWNER_APPROVED', source)
-        self.assertIn('if [ ! -e "$OWNER_GO" ] && [ ! -L "$OWNER_GO" ]; then', source)
+        self.assertIn('if [ "$BOOT_MODE" = ram-experimental ] &&', source)
 
     def test_target_busybox_parses_ram_init_in_isolated_qemu(self):
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
-        self.assertIn("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh -n /air6-init.sh",
+        self.assertIn("qemu-aarch64 -L /rootfs -0 sh /rootfs/bin/busybox -n /air6-init.sh",
                       workflow)
-        self.assertIn("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh /air6-init.sh --capabilities",
+        self.assertIn("qemu-aarch64 -L /rootfs -0 sh /rootfs/bin/busybox /air6-init.sh --capabilities",
                       workflow)
         self.assertIn("PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_RAM_BOOT_SCRIPT_PARSE_PASS",
                       workflow)
         self.assertIn("--cap-drop ALL --security-opt no-new-privileges", workflow)
 
-    def test_qemu_busybox_explicit_argv0_and_fail_closed(self):
-        # QEMU linux-user normally supplies its own argv[0]. BusyBox then
-        # interprets that as an applet name and can return status 127.
+    def test_alternative_p26_aware_kernel_is_packed_into_separate_research_p25(self):
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
-        self.assertEqual(workflow.count("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox"), 3)
-        self.assertNotIn("qemu-aarch64 -L /rootfs /rootfs/bin/busybox", workflow)
-        self.assertIn("BLOCKED_TARGET_BUSYBOX_QEMU_ARGV0_OR_APPLET_DISPATCH", workflow)
-        self.assertIn("--network none --read-only", workflow)
-        self.assertIn("--cap-drop ALL --security-opt no-new-privileges", workflow)
+        self.assertIn("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS", workflow)
+        self.assertIn("gzip -dc \"$work/air6-p26-aware-Image.gz\" | cmp - \"$alternate_image\"", workflow)
+        self.assertIn("PUBLIC_MT6990_ALTERNATIVE_IMAGE_GZIP_IDENTITY_PASS", workflow)
+        self.assertIn("PUBLIC_MT6990_P26_AWARE_P25_INFLATED_IMAGE_IDENTITY_PASS", workflow)
+        self.assertIn('size == kernel["inflated_bytes"]', workflow)
+        self.assertIn('h.hexdigest() == kernel["inflated_sha256"]', workflow)
+        self.assertLess(workflow.index("PUBLIC_MT6990_ALTERNATIVE_IMAGE_GZIP_IDENTITY_PASS"),
+                        workflow.index("PUBLIC_MT6990_P26_AWARE_P25_INFLATED_IMAGE_IDENTITY_PASS"))
+
+        self.assertIn("--output \"$work/p25-p26-aware-research-unsigned.img\"", workflow)
+        self.assertIn("--kernel \"$work/air6-p26-aware-Image.gz\"", workflow)
+        self.assertIn("--p25-receipt \"$work/p25-p26-aware-research.json\"", workflow)
+        self.assertIn('pair["p26_sha256"] == cpio["p26_sha256"] == p26["p26_sha256"]', workflow)
+        self.assertIn('pair["safe_to_flash"] is False', workflow)
+        self.assertLess(workflow.index("PUBLIC_MT6990_NATIVE_ALTERNATIVE_RAM_INITRAMFS_IMAGE_BUILD_PASS"),
+                        workflow.index("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS"))
+        self.assertIn('BLOCKED_SYNTHETIC_OR_UNREVIEWED_P25_METADATA', workflow)
+        self.assertIn("PUBLIC_MT6990_P26_AWARE_P25_FDT_STRUCTURAL_CONTRACT_PASS", workflow)
+        self.assertIn('result["status"] == "STRUCTURAL_ONLY_LK_UNVERIFIED"', workflow)
+        self.assertIn('result["sign_ready"] is False', workflow)
+        self.assertIn("--dtb-section \"$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb\"", workflow)
+        self.assertLess(workflow.index("PUBLIC_MT6990_P26_AWARE_P25_FDT_STRUCTURAL_CONTRACT_PASS"),
+                        workflow.index("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS"))
+
+
+    def test_native_toolchain_runs_are_serialized_without_killing_active_evidence(self):
+        workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
+        package_job = workflow.split("  native-package-compile:", 1)[1]
+        self.assertIn('group: public-air6-native-package-', package_job)
+        self.assertIn('github.event.pull_request.number || github.ref', package_job)
+        self.assertIn('cancel-in-progress: false', package_job)
+        self.assertLess(package_job.index("concurrency:"),
+                        package_job.index("timeout-minutes: 180"))
+        self.assertNotIn('cancel-in-progress: true', package_job)
+
+    def test_native_toolchain_is_real_and_precedes_kernel_build(self):
+        workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
+        self.assertIn('make -C "$work/openwrt" -j1 V=s toolchain/install', workflow)
+        self.assertIn('PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS', workflow)
+        self.assertIn('PUBLIC_MT6990_NATIVE_TOOLCHAIN_AARCH64_OBJECT_COMPILE_PASS', workflow)
+        self.assertIn('BLOCKED_NATIVE_TOOLCHAIN_BAD_AARCH64_ELF', workflow)
+        self.assertIn('"$early_compiler" -x c -O2 -c -o "$work/air6-toolchain-probe.o" -', workflow)
+        self.assertLess(workflow.index('PUBLIC_MT6990_NATIVE_TOOLCHAIN_AARCH64_OBJECT_COMPILE_PASS'),
+                        workflow.index('make -C "$work/openwrt" -j2 V=s target/linux/compile'))
+        self.assertIn('BLOCKED_NATIVE_TOOLCHAIN_GCC_NOT_INSTALLED', workflow)
+        self.assertIn('BLOCKED_NATIVE_TOOLCHAIN_LD_NOT_INSTALLED', workflow)
+        self.assertIn('aarch64-openwrt-linux-musl-gcc', workflow)
+        self.assertLess(workflow.index('make -C "$work/openwrt" -j1 V=s toolchain/install'),
+                        workflow.index('PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS'))
+        self.assertLess(workflow.index('PUBLIC_MT6990_NATIVE_TOOLCHAIN_PRE_KERNEL_PASS'),
+                        workflow.index('make -C "$work/openwrt" -j2 V=s target/linux/compile'))
+        # A preceding shell comment with a backslash continued onto the
+        # toolchain make command was the actual production regression.
+        lines = workflow.splitlines()
+        toolchain = 'make -C "$work/openwrt" -j1 V=s toolchain/install'
+        location = next(i for i, line in enumerate(lines) if line.strip() == toolchain)
+        self.assertFalse(lines[location - 1].rstrip().endswith(chr(92)),
+                         "toolchain/install swallowed by shell continuation")
+        self.assertFalse(lines[location].lstrip().startswith("#"))
+
+    def test_qemu_busybox_direct_target_applet_dispatch(self):
+        # OpenWrt BusyBox can omit the 'busybox' dispatcher while retaining
+        # sh/mount/etc. Probe actual target applets by argv[0], and do not
+        # substitute a host binary or silently accept QEMU errors.
+        workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
+        self.assertIn('for applet in sh mount umount sha256sum switch_root grep cat readlink cmp mkdir sleep; do', workflow)
+        self.assertIn('qemu-aarch64 -L /rootfs -0 "$applet" /rootfs/bin/busybox --help', workflow)
+        self.assertIn('PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_DIRECT_APPLET_PROBES_PASS', workflow)
+        self.assertIn('BLOCKED_TARGET_BUSYBOX_QEMU_APPLET_RUNTIME_$applet', workflow)
+        self.assertIn("BLOCKED_TARGET_BUSYBOX_HELP_OUTPUT_NOT_VERIFIED_$applet", workflow)
+        self.assertIn("grep -Fq 'BusyBox v'", workflow)
+        self.assertIn('--target-busybox-applets "$work/target-openwrt-busybox-applets.txt"', workflow)
+        self.assertIn('--network none --read-only', workflow)
+        self.assertIn('--cap-drop ALL --security-opt no-new-privileges', workflow)
+        self.assertNotIn('qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox', workflow)
 
     def test_qemu_virt_alternative_init_actual_pid1_missing_p26_gate(self):
         # Native kernel must embed the alternate verified CPIO AFTER the
         # known-good research p25/QEMU stages, without changing their receipts.
         wf = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
-        self.assertIn('--set-str INITRAMFS_SOURCE "$work/air6-p26-p44-alternative.cpio"', wf)
+        self.assertIn('--set-str INITRAMFS_SOURCE "$work/air6-p26-p44-required.cpio"', wf)
+        self.assertIn('--boot-mode p44-required', wf)
+        self.assertIn('PUBLIC_MT6990_RC14_P44_REQUIRED_CPIO_READBACK_PASS', wf)
+        self.assertIn('--cpio "$work/air6-p26-p44-required.cpio"', wf)
+        self.assertLess(wf.index('PUBLIC_MT6990_RC14_P44_REQUIRED_CPIO_READBACK_PASS'),
+                        wf.index('--set-str INITRAMFS_SOURCE "$work/air6-p26-p44-required.cpio"'))
         self.assertIn('AIR6_RAM_INIT_ENTER', wf)
         self.assertIn('AIR6_BOOT_BLOCKED_P26_NOT_BLOCK', wf)
         self.assertIn('PUBLIC_MT6990_QEMU_VIRT_ALTERNATIVE_INIT_MISSING_P26_FAILCLOSED_PASS', wf)
