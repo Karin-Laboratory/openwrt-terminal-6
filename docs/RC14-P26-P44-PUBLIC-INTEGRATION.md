@@ -8,7 +8,11 @@ credential, calibration, OEM source or signature material is imported.
 
 The native OpenWrt p26 job runs `install_p44_extension.py` inside the **same fakeroot
 metadata namespace** after `package/install` and the locked-root shadow edit, before
-packing and independent readback. It stages an S99 OpenWrt init.d unit and a standalone
+packing and independent readback.
+The native job also checks the installed init.d runner files are regular root:root
+0755 files, verifies the S99 symlink target, checks the optional disable/timeout
+contract, and refuses a pre-activated P44 extension before packing. The full
+P26 independent rootfs readback subsequently compares these installed files. It stages an S99 OpenWrt init.d unit and a standalone
 runner. The script does **not** create, mount, format, resize or prepopulate p44.
 
 ## First boot / extension contract
