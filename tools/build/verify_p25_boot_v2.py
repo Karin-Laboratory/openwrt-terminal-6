@@ -10,6 +10,8 @@ import zlib
 
 SIZE = 33_554_432
 PAGE = 2048
+# Independently retain the observed C-LK 35MiB inflate bound.
+LK_OUTPUT_CAP = 0x02300000
 
 
 def sha256(path):
@@ -24,7 +26,7 @@ def sha256(path):
 def inspect_single_gzip(path):
     """Independent bounded readback of the exact compressed ARM64 Image."""
     decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
-    limit = 256 * 1024 * 1024
+    limit = LK_OUTPUT_CAP
     count = 0
     fingerprint = hashlib.sha256()
     head = bytearray()
@@ -37,8 +39,8 @@ def inspect_single_gzip(path):
             except zlib.error as exc:
                 raise ValueError("gzip CRC or stream invalid") from exc
             count += len(decoded)
-            if count > limit or decoder.unconsumed_tail:
-                raise ValueError("gzip expanded size limit")
+            if count >= limit or decoder.unconsumed_tail:
+                raise ValueError("LK_OUTPUT_CAP_EXCEEDED")
             fingerprint.update(decoded)
             if len(head) < 64:
                 head.extend(decoded[:64 - len(head)])
@@ -61,6 +63,9 @@ def verify(image, receipt, kernel, dtb):
     if (record.get("kernel", {}).get("inflated_bytes") != expanded or
             record.get("kernel", {}).get("inflated_sha256") != expanded_sha):
         raise ValueError("gzip kernel readback length/SHA mismatch")
+    if (record["kernel"].get("lk_output_cap_bytes") != LK_OUTPUT_CAP or
+            record["kernel"].get("lk_headroom_bytes") != LK_OUTPUT_CAP - expanded):
+        raise ValueError("LK_OUTPUT_CAP_RECEIPT_MISMATCH")
     if record.get("format") != "aosp-boot-v2-p25-research-receipt-v1":
         raise ValueError("incorrect receipt")
     if record.get("status") != "REAL_32M_BYTES_AOSP_V2_STRUCTURE_ONLY_NOT_LK_ACCEPTED":
