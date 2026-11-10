@@ -11,6 +11,9 @@ import importlib.util
 import json
 from pathlib import Path
 
+P25_BYTES = 33_554_432
+P26_BYTES = 134_217_728
+
 
 def digest(path):
     hasher = hashlib.sha256()
@@ -49,7 +52,7 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # Independently recheck the p25 including all boot-sensitive config bytes.
     check = p25_verify or p25_verifier().verify
     p25_result = check(p25, kernel, ramdisk, dtb, config)
-    require(p25_result["partition_bytes"] == 33_554_432 and
+    require(p25_result["partition_bytes"] == P25_BYTES and
             p25_result["p25_sha256"] == digest(p25), "P25_IDENTITY")
     original = json.loads(producer.read_text())
     approved = json.loads(independent.read_text())
@@ -64,9 +67,9 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
             approved.get("verification") ==
             "INDEPENDENT_FULL_PARTITION_AND_EXTRACTED_METADATA",
             "P26_NOT_INDEPENDENTLY_VERIFIED")
-    require(p26.stat().st_size == 134_217_728 and
-            original.get("partition_bytes") == 134_217_728 and
-            approved.get("partition_bytes") == 134_217_728,
+    require(p26.stat().st_size == P26_BYTES and
+            original.get("partition_bytes") == P26_BYTES and
+            approved.get("partition_bytes") == P26_BYTES,
             "P26_SIZE")
     p26_hash = digest(p26)
     require(p26_hash == original.get("p26_sha256") ==
