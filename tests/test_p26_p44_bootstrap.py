@@ -101,9 +101,9 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
 
     def test_target_busybox_parses_ram_init_in_isolated_qemu(self):
         workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
-        self.assertIn("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh -n /air6-init.sh",
+        self.assertIn("qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox sh -n /air6-init.sh",
                       workflow)
-        self.assertIn("qemu-aarch64 -0 busybox -L /rootfs /rootfs/bin/busybox sh /air6-init.sh --capabilities",
+        self.assertIn("qemu-aarch64 -L /rootfs -0 /bin/busybox /rootfs/bin/busybox sh /air6-init.sh --capabilities",
                       workflow)
         self.assertIn("PUBLIC_MT6990_NATIVE_TARGET_BUSYBOX_RAM_BOOT_SCRIPT_PARSE_PASS",
                       workflow)
