@@ -99,6 +99,12 @@ jobs:
     name: Compile real OpenWrt procd/netifd packages (noninstallable)
     needs: native-defconfig
     runs-on: ubuntu-latest
+    # Several source commits per hour previously launched overlapping multi-hour
+    # GCC toolchains. Finish the current compile, then retain the newest pending
+    # revision. Never cancel a running build before its final result is recorded.
+    concurrency:
+      group: public-air6-native-package-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: false
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
