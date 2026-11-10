@@ -632,6 +632,11 @@ jobs:
           entries["etc/air6/p26.sha256"] = (
               stat.S_IFREG | 0o444,
               (p26_sha + "  /dev/mmcblk0p26\n").encode("ascii"), 0, 0)
+          checker = Path(os.environ["GITHUB_WORKSPACE"]) / "tools/boot/verify_bound_p26.sh"
+          if "usr/libexec/air6/verify-bound-p26" in entries or not checker.is_file():
+              raise SystemExit("P25_BLOCKED_P26_CHECKER_STAGING")
+          entries["usr/libexec/air6/verify-bound-p26"] = (
+              stat.S_IFREG | 0o755, checker.read_bytes(), 0, 0)
           archive = bytearray()
           for ino, name in enumerate(sorted(entries), 1):
               mode, payload, major, minor = entries[name]
@@ -643,6 +648,8 @@ jobs:
           print("PUBLIC_MT6990_NATIVE_PROCD_PID1_INITRAMFS_BUILD_PASS",
                 "entries=" + str(len(entries)), "bytes=" + str(len(archive)))
           PY
+          sh -n "$GITHUB_WORKSPACE/tools/boot/verify_bound_p26.sh"
+          python3 -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_verify_bound_p26.py -v
           test -s "$work/air6-procd-initramfs.cpio"
           python3 - "$work/air6-procd-initramfs.cpio" "$work/private-p26/packed/rootfs_a.p26" <<'PY'
           import hashlib
