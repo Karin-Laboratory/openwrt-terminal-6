@@ -216,6 +216,17 @@ else
 fi
 cmp -s "$ROM/sbin/procd" "$NEWROOT/sbin/procd" ||
     halt_boot OVERLAY_PROCD_BINARY_CHANGED
+# P44 must not replace/whiteout the verified, P26-internal management entry.
+# This fails closed for RC15-like mode; RAM research boot is unchanged.
+if [ "$BOOT_MODE" = p44-required ]; then
+    management=usr/libexec/sba6d/rc14-management.sh
+    [ -f "$ROM/$management" ] && [ ! -L "$ROM/$management" ] &&
+        [ -x "$ROM/$management" ] || halt_boot P26_MANAGEMENT_ENTRY_ABSENT
+    [ -f "$NEWROOT/$management" ] && [ ! -L "$NEWROOT/$management" ] &&
+        [ -x "$NEWROOT/$management" ] || halt_boot P44_MANAGEMENT_ENTRY_SHADOW
+    cmp -s "$ROM/$management" "$NEWROOT/$management" ||
+        halt_boot P44_MANAGEMENT_ENTRY_REPLACED
+fi
 log OVERLAY_MOUNT_PASS
 
 mkdir -p "$NEWROOT/rom" "$NEWROOT/overlay" \
