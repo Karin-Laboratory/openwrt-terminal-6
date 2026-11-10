@@ -42,8 +42,6 @@ class PrefixClassificationTests(unittest.TestCase):
         self.p25 = self.home / "synthetic-reference-p25"
         self.report = self.home / "private-report.json"
         image = bytearray(256)
-        image[56:60] = b"ARM\\x64"
-        # Assign as real bytes to avoid a literal textual backslash.
         image[56:60] = bytes([65, 82, 77, 100])
         self.kernel.write_bytes(gzip.compress(bytes(image), mtime=0))
         self.ramdisk.write_bytes(b"")
