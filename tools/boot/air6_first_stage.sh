@@ -16,7 +16,14 @@ mount -t devtmpfs devtmpfs /dev || fail DEVTMPFS
 grep -qw 'bootslot=a' /proc/cmdline || fail NOT_SLOT_A
 root=/dev/mmcblk0p26
 persist=/dev/mmcblk0p44
-[ -b "$root" ] && [ -b "$persist" ] || fail PARTITIONS_NOT_BLOCK
+# devtmpfs can mount before the eMMC partition nodes have appeared.
+# Wait at most 20 seconds; never create, repair, or write partition nodes.
+i=0
+while [ ! -b "$root" ] || [ ! -b "$persist" ]; do
+    [ "$i" -lt 20 ] || fail PARTITIONS_NOT_BLOCK
+    sleep 1
+    i=$((i + 1))
+done
 [ "$root" != "$persist" ] || fail PARTITIONS_ALIASED
 [ -r /sys/class/block/mmcblk0p26/uevent ] &&
     grep -qx 'PARTNAME=rootfs_a' /sys/class/block/mmcblk0p26/uevent ||
