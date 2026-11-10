@@ -157,6 +157,17 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
         self.assertLess(source.index('[ "$observed" = "$expected" ]'),
                         source.index('mount -t tmpfs -o mode=0700,size=64m,nosuid,nodev'))
 
+    def test_qemu_p26_cases_explicitly_simulate_slot_a(self):
+        workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
+        self.assertEqual(workflow.count(
+            '-append "console=ttyAMA0 loglevel=7 panic=1 init=/init bootslot=a"'
+        ), 3)
+        for case in ("alternative-ram-boot.log", "qemu-virtio-sha-mismatch.log",
+                     "qemu-virtio-ram-positive.log"):
+            self.assertIn(case, workflow)
+        self.assertNotIn(
+            '-append "console=ttyAMA0 loglevel=7 panic=1 init=/init"', workflow)
+
     def test_rc13_slot_and_userdata_geometry_preflight_before_rw(self):
         source = maker.BOOT_SCRIPT.read_text()
         self.assertIn("grep -qw 'bootslot=a' /proc/cmdline", source)
