@@ -109,6 +109,18 @@ class ExperimentalP26P44BootstrapTests(unittest.TestCase):
                       workflow)
         self.assertIn("--cap-drop ALL --security-opt no-new-privileges", workflow)
 
+    def test_alternative_p26_aware_kernel_is_packed_into_separate_research_p25(self):
+        workflow = (maker.ROOT / ".github/workflows/mt6990-native-subtarget.yml").read_text()
+        self.assertIn("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS", workflow)
+        self.assertIn("--output \"$work/p25-p26-aware-research-unsigned.img\"", workflow)
+        self.assertIn("--kernel \"$work/air6-p26-aware-Image.gz\"", workflow)
+        self.assertIn("--p25-receipt \"$work/p25-p26-aware-research.json\"", workflow)
+        self.assertIn('pair["p26_sha256"] == cpio["p26_sha256"] == p26["p26_sha256"]', workflow)
+        self.assertIn('pair["safe_to_flash"] is False', workflow)
+        self.assertLess(workflow.index("PUBLIC_MT6990_NATIVE_ALTERNATIVE_RAM_INITRAMFS_IMAGE_BUILD_PASS"),
+                        workflow.index("PUBLIC_MT6990_ALTERNATIVE_INITRAMFS_P25_P26_SAME_RUN_HASH_LINK_PASS"))
+        self.assertIn('BLOCKED_SYNTHETIC_OR_UNREVIEWED_P25_METADATA', workflow)
+
     def test_qemu_busybox_explicit_argv0_and_fail_closed(self):
         # Every native target BusyBox invocation uses the same explicit
         # absolute argv[0] so QEMU linux-user does not dispatch a fake applet.
