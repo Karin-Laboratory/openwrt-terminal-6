@@ -113,5 +113,48 @@ class BootV2SpecTests(unittest.TestCase):
                 maker.build(kernel, dtb, meta, root / "invalid2.img", root / "invalid2.json")
 
 
+    def test_reject_trailing_and_concatenated_gzip_members_before_pack(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            arm64 = bytearray(64)
+            arm64[56:60] = b"ARM\x64"
+            kernel = root / "Image.gz"
+            # Each member has its own valid gzip CRC/ISIZE. Some decompression
+            # libraries accept this concatenation, but the device LK inflater
+            # must not be assumed to support it.
+            one = gzip.compress(arm64, mtime=0)
+            dtb = root / "board.dtb"
+            fdt = bytearray(64)
+            struct.pack_into(">10I", fdt, 0, 0xd00dfeed, 64, 56, 48,
+                             40, 17, 16, 0, 8, 8)
+            dtb.write_bytes(fdt)
+            meta = root / "meta.json"
+            meta.write_text(json.dumps({
+                "format": "aosp-boot-v2-metadata-v1",
+                "metadata_provenance": "synthetic-research-only",
+                "page_size": 2048, "kernel_addr": 0,
+                "tags_addr": 0, "dtb_addr": 0, "os_version": 0,
+                "board": "research", "cmdline": ""
+            }))
+            for label, content, pattern in (
+                ("trailing", one + b"extra", "trailing bytes"),
+                ("multi-member", one + gzip.compress(b"x", mtime=0), "trailing bytes"),
+                ("truncated", one[:-4], "truncated gzip"),
+                ("bad-crc", one[:-8] + b"\x00" * 8, "invalid gzip"),
+            ):
+                with self.subTest(case=label):
+                    kernel.write_bytes(content)
+                    output, receipt = root / (label + ".img"), root / (label + ".json")
+                    with self.assertRaisesRegex(ValueError, pattern):
+                        maker.build(kernel, dtb, meta, output, receipt)
+                    self.assertFalse(output.exists())
+                    self.assertFalse(receipt.exists())
+            kernel.write_bytes(one)
+            output, receipt = root / "valid.img", root / "valid.json"
+            result = maker.build(kernel, dtb, meta, output, receipt)
+            self.assertEqual(reader.verify(output, receipt, kernel, dtb),
+                             result["p25_sha256"])
+
+
 if __name__ == "__main__":
     unittest.main()
