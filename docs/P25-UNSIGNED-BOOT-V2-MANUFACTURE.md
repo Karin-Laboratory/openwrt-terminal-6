@@ -77,6 +77,29 @@ either is signed, fits the device's proprietary boot extension, boots the Air6,
 or has cleared distribution rights. Without an explicit accepted P25 config
 the pair step is skipped/blocked, not silently represented by synthetic inputs.
 
+## RC14-derived complete-P26 SHA binding (2026-11-10)
+
+The private RC14 build evidence shows a critical dependency not covered by
+standalone Android boot-v2 header packing: its first-stage initramfs was
+regenerated to carry the **complete 128 MiB P26 SHA-256**. RC14 did not reuse
+an earlier signed P25 after changing P26. This is an independently recorded
+architectural observation, **not** imported private source or binary data.
+
+The public native job now injects `etc/air6/p26.sha256` into the actual
+procd initramfs from the exact newly manufactured P26 image, before the
+kernel is rebuilt with `CONFIG_INITRAMFS_SOURCE`. The embedded file is a
+`sha256sum -c`-compatible hash record referring to the P26 block device,
+and a host-side check rejects missing/ambiguous SHA content. The final
+independent unsigned-pair gate checks this same hash appears in the embedded
+CPIO as well as the P26 producer and independent-readback receipts.
+
+**Implementation gap:** the public procd initramfs does not yet execute an
+early-boot P26 SHA check or reproduce RC14's verified P44/overlay mount,
+SquashFS `/rom` mount and `switch_root` sequence. P44's late optional
+extension runner is a separate mechanism. The SHA being embedded and
+pair-checked is a **build-time contract only** until these runtime controls
+are separately implemented and tested. No actual boot behavior is claimed.
+
 ## Acceptance still pending
 
 1. An independently verified public-source ARM64 kernel, correct C-unit DTB
