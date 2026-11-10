@@ -34,7 +34,8 @@ def require(condition, code):
         raise ValueError("AIR6_STAGE_" + code)
 
 
-def package(rootfs, p26_file, p26_receipt, cpio_path, receipt_path):
+def package(rootfs, p26_file, p26_receipt, cpio_path, receipt_path,
+            boot_mode="ram-experimental"):
     rootfs, p26_file, p26_receipt, cpio_path, receipt_path = map(
         Path, (rootfs, p26_file, p26_receipt, cpio_path, receipt_path))
     require(rootfs.is_dir() and not rootfs.is_symlink(), "ROOTFS")
@@ -64,7 +65,13 @@ def package(rootfs, p26_file, p26_receipt, cpio_path, receipt_path):
     for name in ("etc/rc.d/S50dropbear", "etc/rc.d/S49dropbear"):
         require(not (rootfs / name).exists() and not (rootfs / name).is_symlink(),
                 "DROPBEAR_AUTO_START")
+    require(boot_mode in ("ram-experimental", "p44-required"),
+            "UNKNOWN_BOOT_MODE")
     source = BOOT_SCRIPT.read_bytes()
+    marker = b"BOOT_MODE='ram-experimental'"
+    require(source.count(marker) == 1, "BOOT_MODE_TEMPLATE_IDENTITY")
+    if boot_mode == "p44-required":
+        source = source.replace(marker, b"BOOT_MODE='p44-required'")
     require(source.startswith(b"#!/bin/sh\n") and b"\x00" not in source and
             len(source) < 32_768, "BOOT_SCRIPT")
     spec = importlib.util.spec_from_file_location("public_air6_newc", NEWC_SCRIPT)
@@ -105,6 +112,10 @@ def package(rootfs, p26_file, p26_receipt, cpio_path, receipt_path):
     receipt = {
         "schema": "public-air6-p26-p44-bootstrap-v1",
         "scope": "EPHEMERAL_UNSIGNED_BOOTSTRAP_CPIO_NOT_AIR6_VALIDATED",
+        "boot_mode": boot_mode,
+        "p44_required": boot_mode == "p44-required",
+        "p44_identity_gate": "EXT4_RO_NOLOAD_MARKER_FS_STATE_UPPER_WORK",
+        "p44_owner_secret_embedded": False,
         "p26_bytes": PARTITION_BYTES,
         "p26_sha256": record["p26_sha256"],
         "cpio_bytes": len(out), "cpio_sha256": digest,
@@ -135,8 +146,11 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     for name in ("rootfs", "p26-file", "p26-receipt", "output", "receipt"):
         ap.add_argument("--" + name, type=Path, required=True)
+    ap.add_argument("--boot-mode", choices=("ram-experimental", "p44-required"),
+                    default="ram-experimental")
     a = ap.parse_args()
-    record = package(a.rootfs, a.p26_file, a.p26_receipt, a.output, a.receipt)
+    record = package(a.rootfs, a.p26_file, a.p26_receipt, a.output,
+                     a.receipt, boot_mode=a.boot_mode)
     print("PUBLIC_AIR6_P26_P44_BOOTSTRAP_CPIO_BUILT", record["cpio_sha256"])
     print("LIMIT: explicit private P44 consent and real Air6 boot still not verified")
 
