@@ -192,3 +192,32 @@ private RC14 successful diagnostic boot used a shell PID 1; successful
 ordinary procd handoff is a separate runtime acceptance condition.
 P44 must be safely pre-provisioned by the owner with the documented
 marker/overlay layout; this boot path never initializes a blank partition.
+
+## P26-internal RC14-derived management candidate
+
+The public native rootfs stage now includes the independently authored
+`/usr/libexec/sba6d/rc14-management.sh` (source:
+`config/sbat6-stage/usr/libexec/sba6d/rc14-management.sh`).
+It is installed **inside source-built P26**, not on P44. The workflow
+checks exact source identity, root:root/0755 in the retained fakeroot
+namespace, and performs an independent `unsquashfs -cat` byte comparison
+against the real packed SquashFS.
+
+The observed RC14 LAN2 management role informs an explicit, manual-only
+`--check` / `--start` candidate: require a real MAC1/DSA LAN2 interface
+with carrier 1000/full; mount topology `/rom` and P44-backed `/overlay`;
+require owner-provisioned per-unit SSH host key and authorized keys with
+root-only permissions; never generate or embed shared secrets. An
+`--start` request requires native network configuration already to have
+placed the selected 192.168.1.1/24 management address on lan2, then binds
+Dropbear to that address with password/forwarding disabled.
+
+No `/etc/rc.d/S*` autorun link is created: **this candidate does not
+auto-enable SSH or provision per-device keys**. The P44-required initramfs
+checks that P44 overlay has not replaced or hidden its P26 management script
+before `switch_root`. It does not load RC14's experimental NETSYS/MDIO
+modules or write SGMII registers, and therefore does **not** yet provide
+RC14's proven LAN hardware initialization. Successful boot, packet
+forwarding, multi-unit MAC assignment, per-unit calibration, Wi-Fi AP
+bring-up, and post-reboot management are all still unverified on the public
+image. Do not sign/flash this research P25/P26 based on these checks alone.
