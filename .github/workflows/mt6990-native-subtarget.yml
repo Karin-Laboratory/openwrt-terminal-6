@@ -281,6 +281,42 @@ jobs:
             python3 "$GITHUB_WORKSPACE/tools/build/install_p44_extension.py" "$rootfs"
           sh -n "$rootfs/etc/init.d/air6-p44-extension"
           sh -n "$rootfs/usr/libexec/air6/p44-extension-runner"
+          # Verify the real, fakeroot-tracked installed hook, not only
+          # synthetic installer tests. All paths must survive P26 readback.
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 - "$rootfs" <<'PY'
+          import os
+          from pathlib import Path
+          import stat
+          import sys
+          root = Path(sys.argv[1])
+          expected = {
+              "etc/init.d/air6-p44-extension": 0o755,
+              "usr/libexec/air6/p44-extension-runner": 0o755,
+          }
+          for rel, mode in expected.items():
+              node = root / rel
+              meta = node.lstat()
+              if (not stat.S_ISREG(meta.st_mode)
+                      or meta.st_uid != 0 or meta.st_gid != 0
+                      or stat.S_IMODE(meta.st_mode) != mode):
+                  raise SystemExit("P26_BLOCKED_P44_HOOK_METADATA_" +
+                                   rel.replace("/", "_"))
+          service = root / "etc/rc.d/S99air6-p44-extension"
+          if (not service.is_symlink()
+                  or os.readlink(service) != "../init.d/air6-p44-extension"
+                  or service.resolve() != (root / "etc/init.d/air6-p44-extension").resolve()):
+              raise SystemExit("P26_BLOCKED_P44_INIT_LINK")
+          runner = (root / "usr/libexec/air6/p44-extension-runner").read_text()
+          required = (' /overlay ext4 ', '"$base/enabled"', '"$base/disabled"',
+                      'timeout 15 "$script"', 'extension exit status=$status')
+          if not all(token in runner for token in required):
+              raise SystemExit("P26_BLOCKED_P44_HOOK_CONTRACT")
+          for rel in ("overlay/air6/enabled", "overlay/air6/boot.sh",
+                      "overlay/air6/disabled"):
+              if (root / rel).exists() or (root / rel).is_symlink():
+                  raise SystemExit("P26_BLOCKED_PREACTIVATED_P44_EXTENSION")
+          print("PUBLIC_P26_P44_HOOK_STAGED_ROOT_METADATA_PASS")
+          PY
           python3 -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_install_p44_extension.py -v
           find "$rootfs/etc/rc.d" -maxdepth 1 -name '*dropbear*' \
             -type l -delete
