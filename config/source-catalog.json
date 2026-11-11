@@ -283,6 +283,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_air6_bootslot_unique_runtime.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "09fd0a8b4e99ef6a880c1bbc3f178c7ad4dccd9f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_air6_compiled_scope.py",
       "component": "board-dt",
       "origin": "independent-original",
@@ -301,11 +310,20 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_air6_exact_bootslot.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "4b5bd132db77ffbbc7e65dc6a84df623542f4884",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_air6_first_stage_contract.py",
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "3ad9fa2dc39ffa7ee43be3522c0fd1e55322002c",
+      "git_blob_sha1": "a33897cfbbdb93fdc7af04332c6cbe822d9662de",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -638,7 +656,7 @@
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "76379370195d3af313f7dd32529539cfb9c53e26",
+      "git_blob_sha1": "bf8c99105c507d1be7f69fad22802f7f028e3822",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
