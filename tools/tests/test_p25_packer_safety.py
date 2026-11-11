@@ -71,6 +71,28 @@ class P25SafetyTest(unittest.TestCase):
             self.assertFalse(output.exists())
             self.assertFalse(output.with_name(output.name + ".json").exists())
 
+    def test_receipt_serialization_failure_removes_partial_receipt(self):
+        # JSON serialization fails after exclusive receipt creation.
+        import json
+        import struct
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            kernel, ramdisk = root / "kernel.gz", root / "ramdisk"
+            dtb, config, output = root / "board.dtb", root / "config.json", root / "p25.img"
+            kernel.write_bytes(gzip.compress(b"synthetic kernel"))
+            ramdisk.write_bytes(b"synthetic ramdisk")
+            dtb.write_bytes(b"\xd0\x0d\xfe\xed" + struct.pack(">I", 40) + bytes(32))
+            config.write_text(json.dumps({
+                "kernel_addr": "0x40008000", "ramdisk_addr": "0x42000000",
+                "tags_addr": "0x40000100", "dtb_addr": "0x43000000",
+                "name": "test", "cmdline": "console=ttyS0"
+            }))
+            with patch.object(packer.json, "dumps", side_effect=RuntimeError("synthetic serialization failure")):
+                with self.assertRaisesRegex(RuntimeError, "synthetic serialization failure"):
+                    packer.build(kernel, ramdisk, dtb, config, output)
+            self.assertFalse(output.exists())
+            self.assertFalse(output.with_name(output.name + ".json").exists())
+
     def test_exclusive_output_flag_present(self):
         # Guard against regressing to non-atomic Path.write_bytes.
         import inspect
