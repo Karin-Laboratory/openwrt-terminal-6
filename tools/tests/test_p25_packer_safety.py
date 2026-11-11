@@ -177,6 +177,47 @@ class P25SafetyTest(unittest.TestCase):
             self.assertFalse(output.exists())
             self.assertFalse(output.with_name(output.name + ".json").exists())
 
+    def test_silent_short_receipt_write_rolls_back(self):
+        import json
+        import struct
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            kernel, ramdisk = root / "kernel.gz", root / "ramdisk"
+            dtb, config, output = root / "board.dtb", root / "config.json", root / "p25.img"
+            kernel.write_bytes(gzip.compress(b"synthetic kernel"))
+            ramdisk.write_bytes(b"synthetic ramdisk")
+            dtb.write_bytes(bytes.fromhex("d00dfeed") + struct.pack(">I", 40) + bytes(32))
+            config.write_text(json.dumps({
+                "kernel_addr": "0x40008000", "ramdisk_addr": "0x42000000",
+                "tags_addr": "0x40000100", "dtb_addr": "0x43000000",
+                "name": "test", "cmdline": "console=ttyS0"
+            }))
+            real_fdopen = packer.os.fdopen
+
+            class ShortReceiptWriter:
+                def __init__(self, handle):
+                    self.handle = handle
+
+                def __enter__(self):
+                    self.handle.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.handle.__exit__(*args)
+
+                def write(self, data):
+                    return self.handle.write(data[:8])
+
+            def short_receipt_write(fd, mode, *args, **kwargs):
+                handle = real_fdopen(fd, mode, *args, **kwargs)
+                return ShortReceiptWriter(handle) if mode == "w" else handle
+
+            with patch.object(packer.os, "fdopen", side_effect=short_receipt_write):
+                with self.assertRaisesRegex(ValueError, "P25_BLOCKED_RECEIPT_SHORT_WRITE"):
+                    packer.build(kernel, ramdisk, dtb, config, output)
+            self.assertFalse(output.exists())
+            self.assertFalse(output.with_name(output.name + ".json").exists())
+
     def test_exclusive_output_flag_present(self):
         # Guard against regressing to non-atomic Path.write_bytes.
         import inspect
