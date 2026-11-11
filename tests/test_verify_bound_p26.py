@@ -33,20 +33,20 @@ class BoundP26Tests(unittest.TestCase):
         self.assertIn("P26_RUNTIME_FULL_SHA256_PASS", output.stdout)
 
     def test_trailing_blank_line_fails(self):
-        self.manifest.write_bytes(self.manifest.read_bytes() + b"\\n")
+        self.manifest.write_bytes(self.manifest.read_bytes() + b"\n")
         self.assertEqual(self.check().returncode, 15)
 
     def test_missing_final_newline_fails(self):
-        self.manifest.write_bytes(self.manifest.read_bytes().rstrip(b"\\n"))
+        self.manifest.write_bytes(self.manifest.read_bytes().rstrip(b"\n"))
         self.assertEqual(self.check().returncode, 15)
 
     def test_embedded_nul_fails(self):
         data = self.manifest.read_bytes()
-        self.manifest.write_bytes(data[:-1] + b"\\x00\\n")
+        self.manifest.write_bytes(data[:-1] + b"\x00\n")
         self.assertEqual(self.check().returncode, 15)
 
     def test_extra_line_fails(self):
-        self.manifest.write_bytes(self.manifest.read_bytes() + b"extra\\n")
+        self.manifest.write_bytes(self.manifest.read_bytes() + b"extra\n")
         self.assertEqual(self.check().returncode, 15)
 
     def test_modified_partition_fails(self):
