@@ -93,6 +93,49 @@ class P25SafetyTest(unittest.TestCase):
             self.assertFalse(output.exists())
             self.assertFalse(output.with_name(output.name + ".json").exists())
 
+    def test_image_write_failure_removes_partial_output(self):
+        # Inject an I/O failure after writing part of the image.
+        import json
+        import struct
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            kernel, ramdisk = root / "kernel.gz", root / "ramdisk"
+            dtb, config, output = root / "board.dtb", root / "config.json", root / "p25.img"
+            kernel.write_bytes(gzip.compress(b"synthetic kernel"))
+            ramdisk.write_bytes(b"synthetic ramdisk")
+            dtb.write_bytes(bytes.fromhex("d00dfeed") + struct.pack(">I", 40) + bytes(32))
+            config.write_text(json.dumps({
+                "kernel_addr": "0x40008000", "ramdisk_addr": "0x42000000",
+                "tags_addr": "0x40000100", "dtb_addr": "0x43000000",
+                "name": "test", "cmdline": "console=ttyS0"
+            }))
+            real_fdopen = packer.os.fdopen
+
+            class FailingWriter:
+                def __init__(self, handle):
+                    self.handle = handle
+
+                def __enter__(self):
+                    self.handle.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.handle.__exit__(*args)
+
+                def write(self, data):
+                    self.handle.write(data[:4096])
+                    raise OSError("synthetic image write failure")
+
+            def fail_image_write(fd, mode, *args, **kwargs):
+                handle = real_fdopen(fd, mode, *args, **kwargs)
+                return FailingWriter(handle) if mode == "wb" else handle
+
+            with patch.object(packer.os, "fdopen", side_effect=fail_image_write):
+                with self.assertRaisesRegex(OSError, "synthetic image write failure"):
+                    packer.build(kernel, ramdisk, dtb, config, output)
+            self.assertFalse(output.exists())
+            self.assertFalse(output.with_name(output.name + ".json").exists())
+
     def test_exclusive_output_flag_present(self):
         # Guard against regressing to non-atomic Path.write_bytes.
         import inspect
