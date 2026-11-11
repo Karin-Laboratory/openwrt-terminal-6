@@ -101,7 +101,8 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output):
     fd = os.open(output, flags, 0o600)
     try:
         with os.fdopen(fd, "wb") as handle:
-            handle.write(data)
+            written = handle.write(data)
+            require(written == len(data), "IMAGE_SHORT_WRITE")
     except BaseException:
         # A short/failed image write must never leave a plausible P25 file.
         output.unlink(missing_ok=True)
