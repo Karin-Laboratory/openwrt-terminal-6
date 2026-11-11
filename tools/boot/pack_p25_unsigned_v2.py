@@ -126,7 +126,9 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output):
         receipt_fd = os.open(receipt_path, receipt_flags, 0o600)
         receipt_created = True
         with os.fdopen(receipt_fd, "w", encoding="utf-8") as receipt_handle:
-            receipt_handle.write(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+            receipt_text = json.dumps(receipt, indent=2, sort_keys=True) + "\n"
+            written = receipt_handle.write(receipt_text)
+            require(written == len(receipt_text), "RECEIPT_SHORT_WRITE")
     except BaseException:
         # Only remove files exclusively created by this invocation. A failed
         # write may otherwise leave a truncated JSON receipt behind.
