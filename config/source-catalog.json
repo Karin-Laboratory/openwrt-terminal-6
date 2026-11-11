@@ -647,7 +647,7 @@
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "79b8dc5b641beabf2f9ec229aceceeb195e6009a",
+      "git_blob_sha1": "f7471289585afd38e5f230f37e0208ad1efb51bf",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -665,7 +665,7 @@
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "f65b27997344609b069c7985a2f43cc7df4812d9",
+      "git_blob_sha1": "84bc344aa8ab6444fa6dd1b70b7ba9537c9c31ee",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -855,6 +855,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "f549fa4ebf28a18b8c53ce7dda5848990fcdda8d",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/tests/test_p25_packer_safety.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "fee2ce6c2e4058b531c88566cf6ef94c3d311d6a",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
