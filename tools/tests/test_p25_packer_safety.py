@@ -39,6 +39,38 @@ class P25SafetyTest(unittest.TestCase):
             self.assertFalse(output.exists())
             self.assertEqual(receipt.read_text(), "existing receipt")
 
+    def test_receipt_open_failure_rolls_back_new_image(self):
+        # Exercise the post-image-write failure path with valid synthetic inputs.
+        import json
+        import struct
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            kernel = root / "kernel.gz"
+            ramdisk = root / "ramdisk"
+            dtb = root / "board.dtb"
+            config = root / "config.json"
+            output = root / "p25.img"
+            kernel.write_bytes(gzip.compress(b"synthetic kernel"))
+            ramdisk.write_bytes(b"synthetic ramdisk")
+            dtb.write_bytes(b"\\xd0\\x0d\\xfe\\xed" + struct.pack(">I", 40) + bytes(32))
+            config.write_text(json.dumps({
+                "kernel_addr": "0x40008000", "ramdisk_addr": "0x42000000",
+                "tags_addr": "0x40000100", "dtb_addr": "0x43000000",
+                "name": "test", "cmdline": "console=ttyS0"
+            }))
+            original_open = packer.os.open
+
+            def reject_receipt(path, flags, mode=0o777):
+                if Path(path) == output.with_name(output.name + ".json"):
+                    raise PermissionError("synthetic receipt failure")
+                return original_open(path, flags, mode)
+
+            with patch.object(packer.os, "open", side_effect=reject_receipt):
+                with self.assertRaises(PermissionError):
+                    packer.build(kernel, ramdisk, dtb, config, output)
+            self.assertFalse(output.exists())
+            self.assertFalse(output.with_name(output.name + ".json").exists())
+
     def test_exclusive_output_flag_present(self):
         # Guard against regressing to non-atomic Path.write_bytes.
         import inspect
