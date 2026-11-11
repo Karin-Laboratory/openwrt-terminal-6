@@ -26,6 +26,8 @@ Read the [board DTS reconstruction evidence](board/DTS-RECONSTRUCTION-20261029.m
 
 Read the [engineering integration status](docs/ENGINEERING-STATUS-20261027.md), [technical status](docs/STATUS.md), [source provenance](docs/PROVENANCE.md) and [publication gates](docs/RELEASE-GATES.md). The original research and binary evidence are retained separately in non-public archives; they are not imported into this Git history.
 
+**Stock GNSS research (separate from OpenWrt):** A privately owned Air Terminal 6 running the stock OS produced a 3D fix and 4,609 navigation-message delivery events across two tests; SBAS/L1Sb and L1S reception remain **unverified**. See the [sanitized GNSS investigation (Japanese, English summary)](docs/GNSS-RESEARCH-20261112.ja.md). This does **not** establish GNSS support in the public OpenWrt build.
+
 ## Start here
 
 This is a **public source development repository with unsigned image-build work underway**, not a firmware download page. Browse [technical status](docs/STATUS.md) to distinguish what worked on a research unit from what is reproducible from this tree. Review [roadmap](docs/ROADMAP.md) for next engineering milestones and [build contract](docs/BUILD-CONTRACT.md) for offline checks. Report bugs or propose small source improvements via Issues and PRs, following [CONTRIBUTING.md](CONTRIBUTING.md).
