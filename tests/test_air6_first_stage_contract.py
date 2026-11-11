@@ -16,7 +16,7 @@ class FirstStageContractTests(unittest.TestCase):
     def test_boot_gates_order_and_fail_closed(self):
         text = FIRST.read_text()
         steps = [
-            "grep -qw 'bootslot=a'",
+            "grep -Fxq 'bootslot=a'",
             "grep -qx 'PARTNAME=rootfs_a'",
             "grep -qx 'PARTNAME=rootfs_data'",
             "/usr/libexec/air6/verify-bound-p26",
