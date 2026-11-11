@@ -9,6 +9,8 @@ import argparse
 import gzip
 import hashlib
 import json
+import os
+from io import BytesIO
 from pathlib import Path
 import struct
 
@@ -17,6 +19,7 @@ PAGE = 4096
 HDR_V2_SIZE = 1660
 MAGIC = b"ANDROID!"
 FDT_MAGIC = b"\xd0\x0d\xfe\xed"
+MAX_KERNEL_UNCOMPRESSED = 64 * 1024 * 1024
 
 
 def require(condition, name):
@@ -51,7 +54,9 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output):
     require(0 < len(kernel) < PARTITION and kernel[:2] == b"\x1f\x8b",
             "KERNEL_GZIP_REQUIRED")
     try:
-        uncompressed = gzip.decompress(kernel)
+        with gzip.GzipFile(fileobj=BytesIO(kernel)) as stream:
+            uncompressed = stream.read(MAX_KERNEL_UNCOMPRESSED + 1)
+        require(len(uncompressed) <= MAX_KERNEL_UNCOMPRESSED, "KERNEL_UNCOMPRESSED_TOO_LARGE")
     except (OSError, EOFError) as exc:
         raise ValueError("P25_BLOCKED_KERNEL_GZIP_INVALID") from exc
     require(bool(uncompressed), "EMPTY_KERNEL")
@@ -87,7 +92,13 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output):
     payload = align(header) + align(kernel) + align(ramdisk) + align(dtb)
     require(len(payload) <= PARTITION, "PARTITION_OVERFLOW")
     data = payload + bytes(PARTITION - len(payload))
-    output.write_bytes(data)
+    # O_EXCL makes output creation atomic against concurrent producers.
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd = os.open(output, flags, 0o600)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(data)
     receipt = {
         "scope": "UNSIGNED_P25_PRE_SIGNING_ONLY", "header_version": 2,
         "partition_bytes": PARTITION, "page_bytes": PAGE,
