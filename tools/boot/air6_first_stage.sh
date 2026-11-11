@@ -32,9 +32,11 @@ while [ ! -b "$root" ] || [ ! -b "$persist" ]; do
 done
 [ "$root" != "$persist" ] || fail PARTITIONS_ALIASED
 [ -r /sys/class/block/mmcblk0p26/uevent ] &&
+    [ "$(grep -c '^PARTNAME=' /sys/class/block/mmcblk0p26/uevent || :)" = 1 ] &&
     grep -qx 'PARTNAME=rootfs_a' /sys/class/block/mmcblk0p26/uevent ||
     fail P26_PARTNAME
 [ -r /sys/class/block/mmcblk0p44/uevent ] &&
+    [ "$(grep -c '^PARTNAME=' /sys/class/block/mmcblk0p44/uevent || :)" = 1 ] &&
     grep -qx 'PARTNAME=rootfs_data' /sys/class/block/mmcblk0p44/uevent ||
     fail P44_PARTNAME
 /usr/libexec/air6/verify-bound-p26 /etc/air6/p26.sha256 "$root" || fail P26_SHA
