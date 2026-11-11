@@ -863,7 +863,7 @@
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "fee2ce6c2e4058b531c88566cf6ef94c3d311d6a",
+      "git_blob_sha1": "c41d0dc40532259f6375cfa0f111e66b8ab7052c",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
