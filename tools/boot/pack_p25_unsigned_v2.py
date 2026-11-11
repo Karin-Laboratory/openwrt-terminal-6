@@ -45,6 +45,8 @@ def parse_addr(value):
 def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output):
     require(not output.exists() and not output.is_symlink(), "OUTPUT_EXISTS")
     require(not output.parent.is_symlink(), "OUTPUT_PARENT_SYMLINK")
+    receipt_path = output.with_name(output.name + ".json")
+    require(not receipt_path.exists() and not receipt_path.is_symlink(), "RECEIPT_EXISTS")
     kernel = read_regular(kernel_path)
     ramdisk = read_regular(ramdisk_path)
     dtb = read_regular(dtb_path)
@@ -110,8 +112,12 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output):
         "not_proven": ["Air6 LK compatibility", "Air6 cold boot", "proprietary boot extensions",
                        "kernel runtime", "rights clearance", "signed firmware"]
     }
-    output.with_name(output.name + ".json").write_text(
-        json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    receipt_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        receipt_flags |= os.O_NOFOLLOW
+    receipt_fd = os.open(receipt_path, receipt_flags, 0o600)
+    with os.fdopen(receipt_fd, "w", encoding="utf-8") as receipt_handle:
+        receipt_handle.write(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     return receipt
 
 
