@@ -301,6 +301,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_air6_qemu_mount_identity.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "35ced8a1145c64fa67a40a193a464fd2ba5d4fb5",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_air6_source_scope.py",
       "component": "board-dt",
       "origin": "independent-original",
@@ -486,6 +495,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "233e57a6c2f0bd205719231cf4e4921920317ada",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/air6-rescue-qemu-v0.3/n-unit-split-qemu.sh",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "2325a654b53ca05a76a54ba0b4ff44815e44cce7",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
