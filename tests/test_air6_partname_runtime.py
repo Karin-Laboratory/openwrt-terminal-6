@@ -35,6 +35,11 @@ class PartitionIdentityRuntimeTest(unittest.TestCase):
                 ("prefix-p26", "PARTNAME=rootfs_a_extra\n", "PARTNAME=rootfs_data\n", False),
                 ("prefix-p44", "PARTNAME=rootfs_a\n", "PARTNAME=rootfs_data_extra\n", False),
                 ("case-mismatch", "partname=rootfs_a\n", "PARTNAME=rootfs_data\n", False),
+                ("duplicate-p26", "PARTNAME=rootfs_a\nPARTNAME=rootfs_a\n", "PARTNAME=rootfs_data\n", False),
+                ("conflict-p26", "PARTNAME=rootfs_a\nPARTNAME=other\n", "PARTNAME=rootfs_data\n", False),
+                ("duplicate-p44", "PARTNAME=rootfs_a\n", "PARTNAME=rootfs_data\nPARTNAME=rootfs_data\n", False),
+                ("conflict-p44", "PARTNAME=rootfs_a\n", "PARTNAME=rootfs_data\nPARTNAME=other\n", False),
+                ("other-uevent-attributes", "MAJOR=179\nPARTNAME=rootfs_a\nMINOR=26\n", "MAJOR=179\nPARTNAME=rootfs_data\nMINOR=44\n", True),
             )
             for label, left, right, valid in cases:
                 with self.subTest(label=label):
