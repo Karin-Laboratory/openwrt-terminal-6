@@ -49,7 +49,7 @@ mount -t ext4 -o ro,noload "$persist" /mnt/air6/check || fail P44_READONLY
 marker=/mnt/air6/check/.sba6d-rootfs-data-v1
 # Require one exact marker line and reject all additional lines, including blanks.
 [ "$(grep -Fxc 'SBA6D_ROOTFS_DATA_V1' "$marker")" = 1 ] &&
-    ! grep -Fxv 'SBA6D_ROOTFS_DATA_V1' "$marker" ||
+    ! grep -Fxvq 'SBA6D_ROOTFS_DATA_V1' "$marker" ||
     fail P44_MARKER
 [ -d /mnt/air6/check/upper ] && [ ! -L /mnt/air6/check/upper ] ||
     fail P44_UPPER
