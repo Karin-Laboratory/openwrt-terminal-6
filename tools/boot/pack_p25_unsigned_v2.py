@@ -115,13 +115,17 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output):
     receipt_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_NOFOLLOW"):
         receipt_flags |= os.O_NOFOLLOW
+    receipt_created = False
     try:
         receipt_fd = os.open(receipt_path, receipt_flags, 0o600)
+        receipt_created = True
         with os.fdopen(receipt_fd, "w", encoding="utf-8") as receipt_handle:
             receipt_handle.write(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     except BaseException:
-        # Do not leave an apparently usable image without its receipt.
-        # This output was exclusively created by this invocation.
+        # Only remove files exclusively created by this invocation. A failed
+        # write may otherwise leave a truncated JSON receipt behind.
+        if receipt_created:
+            receipt_path.unlink(missing_ok=True)
         output.unlink()
         raise
     return receipt
