@@ -328,6 +328,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_air6_partname_runtime.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "8800d2e66ccf075620339a793ff5c0333145c9d5",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_air6_source_scope.py",
       "component": "board-dt",
       "origin": "independent-original",
