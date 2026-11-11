@@ -15,6 +15,10 @@ mount -t sysfs sysfs /sys || fail SYS
 mount -t devtmpfs devtmpfs /dev || fail DEVTMPFS
 # Match the complete kernel command-line argument, not a word prefix.
 # grep -w also accepts bootslot=a,b and bootslot=a-b.
+# Reject duplicate or conflicting bootslot arguments, including malformed variants.
+# Kernel arguments are whitespace-separated; never accept a prefix match.
+slot_count=$(tr ' \t' '\n\n' </proc/cmdline | grep -c '^bootslot=' || :)
+[ "$slot_count" = 1 ] || fail BOOTSLOT_AMBIGUOUS
 tr ' \t' '\n\n' </proc/cmdline | grep -Fxq 'bootslot=a' || fail NOT_SLOT_A
 root=/dev/mmcblk0p26
 persist=/dev/mmcblk0p44
