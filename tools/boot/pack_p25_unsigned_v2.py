@@ -99,8 +99,13 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output):
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
     fd = os.open(output, flags, 0o600)
-    with os.fdopen(fd, "wb") as handle:
-        handle.write(data)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+    except BaseException:
+        # A short/failed image write must never leave a plausible P25 file.
+        output.unlink(missing_ok=True)
+        raise
     receipt = {
         "scope": "UNSIGNED_P25_PRE_SIGNING_ONLY", "header_version": 2,
         "partition_bytes": PARTITION, "page_bytes": PAGE,
