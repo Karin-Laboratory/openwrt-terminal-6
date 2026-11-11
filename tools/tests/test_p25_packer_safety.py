@@ -52,7 +52,7 @@ class P25SafetyTest(unittest.TestCase):
             output = root / "p25.img"
             kernel.write_bytes(gzip.compress(b"synthetic kernel"))
             ramdisk.write_bytes(b"synthetic ramdisk")
-            dtb.write_bytes(b"\\xd0\\x0d\\xfe\\xed" + struct.pack(">I", 40) + bytes(32))
+            dtb.write_bytes(b"\xd0\x0d\xfe\xed" + struct.pack(">I", 40) + bytes(32))
             config.write_text(json.dumps({
                 "kernel_addr": "0x40008000", "ramdisk_addr": "0x42000000",
                 "tags_addr": "0x40000100", "dtb_addr": "0x43000000",
