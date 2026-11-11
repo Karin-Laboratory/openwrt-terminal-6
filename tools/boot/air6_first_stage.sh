@@ -13,7 +13,9 @@ fail() {
 mount -t proc proc /proc || fail PROC
 mount -t sysfs sysfs /sys || fail SYS
 mount -t devtmpfs devtmpfs /dev || fail DEVTMPFS
-grep -qw 'bootslot=a' /proc/cmdline || fail NOT_SLOT_A
+# Match the complete kernel command-line argument, not a word prefix.
+# grep -w also accepts bootslot=a,b and bootslot=a-b.
+tr ' \t' '\n\n' </proc/cmdline | grep -Fxq 'bootslot=a' || fail NOT_SLOT_A
 root=/dev/mmcblk0p26
 persist=/dev/mmcblk0p44
 # devtmpfs can mount before the eMMC partition nodes have appeared.
