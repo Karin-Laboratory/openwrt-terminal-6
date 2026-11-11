@@ -27,11 +27,24 @@ class P25SafetyTest(unittest.TestCase):
                                  root / "unused3", root / "output")
             self.assertFalse((root / "output").exists())
 
+    def test_existing_receipt_blocks_before_output_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "p25.img"
+            receipt = root / "p25.img.json"
+            receipt.write_text("existing receipt")
+            with self.assertRaisesRegex(ValueError, "RECEIPT_EXISTS"):
+                packer.build(root / "missing-kernel", root / "missing-ramdisk",
+                             root / "missing-dtb", root / "missing-config", output)
+            self.assertFalse(output.exists())
+            self.assertEqual(receipt.read_text(), "existing receipt")
+
     def test_exclusive_output_flag_present(self):
         # Guard against regressing to non-atomic Path.write_bytes.
         import inspect
         source = inspect.getsource(packer.build)
         self.assertIn("os.O_EXCL", source)
+        self.assertIn("receipt_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL", source)
         self.assertIn("os.open(output, flags, 0o600)", source)
         self.assertNotIn("output.write_bytes(data)", source)
 
