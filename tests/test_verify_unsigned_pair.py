@@ -74,6 +74,21 @@ class PairTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             self.run_pair()
 
+    def test_partial_receipt_removed_after_serializer_failure(self):
+        real_dump = json.dump
+
+        def partial_then_fail(obj, stream, *args, **kwargs):
+            stream.write('{"status": "partial"')
+            raise OSError("synthetic write failure")
+
+        with patch.object(pair.json, "dump", side_effect=partial_then_fail):
+            with self.assertRaisesRegex(OSError, "synthetic write failure"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+        # A failed attempt must not prevent a subsequent valid verification.
+        evidence = self.run_pair()
+        self.assertEqual(evidence["status"], "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED")
+
     def test_mismatched_initramfs_p26_hash_rejected(self):
         self.cpio.write_bytes(b"newc" + b"0" * 64 + b"  /dev/mmcblk0p26")
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
