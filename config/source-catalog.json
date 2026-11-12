@@ -598,6 +598,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/air6-rescue-qemu-v0.3/n-unit-split-qemu.sh",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "aeb039356e0c1fbf0a36933b9297555474bd6de3",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/board/check_air6_compiled_scope.py",
       "component": "board-dt",
       "origin": "independent-original",
