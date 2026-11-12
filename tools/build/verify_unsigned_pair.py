@@ -95,13 +95,26 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         "not_proven": ["Air6 LK accepts p25", "RC14 boot compatibility",
                        "hardware cold boot", "LAN/SSH", "publication rights"],
     }
+class CheckedReceiptWriter:
+    """Reject text streams that silently accept only a prefix."""
+
+    def __init__(self, stream):
+        self.stream = stream
+
+    def write(self, value):
+        written = self.stream.write(value)
+        if written != len(value):
+            raise OSError("UNSIGNED_PAIR_BLOCKED_SHORT_RECEIPT_WRITE")
+        return written
+
+
     # Do not overwrite stale pair evidence.
     # Never leave a partial success receipt if serialization or I/O fails.
     # The exclusive create still refuses to replace any previous evidence.
     with out.open("x", encoding="utf-8") as stream:
         try:
-            json.dump(receipt, stream, indent=2, sort_keys=True)
-            stream.write("\n")
+            json.dump(receipt, CheckedReceiptWriter(stream), indent=2, sort_keys=True)
+            CheckedReceiptWriter(stream).write("\n")
             stream.flush()
         except BaseException:
             stream.close()
