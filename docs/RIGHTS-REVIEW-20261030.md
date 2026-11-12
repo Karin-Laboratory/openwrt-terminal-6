@@ -13,7 +13,7 @@
 
 ## Inventory by declared origin/license (not legal conclusions)
 
-<!-- source-catalog-inventory: inputs=97; pending=97 -->
+<!-- source-catalog-inventory: inputs=96; pending=96 -->
 
 The summary is a **2026-11-05 source-catalog snapshot**. Changes to catalog entries must update this breakdown and pass the source-only inventory consistency test. Counts represent declared entries, not permission to redistribute.
 
