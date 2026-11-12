@@ -101,13 +101,30 @@ class IndependentP26Tests(unittest.TestCase):
     def test_attestation_write_failure_removes_partial_output(self):
         receipt = self._producer_receipt()
         output = self.base / "partial.json"
-        original_dump = mod.json.dump
+        original_open = Path.open
 
-        def fail_after_write(obj, stream, **kwargs):
-            stream.write("{partial")
-            raise OSError("synthetic write failure")
+        class FailingWriter:
+            def __init__(self, wrapped):
+                self.wrapped = wrapped
 
-        with patch.object(mod.json, "dump", side_effect=fail_after_write):
+            def __enter__(self):
+                self.wrapped.__enter__()
+                return self
+
+            def __exit__(self, *args):
+                return self.wrapped.__exit__(*args)
+
+            def write(self, payload):
+                self.wrapped.write(payload[:5])
+                raise OSError("synthetic write failure")
+
+        def failing_open(path, *args, **kwargs):
+            opened = original_open(path, *args, **kwargs)
+            if path == output and args and args[0] == "x":
+                return FailingWriter(opened)
+            return opened
+
+        with patch.object(Path, "open", failing_open):
             with self.assertRaisesRegex(OSError, "synthetic write failure"):
                 mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
         self.assertFalse(output.exists())
