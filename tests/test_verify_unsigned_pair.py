@@ -75,8 +75,6 @@ class PairTests(unittest.TestCase):
             self.run_pair()
 
     def test_partial_receipt_removed_after_serializer_failure(self):
-        real_dump = json.dump
-
         def partial_then_fail(obj, stream, *args, **kwargs):
             stream.write('{"status": "partial"')
             raise OSError("synthetic write failure")
