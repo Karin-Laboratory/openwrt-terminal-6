@@ -41,6 +41,19 @@ def p25_verifier():
     return mod
 
 
+class CheckedReceiptWriter:
+    """Reject text streams that silently accept only a prefix."""
+
+    def __init__(self, stream):
+        self.stream = stream
+
+    def write(self, value):
+        written = self.stream.write(value)
+        if written != len(value):
+            raise OSError("UNSIGNED_PAIR_BLOCKED_SHORT_RECEIPT_WRITE")
+        return written
+
+
 def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
                 independent, cpio, out, p25_verify=None):
     paths = (p25, kernel, ramdisk, dtb, config, p26, producer, independent, cpio)
@@ -95,19 +108,6 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         "not_proven": ["Air6 LK accepts p25", "RC14 boot compatibility",
                        "hardware cold boot", "LAN/SSH", "publication rights"],
     }
-class CheckedReceiptWriter:
-    """Reject text streams that silently accept only a prefix."""
-
-    def __init__(self, stream):
-        self.stream = stream
-
-    def write(self, value):
-        written = self.stream.write(value)
-        if written != len(value):
-            raise OSError("UNSIGNED_PAIR_BLOCKED_SHORT_RECEIPT_WRITE")
-        return written
-
-
     # Do not overwrite stale pair evidence.
     # Never leave a partial success receipt if serialization or I/O fails.
     # The exclusive create still refuses to replace any previous evidence.
