@@ -36,7 +36,13 @@ def inventory(root):
     result["."] = ("dir", "", stat.S_IMODE(root_stat.st_mode),
                    root_stat.st_uid, root_stat.st_gid, root_attrs)
     hardlink_groups = {}
-    for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
+    def fail_walk(error):
+        # os.walk otherwise silently skips unreadable directories, making an
+        # incomplete extracted tree look identical to an incomplete source.
+        raise ValueError("TREE_WALK_FAILED: " + str(error)) from error
+
+    for base, dirs, files in os.walk(root, topdown=True, followlinks=False,
+                                     onerror=fail_walk):
         for name in dirs + files:
             p = Path(base) / name
             rel = p.relative_to(root).as_posix()
