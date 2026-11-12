@@ -800,7 +800,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "b89cb1ba32ffd166462562e76d0705bf2b2cd568",
+      "git_blob_sha1": "a2b14abef9a55fdef73b38038f4fe9610b6fe0fe",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
