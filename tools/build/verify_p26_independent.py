@@ -146,9 +146,18 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     }
     # Exclusive creation prevents a stale or previously attested result from
     # silently surviving a later changed p26 producer run.
-    with attestation.open("x", encoding="utf-8") as f:
-        json.dump(evidence, f, sort_keys=True, indent=2)
-        f.write("\n")
+    # An exception after exclusive creation must not leave a partial file
+    # that looks like an independent success attestation.
+    created = False
+    try:
+        with attestation.open("x", encoding="utf-8") as f:
+            created = True
+            json.dump(evidence, f, sort_keys=True, indent=2)
+            f.write("\n")
+    except BaseException:
+        if created:
+            attestation.unlink(missing_ok=True)
+        raise
     return evidence
 
 
