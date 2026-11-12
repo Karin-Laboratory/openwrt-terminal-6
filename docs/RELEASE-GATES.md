@@ -9,7 +9,7 @@ For the dated branch-tip, GitHub-conversation and source-equivalent ARM64 build 
 
 The source-only rights-label subgate is `python3 tools/build/verify_source_catalog.py --public-source`; it is expected to **FAIL** while attribution/redistribution reviews are PENDING. This subgate does not require unfinished firmware features, but a PASS would not supersede the independent security and rights checklist below.
 
-<!-- source-catalog-inventory: inputs=97; pending=97 -->
+<!-- source-catalog-inventory: inputs=96; pending=96 -->
 
 For the AP-first management release gate, see [key-only first-boot SSH policy](AP-FIRST-SSH-PROVISIONING.md). Public isolated QEMU CI is intentionally credential-free; release-capable private builds must separately validate owner public-key provisioning, unique device host keys, management isolation and recovery before any signer/flash decision.
 
