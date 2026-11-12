@@ -37,6 +37,17 @@ class IndependentP26Tests(unittest.TestCase):
         shutil.copytree(self.root, Path(command[command.index("-d") + 1]), symlinks=True)
         return None
 
+    def test_inventory_fails_closed_on_walk_error(self):
+        # os.walk defaults to swallowing scandir errors. Simulate a traversal
+        # failure without relying on root permissions in CI.
+        def failing_walk(root, **kwargs):
+            kwargs["onerror"](PermissionError("synthetic unreadable directory"))
+            yield from ()
+
+        with patch.object(mod.os, "walk", side_effect=failing_walk):
+            with self.assertRaisesRegex(ValueError, "TREE_WALK_FAILED"):
+                mod.inventory(self.root)
+
     def test_synthetic_matching_tree(self):
         with patch.object(mod.subprocess, "run", side_effect=self.fake_unsquashfs):
             self.assertEqual(mod.verify(self.root, self.p26, self.raw), mod.sha(self.p26))
