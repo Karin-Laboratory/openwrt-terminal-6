@@ -98,6 +98,20 @@ class IndependentP26Tests(unittest.TestCase):
             mod.attest(receipt, self.base / "verified.json", self.p26,
                        self.raw, mod.sha(self.p26))
 
+    def test_attestation_write_failure_removes_partial_output(self):
+        receipt = self._producer_receipt()
+        output = self.base / "partial.json"
+        original_dump = mod.json.dump
+
+        def fail_after_write(obj, stream, **kwargs):
+            stream.write("{partial")
+            raise OSError("synthetic write failure")
+
+        with patch.object(mod.json, "dump", side_effect=fail_after_write):
+            with self.assertRaisesRegex(OSError, "synthetic write failure"):
+                mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertFalse(output.exists())
+
     def test_partition_size_rejected(self):
         self.p26.write_bytes(b"short")
         with self.assertRaisesRegex(ValueError, "PARTITION_SIZE"):
