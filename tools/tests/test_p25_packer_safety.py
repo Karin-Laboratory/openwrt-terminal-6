@@ -218,6 +218,34 @@ class P25SafetyTest(unittest.TestCase):
             self.assertFalse(output.exists())
             self.assertFalse(output.with_name(output.name + ".json").exists())
 
+    def test_readback_mismatch_removes_image_and_receipt(self):
+        import json
+        import struct
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            kernel, ramdisk = root / "kernel.gz", root / "ramdisk"
+            dtb, config, output = root / "board.dtb", root / "config.json", root / "p25.img"
+            kernel.write_bytes(gzip.compress(b"synthetic kernel"))
+            ramdisk.write_bytes(b"synthetic ramdisk")
+            dtb.write_bytes(bytes.fromhex("d00dfeed") + struct.pack(">I", 40) + bytes(32))
+            config.write_text(json.dumps({
+                "kernel_addr": "0x40008000", "ramdisk_addr": "0x42000000",
+                "tags_addr": "0x40000100", "dtb_addr": "0x43000000",
+                "name": "test", "cmdline": "console=ttyS0"
+            }))
+            real_open = Path.open
+            def corrupt_readback(path, mode="r", *args, **kwargs):
+                if Path(path) == output and mode == "rb":
+                    with real_open(path, "r+b") as writer:
+                        writer.seek(0)
+                        writer.write(b"X")
+                return real_open(path, mode, *args, **kwargs)
+            with patch.object(Path, "open", autospec=True, side_effect=corrupt_readback):
+                with self.assertRaisesRegex(ValueError, "P25_BLOCKED_READBACK_SHA256"):
+                    packer.build(kernel, ramdisk, dtb, config, output)
+            self.assertFalse(output.exists())
+            self.assertFalse(output.with_name(output.name + ".json").exists())
+
     def test_exclusive_output_flag_present(self):
         # Guard against regressing to non-atomic Path.write_bytes.
         import inspect

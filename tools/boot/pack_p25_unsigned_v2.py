@@ -107,6 +107,22 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output):
         # A short/failed image write must never leave a plausible P25 file.
         output.unlink(missing_ok=True)
         raise
+    # Verify the completed image on disk before issuing a success receipt.
+    try:
+        readback = hashlib.sha256()
+        count = 0
+        with output.open("rb") as verify_handle:
+            while True:
+                chunk = verify_handle.read(1024 * 1024)
+                if not chunk:
+                    break
+                count += len(chunk)
+                readback.update(chunk)
+        require(count == PARTITION, "READBACK_SIZE")
+        require(readback.digest() == hashlib.sha256(data).digest(), "READBACK_SHA256")
+    except BaseException:
+        output.unlink(missing_ok=True)
+        raise
     receipt = {
         "scope": "UNSIGNED_P25_PRE_SIGNING_ONLY", "header_version": 2,
         "partition_bytes": PARTITION, "page_bytes": PAGE,
