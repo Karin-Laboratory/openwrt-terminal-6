@@ -112,6 +112,37 @@ class IndependentP26Tests(unittest.TestCase):
                 mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
         self.assertFalse(output.exists())
 
+    def test_attestation_silent_short_write_removes_partial_output(self):
+        receipt = self._producer_receipt()
+        output = self.base / "short.json"
+        original_open = Path.open
+
+        class ShortWriter:
+            def __init__(self, wrapped):
+                self.wrapped = wrapped
+
+            def __enter__(self):
+                self.wrapped.__enter__()
+                return self
+
+            def __exit__(self, *args):
+                return self.wrapped.__exit__(*args)
+
+            def write(self, payload):
+                self.wrapped.write(payload[:5])
+                return 5
+
+        def short_open(path, *args, **kwargs):
+            opened = original_open(path, *args, **kwargs)
+            if path == output and args and args[0] == "x":
+                return ShortWriter(opened)
+            return opened
+
+        with patch.object(Path, "open", short_open):
+            with self.assertRaisesRegex(OSError, "ATTEST_SHORT_WRITE"):
+                mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertFalse(output.exists())
+
     def test_partition_size_rejected(self):
         self.p26.write_bytes(b"short")
         with self.assertRaisesRegex(ValueError, "PARTITION_SIZE"):
