@@ -96,9 +96,17 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
                        "hardware cold boot", "LAN/SSH", "publication rights"],
     }
     # Do not overwrite stale pair evidence.
+    # Never leave a partial success receipt if serialization or I/O fails.
+    # The exclusive create still refuses to replace any previous evidence.
     with out.open("x", encoding="utf-8") as stream:
-        json.dump(receipt, stream, indent=2, sort_keys=True)
-        stream.write("\n")
+        try:
+            json.dump(receipt, stream, indent=2, sort_keys=True)
+            stream.write("\n")
+            stream.flush()
+        except BaseException:
+            stream.close()
+            out.unlink(missing_ok=True)
+            raise
     return receipt
 
 
