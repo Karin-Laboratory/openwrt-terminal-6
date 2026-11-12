@@ -20,11 +20,20 @@ class P25SafetyTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             kernel = root / "kernel.gz"
+            import json
+            import struct
+            ramdisk, dtb, config = root / "ramdisk", root / "board.dtb", root / "config.json"
             kernel.write_bytes(gzip.compress(b"K" * 8192))
+            ramdisk.write_bytes(b"synthetic ramdisk")
+            dtb.write_bytes(bytes.fromhex("d00dfeed") + struct.pack(">I", 40) + bytes(32))
+            config.write_text(json.dumps({
+                "kernel_addr": "0x40008000", "ramdisk_addr": "0x42000000",
+                "tags_addr": "0x40000100", "dtb_addr": "0x43000000",
+                "name": "test", "cmdline": "console=ttyS0"
+            }))
             with patch.object(packer, "MAX_KERNEL_UNCOMPRESSED", 4096):
                 with self.assertRaisesRegex(ValueError, "KERNEL_UNCOMPRESSED_TOO_LARGE"):
-                    packer.build(kernel, root / "unused", root / "unused2",
-                                 root / "unused3", root / "output")
+                    packer.build(kernel, ramdisk, dtb, config, root / "output")
             self.assertFalse((root / "output").exists())
 
     def test_existing_receipt_blocks_before_output_creation(self):
