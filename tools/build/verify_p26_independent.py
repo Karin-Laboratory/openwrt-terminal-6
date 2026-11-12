@@ -120,6 +120,10 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     # modification cannot inherit an obsolete verified_sha from the caller.
     if p26.stat().st_size != SIZE or sha(p26) != verified_sha:
         raise ValueError("ATTEST_P26_CHANGED_AFTER_VERIFY")
+    # A zero-length or oversized replacement would otherwise pass the prefix
+    # comparison vacuously (or consume partition padding). Mirror verify().
+    if not 0 < raw.stat().st_size < SIZE:
+        raise ValueError("ATTEST_SQUASHFS_SIZE")
     # Bind the SquashFS used for attestation to the verified partition bytes.
     # A modified raw image plus a rewritten producer receipt must not turn a
     # previously verified p26 into an attestation for a different filesystem.
