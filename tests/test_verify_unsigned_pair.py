@@ -87,6 +87,23 @@ class PairTests(unittest.TestCase):
         evidence = self.run_pair()
         self.assertEqual(evidence["status"], "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED")
 
+    def test_silent_short_receipt_write_is_rejected(self):
+        # A serializer can receive a successful but truncated write count.
+        def silent_short(obj, stream, *args, **kwargs):
+            self.assertEqual(stream.write("partial"), len("partial"))
+
+        # Simulate the underlying stream accepting fewer characters than asked.
+        class ShortStream:
+            def write(self, value):
+                return max(0, len(value) - 1)
+
+        with self.assertRaisesRegex(OSError, "SHORT_RECEIPT_WRITE"):
+            pair.CheckedReceiptWriter(ShortStream()).write("receipt")
+        with patch.object(pair.json, "dump", side_effect=lambda obj, stream, **kw: stream.write("receipt")):
+            # A successful complete write remains valid; no false rejection.
+            self.run_pair()
+        self.assertTrue(self.out.exists())
+
     def test_mismatched_initramfs_p26_hash_rejected(self):
         self.cpio.write_bytes(b"newc" + b"0" * 64 + b"  /dev/mmcblk0p26")
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
