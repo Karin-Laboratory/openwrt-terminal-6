@@ -152,8 +152,9 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     try:
         with attestation.open("x", encoding="utf-8") as f:
             created = True
-            json.dump(evidence, f, sort_keys=True, indent=2)
-            f.write("\n")
+            payload = json.dumps(evidence, sort_keys=True, indent=2) + "\n"
+            if f.write(payload) != len(payload):
+                raise OSError("ATTEST_SHORT_WRITE")
     except BaseException:
         if created:
             attestation.unlink(missing_ok=True)
