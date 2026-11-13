@@ -8,6 +8,7 @@ Requires the independent P26 filesystem readback receipt.
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 
 P26_BYTES = 134_217_728
@@ -45,6 +46,13 @@ def create(p26, producer, independent, output):
             or original.get('squashfs_sha256') != approved.get('squashfs_sha256')
             or original.get('squashfs_bytes') != approved.get('squashfs_bytes')):
         raise ValueError('P26 identity mismatch')
+    # Both receipts are untrusted JSON. Matching absent or malformed metadata
+    # must not be treated as proof of a valid SquashFS payload.
+    squash_hash = original.get('squashfs_sha256')
+    squash_size = original.get('squashfs_bytes')
+    if (not isinstance(squash_hash, str) or re.fullmatch(r'[0-9a-f]{64}', squash_hash) is None
+            or type(squash_size) is not int or not 0 < squash_size <= P26_BYTES):
+        raise ValueError('invalid SquashFS identity metadata')
     payload = (digest + '  ' + DEVICE + '\n').encode('ascii')
     # An exclusive create prevents replacing evidence from an earlier build.
     # A short write or an I/O failure must never leave a plausible hash input.
