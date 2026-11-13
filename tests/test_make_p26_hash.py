@@ -72,6 +72,48 @@ class HashInputTests(unittest.TestCase):
                 self.run_create()
         self.assertFalse(self.out.exists())
 
+    def test_cleanup_failure_preserves_primary_write_error(self):
+        real_open = Path.open
+        real_unlink = Path.unlink
+        output = self.out
+
+        class FailedWrite:
+            def __init__(self, stream):
+                self.stream = stream
+
+            def __enter__(self):
+                self.stream.__enter__()
+                return self
+
+            def __exit__(self, *args):
+                return self.stream.__exit__(*args)
+
+            def write(self, payload):
+                self.stream.write(payload[:1])
+                raise OSError('primary write failure')
+
+            def flush(self):
+                self.stream.flush()
+
+        def injected_open(path, *args, **kwargs):
+            stream = real_open(path, *args, **kwargs)
+            if path == output and args and args[0] == 'xb':
+                return FailedWrite(stream)
+            return stream
+
+        def injected_unlink(path, *args, **kwargs):
+            if path == output:
+                raise OSError('rollback failure')
+            return real_unlink(path, *args, **kwargs)
+
+        with patch.object(Path, 'open', injected_open), patch.object(Path, 'unlink', injected_unlink):
+            with self.assertRaisesRegex(OSError, 'primary write failure') as caught:
+                self.run_create()
+        if hasattr(caught.exception, '__notes__'):
+            self.assertIn('rollback failure', ' '.join(caught.exception.__notes__))
+        # A failed cleanup leaves a partial file; never report successful evidence.
+        self.assertEqual(self.out.read_bytes(), b'1')
+
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
         with self.assertRaisesRegex(ValueError, 'identity mismatch'):
