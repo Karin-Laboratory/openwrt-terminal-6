@@ -85,6 +85,22 @@ class HashInputTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'receipt mismatch'):
             self.run_create()
 
+    def test_reject_missing_or_malformed_squashfs_identity(self):
+        for bad_hash, bad_size in ((None, None), ('not-a-digest', 4), ('a'*64, 0), ('a'*64, True), ('a'*64, 9)):
+            with self.subTest(hash=bad_hash, size=bad_size):
+                producer = json.loads(self.producer.read_text())
+                independent = json.loads(self.independent.read_text())
+                producer['squashfs_sha256'] = bad_hash
+                producer['squashfs_bytes'] = bad_size
+                independent['squashfs_sha256'] = bad_hash
+                independent['squashfs_bytes'] = bad_size
+                self.producer.write_text(json.dumps(producer))
+                independent['producer_receipt_sha256'] = mod.sha256(self.producer)
+                self.independent.write_text(json.dumps(independent))
+                with self.assertRaisesRegex(ValueError, 'invalid SquashFS identity metadata'):
+                    self.run_create()
+                self.assertFalse(self.out.exists())
+
     def test_reject_changed_producer(self):
         data = json.loads(self.producer.read_text())
         data['squashfs_bytes'] = 5
