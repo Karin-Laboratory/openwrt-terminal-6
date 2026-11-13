@@ -46,8 +46,20 @@ def create(p26, producer, independent, output):
             or original.get('squashfs_bytes') != approved.get('squashfs_bytes')):
         raise ValueError('P26 identity mismatch')
     payload = (digest + '  ' + DEVICE + '\n').encode('ascii')
-    with output.open('xb') as stream:
-        stream.write(payload)
+    # An exclusive create prevents replacing evidence from an earlier build.
+    # A short write or an I/O failure must never leave a plausible hash input.
+    created = False
+    try:
+        with output.open('xb') as stream:
+            created = True
+            count = stream.write(payload)
+            if count != len(payload):
+                raise OSError('short P26 hash payload write')
+            stream.flush()
+    except BaseException:
+        if created:
+            output.unlink(missing_ok=True)
+        raise
     return digest
 
 def main():
