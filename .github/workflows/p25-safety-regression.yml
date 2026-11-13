@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MIT
+name: P25 unsigned packer safety regression
+on:
+  push:
+    paths:
+      - 'tools/boot/pack_p25_unsigned_v2.py'
+      - 'tools/tests/test_p25_packer_safety.py'
+      - '.github/workflows/p25-safety-regression.yml'
+  pull_request:
+    paths:
+      - 'tools/boot/pack_p25_unsigned_v2.py'
+      - 'tools/tests/test_p25_packer_safety.py'
+      - '.github/workflows/p25-safety-regression.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  p25-host-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Python version
+        run: python3 --version
+      - name: Run exact P25 packer safety regressions
+        run: python3 -m unittest discover -s tools/tests -p 'test_p25_packer_safety.py' -v

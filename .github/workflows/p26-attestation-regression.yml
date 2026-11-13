@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: MIT
+name: P26 independent attestation host regression
+on:
+  push:
+    paths:
+      - 'tools/build/verify_p26_independent.py'
+      - 'tests/test_verify_p26_independent.py'
+      - '.github/workflows/p26-attestation-regression.yml'
+  pull_request:
+    paths:
+      - 'tools/build/verify_p26_independent.py'
+      - 'tests/test_verify_p26_independent.py'
+      - '.github/workflows/p26-attestation-regression.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  p26-host-attestation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Run independent P26 synthetic attestation regressions
+        run: python3 -m unittest discover -s tests -p 'test_verify_p26_independent.py' -v
