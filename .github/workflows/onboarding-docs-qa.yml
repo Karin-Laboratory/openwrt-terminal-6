@@ -4,6 +4,11 @@ on:
     paths:
       - 'README.md'
       - 'agent-entry.json'
+      - 'docs/TERMINAL6-FW-COMPATIBILITY.json'
+      - 'docs/AB-FALLBACK-RESEARCH.md'
+      - 'tools/qa/p43_unsplit_offline.py'
+      - 'tools/air6-rescue-qemu-v0.3/n-unit-split-qemu.sh'
+      - 'config/source-catalog.json'
       - 'AGENT-START.ja.md'
       - 'docs/AGENT-ENTRY-OFFLINE-AUDIT-20261113.ja.md'
       - 'START-HERE.ja.md'

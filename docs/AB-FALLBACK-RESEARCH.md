@@ -25,3 +25,24 @@ A hypothetical simulator is not a device proof. No A/B mutation or flash command
 ## Relation to signature / firmware packaging
 
 The bootloader's acceptance of a signed payload, the right to use the signing credentials, the content's integrity, and successful fallback are four independent conditions. None can substitute for the others. See [release gates](RELEASE-GATES.md).
+
+## First-owner agent: S02/S03/S05 transition guard (2026-11-14)
+
+The canonical stage IDs are S01 UART connection, S02 LK identification, S03 stock-B emergency shell identification, S04 stock SSH for the current boot, S05 persistence after reboot, S06 read-only P43/P44 inventory, S07 partition mutation or verified pre-existing P44, and S08 final acceptance. The entry JSON fetch is **preflight**, not an S01 PASS.
+
+**S05 does not require permanently pinning slot B as the default boot slot.** Never auto-write retry/success/priority flags just to achieve SSH persistence. LK and U-Boot are not interchangeable interfaces. A bootloader help command, prompt character or earlier unit's log does not authorize any unknown boot command.
+
+### Read-only evidence and decision checkpoints
+
+| Observation point | Required evidence | Gate |
+|---|---|---|
+| Passive UART | Boot chronology, LK/OS identity and any observed slot hints | Logs stay private; if unclear use BLOCKED_IDENTITY |
+| Identified LK | Version/context and demonstrably read-only capabilities, when available | Unknown LK command => do not send |
+| Identified Linux shell | `uname -m`, `uname -r`, `cat /proc/cmdline`, `cat /proc/1/comm` | These are Linux-only, never send to LK |
+| Authorized reboot | Next LK slot decision, stock-B Linux, external authenticated SSH with strict host key verification | A/B state change may consume retry counters; fresh owner approval required |
+
+If the unit boots slot A and there is no validated stock-B recovery plan, report `BLOCKED_S03_BOOT_PATH`. If the unit already has authenticated stock-B SSH, inspect it non-destructively, but don't mark Emergency Shell S03 as passed without its own evidence. If a reboot returns another slot or drops SSH, keep S05/S08 blocked; distinguish possible watchdog/fallback/network/service causes without asserting one.
+
+A read-only observer may verify current identity and report a planned transition. The exact next-boot choice, rollback, expected A/B metadata changes, and consequence of failure must be reviewed and specifically approved by the owner. No generic `fw_setenv`, blind misc sector writes, fixed GPT offsets or default credentials are supplied here.
+
+See [firmware compatibility gate](TERMINAL6-FW-COMPATIBILITY.json). Historical kernel 5.4.238 is a research observation, **not** a validated compatibility profile. Unknown firmware, bootloader semantics or partition geometry blocks write paths. A completed S03 runbook and fresh-unit cold-boot validation remain outstanding.

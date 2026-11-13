@@ -490,6 +490,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/air6-rescue-qemu-v0.3/n-unit-split-qemu.sh",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "18fdbb36eab272079ed760f4483afdc884405153",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/board/check_air6_compiled_scope.py",
       "component": "board-dt",
       "origin": "independent-original",
@@ -639,6 +648,24 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "80cec57e94d5d6fddde244329374e20d69778540",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/qa/p43_unsplit_offline.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b73ffb5c2bdd5a900e5c76e0646b349369583c17",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/qa/test_onboarding_contract.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1d0a297604944ef8adf84ccc89f6f8e3d6307d2a",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
