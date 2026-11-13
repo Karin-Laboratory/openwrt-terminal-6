@@ -643,6 +643,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/qa/test_onboarding_contract.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "0a05c9b6cbe343e586a6c15f4253ae2c55d12b6e",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/security/check_publication.py",
       "component": "kernel",
       "origin": "independent-original",
