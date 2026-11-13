@@ -104,7 +104,10 @@
     "on_existing_p44": "SKIP_CREATION_AND_VERIFY_NONDESTRUCTIVELY",
     "on_unavailable_real_apply_tool": "BLOCKED_NEEDS_IMPLEMENTATION_AND_VALIDATION",
     "on_fsck_findings": "STOP_NO_AUTOREPAIR",
-    "on_insecure_ssh": "STOP_NO_PUBLIC_NETWORK_EXPOSURE"
+    "on_insecure_ssh": "STOP_NO_PUBLIC_NETWORK_EXPOSURE",
+    "on_insufficient_p43_capacity": "BLOCKED_NO_SHRINK",
+    "on_ssh_persistence_resides_on_p43": "BLOCKED_UNTIL_SHRINK_COMPATIBILITY_VERIFIED",
+    "on_missing_runtime_utilities": "BLOCKED_NO_ASSUMED_STOCK_TOOLS"
   },
   "stages": [
     {
@@ -227,18 +230,21 @@
       "authorization": "approval_for_persistent_change_and_reboot",
       "preconditions": [
         "S04 passed",
-        "persistent store and rollback plan identified"
+        "persistent store and rollback plan identified",
+        "Identify persistence filesystem and whether it lives on P43; if yes, validate dependency with upcoming shrink before treating S05 as durable"
       ],
       "required_evidence": [
         "Before/after config comparison",
         "stock B reboot observed",
         "SSH auth and command after restart",
-        "host identity checked and keys safeguarded"
+        "host identity checked and keys safeguarded",
+        "Persistence location, rollback and post-P43-resize compatibility recorded (if on P43)"
       ],
       "stop_conditions": [
         "Persistent storage unknown",
         "rollback absent",
-        "post-reboot SSH fails"
+        "post-reboot SSH fails",
+        "P43-hosted SSH state would be lost/invalidated by planned S07"
       ],
       "when_unresolved": "collect safe observations, explain uncertainty, propose tested plan; never claim PASS",
       "states": [
@@ -264,13 +270,17 @@
         "GPT primary and secondary validation",
         "P43 mounted state and ext4 health",
         "P44 present/absent classified",
-        "P43 backup and recovery plan recorded"
+        "P43 backup and recovery plan recorded",
+        "Per-unit P43 ext4 block size, total/used/free, minimum required resize size and filesystem feature/journal state",
+        "P43 starting LBA and GPT primary/backup headers and CRC, sanitized individual GUID comparison",
+        "Check presence and provenance of e2fsck/blkid/sgdisk; missing tool is BLOCKED not assumed present"
       ],
       "stop_conditions": [
         "eMMC ambiguity",
         "P43 mounted",
         "fsck anomalies",
-        "missing backup/recovery"
+        "missing backup/recovery",
+        "Capacity or minimum-size information unknown, mounted volume, or journal needs replay"
       ],
       "when_unresolved": "collect safe observations, explain uncertainty, propose tested plan; never claim PASS",
       "states": [
@@ -292,7 +302,9 @@
         "P44 absent",
         "known-good independent backup",
         "target ranges resolved dynamically",
-        "owner approves exact plan"
+        "owner approves exact plan",
+        "Target ext4 and partition sizes determined from this unit, not hardcoded 440MiB; minimum size plus conservative safety margin proven to fit",
+        "P43-backed SSH persistence verified compatible with shrink or migrated to a validated independent persistent location"
       ],
       "required_evidence": [
         "Offline ext4 resize/readback",
@@ -305,7 +317,8 @@
         "write tool unavailable",
         "partial state",
         "size insufficient",
-        "device readback mismatch"
+        "device readback mismatch",
+        "P43 data, filesystem minimum size or journal state unsuitable for proposed target"
       ],
       "when_unresolved": "collect safe observations, explain uncertainty, propose tested plan; never claim PASS",
       "states": [
