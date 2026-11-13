@@ -44,7 +44,7 @@ class PairTests(unittest.TestCase):
         self.independent = self.base / "independent.json"
         self.out = self.base / "pair.json"
         self.cpio = self.base / "initramfs.cpio"
-        self.cpio.write_bytes(newc([("etc/p26.sha256",
+        self.cpio.write_bytes(newc([("etc/air6/p26.sha256",
                                    (pair.digest(self.p26) + "  /dev/mmcblk0p26").encode("ascii"),
                                    0o100644)]))
         self.producer.write_text(json.dumps({
@@ -90,14 +90,28 @@ class PairTests(unittest.TestCase):
             self.run_pair()
 
     def test_mismatched_initramfs_p26_hash_rejected(self):
-        self.cpio.write_bytes(newc([("etc/p26.sha256",
+        self.cpio.write_bytes(newc([("etc/air6/p26.sha256",
             b"0" * 64 + b"  /dev/mmcblk0p26", 0o100644)]))
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
             self.run_pair()
         self.assertFalse(self.out.exists())
 
+    def test_hash_in_unrelated_file_rejected(self):
+        self.cpio.write_bytes(newc([("tmp/decoy",
+            (pair.digest(self.p26) + "  /dev/mmcblk0p26\\n").encode(),
+            0o100644)]))
+        with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
+            self.run_pair()
+
+    def test_hash_with_extra_content_rejected(self):
+        self.cpio.write_bytes(newc([("etc/air6/p26.sha256",
+            (pair.digest(self.p26) + "  /dev/mmcblk0p26\\nEXTRA").encode(),
+            0o100644)]))
+        with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
+            self.run_pair()
+
     def test_hash_only_in_symlink_rejected(self):
-        self.cpio.write_bytes(newc([("etc/p26.sha256",
+        self.cpio.write_bytes(newc([("etc/air6/p26.sha256",
             (pair.digest(self.p26) + "  /dev/mmcblk0p26").encode(), 0o120777)]))
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
             self.run_pair()
