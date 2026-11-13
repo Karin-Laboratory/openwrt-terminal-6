@@ -101,6 +101,22 @@ assert entry["stage_readiness"]["first_public_documentation_blocker"] == "S03"
 assert {s["id"] for s in entry["audit_scenarios"]} >= {"T08","T09","T10"}
 assert "ext4_minimum_blocks" in (ROOT / "tools/qa/p43_unsplit_offline.py").read_text()
 print("UNSPLIT_OFFLINE_CLASSIFIER_PASS")
+# Third-party audit remediation: canonical stage identity and fail-closed FW table.
+fw = json.loads((ROOT / "docs/TERMINAL6-FW-COMPATIBILITY.json").read_text(encoding="utf-8"))
+workflow_stage_ids = {item["id"]: item["name"] for item in data["stages"]}
+assert entry["stage_identity_contract"]["stage_ids"] == workflow_stage_ids
+assert entry["stage_identity_contract"]["preflight"].find("not S01 PASS") != -1
+assert fw["validated_profiles"] == []
+assert fw["policy"]["write_default"] == "DENY"
+assert fw["machine_results"]["no_validated_profile"] == "BLOCKED_NO_VALIDATED_MUTATION_PROFILE"
+assert entry["compatibility_gate"]["reference"] in entry["required_reading"]
+assert entry["compatibility_gate"]["no_validated_mutation_profile"] == "BLOCKED_NO_VALIDATED_MUTATION_PROFILE"
+assert {"T11", "T12"} <= {x["id"] for x in entry["audit_scenarios"]}
+assert "S05" in (ROOT / "docs/AB-FALLBACK-RESEARCH.md").read_text(encoding="utf-8")
+assert "デフォルト固定" in (ROOT / "START-HERE.ja.md").read_text(encoding="utf-8")
+for required_path in ["docs/AB-FALLBACK-RESEARCH.md", "docs/TERMINAL6-FW-COMPATIBILITY.json"]:
+    assert (ROOT / required_path).is_file()
+print("EXTERNAL_AUDIT_CORRECTION_PASS")
 print("AGENT_ENTRY_OFFLINE_AUDIT_PASS")
 
 print("ONBOARDING_DOCS_JSON_CONSISTENCY_PASS")
