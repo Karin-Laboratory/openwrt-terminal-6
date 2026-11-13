@@ -64,9 +64,14 @@ def create(p26, producer, independent, output):
             if count != len(payload):
                 raise OSError('short P26 hash payload write')
             stream.flush()
-    except BaseException:
+    except BaseException as original_error:
         if created:
-            output.unlink(missing_ok=True)
+            try:
+                output.unlink(missing_ok=True)
+            except OSError as cleanup_error:
+                # Preserve the primary failure even if rollback itself fails.
+                if hasattr(original_error, 'add_note'):
+                    original_error.add_note(f'P26 hash cleanup failed: {cleanup_error}')
         raise
     return digest
 
