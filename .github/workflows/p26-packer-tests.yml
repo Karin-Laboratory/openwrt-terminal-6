@@ -1,0 +1,60 @@
+name: p26 unsigned packer unit tests
+
+on:
+  push:
+    branches:
+      - work/p26-rootfs-unsigned-packer-20261104
+    paths:
+      - 'tools/build/install_p44_extension.py'
+      - 'tests/test_install_p44_extension.py'
+      - 'tools/build/pack_p26_rootfs.py'
+      - 'tests/test_pack_p26_rootfs.py'
+      - 'tests/test_verify_p26_independent.py'
+      - 'tools/build/verify_p26_independent.py'
+      - 'tools/build/verify_unsigned_pair.py'
+      - 'tests/test_verify_unsigned_pair.py'
+      - 'tools/build/verify_p26_partition.py'
+      - 'tests/test_verify_p26_partition.py'
+      - '.github/workflows/p26-packer-tests.yml'
+  pull_request:
+    paths:
+      - 'tools/build/pack_p26_rootfs.py'
+      - 'tests/test_pack_p26_rootfs.py'
+      - 'tests/test_verify_p26_independent.py'
+      - 'tools/build/verify_p26_independent.py'
+      - 'tools/build/verify_unsigned_pair.py'
+      - 'tests/test_verify_unsigned_pair.py'
+      - 'tools/build/verify_p26_partition.py'
+      - 'tests/test_verify_p26_partition.py'
+      - '.github/workflows/p26-packer-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Compile Python modules
+        run: python3 -m py_compile tools/build/pack_p26_rootfs.py tests/test_pack_p26_rootfs.py tools/build/verify_p26_independent.py tests/test_verify_p26_independent.py tools/build/verify_p26_partition.py tests/test_verify_p26_partition.py
+      - name: Test RC14-derived P44 hook staging
+        run: |
+          python3 -m unittest discover -s tests -p test_install_p44_extension.py -v
+          python3 -m py_compile tools/build/install_p44_extension.py
+      - name: Run p26 packer unit tests
+        run: python3 -m unittest discover -s tests -p test_pack_p26_rootfs.py -v
+      - name: Run independent verifier regression tests
+        run: python3 -m unittest discover -s tests -p test_verify_p26_independent.py -v
+      - name: Run partition byte-layout verifier regressions
+        run: python3 -m unittest discover -s tests -p test_verify_p26_partition.py -v
+      - name: Run unsigned p25/p26 pair identity regressions
+        run: |
+          python3 -m py_compile tools/build/verify_unsigned_pair.py tests/test_verify_unsigned_pair.py
+          python3 -m unittest discover -s tests -p test_verify_unsigned_pair.py -v
+      # Real p26 pack + independent readback is exercised in the same-run native
+      # build. Synthetic packer and independent verifier regressions run above.
+      # Do not invoke elevated commands here: public CI policy forbids privileged shells,
+      # and the production UID/GID ownership gate must remain strict.
