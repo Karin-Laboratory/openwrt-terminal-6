@@ -264,10 +264,10 @@ class P26PackerTests(unittest.TestCase):
                              "uci", "netifd", "dropbear"], "feeds": {}
             }))
             failure = subprocess.CalledProcessError(7, "mksquashfs")
-            with patch.object(mod, "check_tree", return_value=True), \\
-                 patch.object(mod, "check_target_ownership", return_value=True), \\
-                 patch.object(mod.shutil, "which", return_value="/usr/bin/mock"), \\
-                 patch.object(mod.subprocess, "run", side_effect=failure), \\
+            with patch.object(mod, "check_tree", return_value=True), \
+                 patch.object(mod, "check_target_ownership", return_value=True), \
+                 patch.object(mod.shutil, "which", return_value="/usr/bin/mock"), \
+                 patch.object(mod.subprocess, "run", side_effect=failure), \
                  patch.object(mod.shutil, "rmtree", side_effect=PermissionError("locked")):
                 with self.assertRaises(subprocess.CalledProcessError) as caught:
                     mod.produce(stage, output, source)
