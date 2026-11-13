@@ -245,6 +245,36 @@ class P26PackerTests(unittest.TestCase):
             self.assertTrue(stage.is_dir())
             self.assertTrue(source.is_file())
 
+    def test_cleanup_failure_preserves_manufacturing_exception(self):
+        import json
+        import subprocess
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            stage = base / "stage"
+            stage.mkdir()
+            self.make_root(stage)
+            private = base / "private"
+            private.mkdir(mode=0o700)
+            output = private / "out"
+            source = base / "source.json"
+            source.write_text(json.dumps({
+                "openwrt_commit": "5799d2da76998be50432b0a3325b42713b4b619b",
+                "package_install": True, "source_built": True,
+                "packages": ["base-files", "busybox", "procd", "ubus",
+                             "uci", "netifd", "dropbear"], "feeds": {}
+            }))
+            failure = subprocess.CalledProcessError(7, "mksquashfs")
+            with patch.object(mod, "check_tree", return_value=True), \\
+                 patch.object(mod, "check_target_ownership", return_value=True), \\
+                 patch.object(mod.shutil, "which", return_value="/usr/bin/mock"), \\
+                 patch.object(mod.subprocess, "run", side_effect=failure), \\
+                 patch.object(mod.shutil, "rmtree", side_effect=PermissionError("locked")):
+                with self.assertRaises(subprocess.CalledProcessError) as caught:
+                    mod.produce(stage, output, source)
+            self.assertIs(caught.exception, failure)
+            self.assertTrue(output.is_dir())
+            self.assertIn("cleanup failed", " ".join(getattr(failure, "__notes__", [])))
+
     def test_output_inside_rootfs_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
