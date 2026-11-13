@@ -373,6 +373,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_make_p26_hash.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "df3e5f11d9a602f4f1ade0769080a7dbd586972f",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_minimal_arm64_initramfs.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -549,6 +558,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "a3225a2d3500b3c581c53d551f4d0dabca4f52bf",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/make_p26_hash.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "f77fb3c22b786bc1c8a154decb74c95d7bed9a3e",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
