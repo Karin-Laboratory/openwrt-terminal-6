@@ -44,8 +44,9 @@ class PairTests(unittest.TestCase):
         self.independent = self.base / "independent.json"
         self.out = self.base / "pair.json"
         self.cpio = self.base / "initramfs.cpio"
-        self.cpio.write_bytes(b"newc" + pair.digest(self.p26).encode("ascii") +
-                              b"  /dev/mmcblk0p26" + b"TRAILER!!!")
+        self.cpio.write_bytes(newc([("etc/p26.sha256",
+                                   (pair.digest(self.p26) + "  /dev/mmcblk0p26").encode("ascii"),
+                                   0o100644)]))
         self.producer.write_text(json.dumps({
             "schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
             "signed": False, "hardware": "NONE",
