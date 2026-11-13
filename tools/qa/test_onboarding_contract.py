@@ -39,4 +39,31 @@ assert "未完成" in start
 assert "再起動後" in start
 assert "事前" in start or "承認" in start
 assert re.search(r"P43.*P44", start, re.S)
+
+# Agent-entry contract checks (host-only; deliberately never connects to UART).
+entry = json.loads((ROOT / "agent-entry.json").read_text(encoding="utf-8"))
+assert entry["schema_version"] == data["schema_version"]
+assert entry["canonical_workflow"] == "docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json"
+assert entry["human_entry"] == "START-HERE.ja.md"
+assert len(entry["initial_agent_actions"]) >= 6
+assert [a["order"] for a in entry["initial_agent_actions"]] == list(range(1, len(entry["initial_agent_actions"]) + 1))
+assert len(entry["machine_decisions"]) >= 7
+assert len(entry["audit_scenarios"]) >= 7
+assert entry["write_policy"]["default"] == "DENY"
+assert data["permission_policy"]["gpt_mutation_and_format"] == "EXPLICIT_APPROVAL"
+assert "S05" in " ".join(entry["completion"]["required"])
+assert "S08" in " ".join(entry["completion"]["required"])
+assert entry["concrete_tool_status"]["p43_p44_v04_r3"]["distribution"].startswith("Private")
+assert "intentionally rejects" in entry["concrete_tool_status"]["p43_p44_v04_r3"]["guarded_apply"]
+assert entry["evidence_provenance"]["publication_rule"].startswith("Never require")
+assert entry["security_addendum"]["network"].find("strict host-key") != -1
+assert set(entry["agent_modes"]) == {"OFFLINE_AUDIT", "HOST_PREFLIGHT", "DEVICE_READONLY", "OWNER_APPROVED_MUTATION"}
+assert len({s["id"] for s in entry["audit_scenarios"]}) == len(entry["audit_scenarios"])
+for p in entry["required_reading"]:
+    assert (ROOT / p).is_file(), p
+for s in entry["audit_scenarios"]:
+    assert s["expected"] in {d["result"] for d in entry["machine_decisions"]}
+assert "agent-entry.json" in (ROOT / "AGENT-START.ja.md").read_text(encoding="utf-8")
+print("AGENT_ENTRY_OFFLINE_AUDIT_PASS")
+
 print("ONBOARDING_DOCS_JSON_CONSISTENCY_PASS")
