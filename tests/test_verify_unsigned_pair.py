@@ -18,7 +18,7 @@ spec.loader.exec_module(pair)
 def newc(files):
     out = bytearray()
     for name, content, mode in files + [("TRAILER!!!", b"", 0)]:
-        name = name.encode() + b"\\0"
+        name = name.encode() + b"\0"
         fields = [0, mode, 0, 0, 1, 0, len(content), 0, 0, 0, 0, len(name), 0]
         out.extend(b"070701" + b"".join(f"{v:08x}".encode() for v in fields))
         out.extend(name)
