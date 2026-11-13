@@ -14,6 +14,20 @@ pair = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pair)
 
 
+
+def newc(files):
+    out = bytearray()
+    for name, content, mode in files + [("TRAILER!!!", b"", 0)]:
+        name = name.encode() + b"\0"
+        fields = [0, mode, 0, 0, 1, 0, len(content), 0, 0, 0, 0, len(name), 0]
+        out.extend(b"070701" + b"".join(f"{v:08x}".encode() for v in fields))
+        out.extend(name)
+        out.extend(bytes((-len(out)) % 4))
+        out.extend(content)
+        out.extend(bytes((-len(out)) % 4))
+    return bytes(out)
+
+
 class PairTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -30,8 +44,9 @@ class PairTests(unittest.TestCase):
         self.independent = self.base / "independent.json"
         self.out = self.base / "pair.json"
         self.cpio = self.base / "initramfs.cpio"
-        self.cpio.write_bytes(b"newc" + pair.digest(self.p26).encode("ascii") +
-                              b"  /dev/mmcblk0p26" + b"TRAILER!!!")
+        self.cpio.write_bytes(newc([("etc/air6/p26.sha256",
+                                   (pair.digest(self.p26) + "  /dev/mmcblk0p26\n").encode("ascii"),
+                                   0o100644)]))
         self.producer.write_text(json.dumps({
             "schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
             "signed": False, "hardware": "NONE",
@@ -75,10 +90,67 @@ class PairTests(unittest.TestCase):
             self.run_pair()
 
     def test_mismatched_initramfs_p26_hash_rejected(self):
-        self.cpio.write_bytes(b"newc" + b"0" * 64 + b"  /dev/mmcblk0p26")
+        self.cpio.write_bytes(newc([("etc/air6/p26.sha256",
+            b"0" * 64 + b"  /dev/mmcblk0p26", 0o100644)]))
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
             self.run_pair()
         self.assertFalse(self.out.exists())
+
+    def test_hash_in_unrelated_file_rejected(self):
+        self.cpio.write_bytes(newc([("tmp/decoy",
+            (pair.digest(self.p26) + "  /dev/mmcblk0p26\\n").encode(),
+            0o100644)]))
+        with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
+            self.run_pair()
+
+    def test_hash_with_extra_content_rejected(self):
+        self.cpio.write_bytes(newc([("etc/air6/p26.sha256",
+            (pair.digest(self.p26) + "  /dev/mmcblk0p26\\nEXTRA").encode(),
+            0o100644)]))
+        with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
+            self.run_pair()
+
+    def test_hash_only_in_symlink_rejected(self):
+        self.cpio.write_bytes(newc([("etc/air6/p26.sha256",
+            (pair.digest(self.p26) + "  /dev/mmcblk0p26").encode(), 0o120777)]))
+        with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
+            self.run_pair()
+
+    def test_symlinked_hash_parent_rejected(self):
+        bound = (pair.digest(self.p26) + "  /dev/mmcblk0p26\n").encode()
+        for parent in ("etc", "etc/air6"):
+            with self.subTest(parent=parent):
+                self.cpio.write_bytes(newc([
+                    ("etc/air6/p26.sha256", bound, 0o100644),
+                    (parent, b"tmp", 0o120777),
+                ]))
+                with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_CPIO_FORMAT"):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+
+    def test_nonzero_newc_alignment_padding_rejected(self):
+        bound = (pair.digest(self.p26) + "  /dev/mmcblk0p26\n").encode()
+        archive = newc([("etc/air6/p26.sha256", bound, 0o100644)])
+        # A valid newc record pads the filename and payload to 4 bytes.
+        name_end = 110 + len("etc/air6/p26.sha256".encode()) + 1
+        data_start = (name_end + 3) & ~3
+        data_end = data_start + len(bound)
+        for pad_start, pad_end in ((name_end, data_start),
+                                   (data_end, (data_end + 3) & ~3)):
+            if pad_start == pad_end:
+                continue
+            damaged = bytearray(archive)
+            damaged[pad_start] = 0x41
+            self.cpio.write_bytes(damaged)
+            with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_CPIO_FORMAT"):
+                self.run_pair()
+            self.assertFalse(self.out.exists())
+
+    def test_malformed_cpio_rejected(self):
+        self.cpio.write_bytes(b"newc" + pair.digest(self.p26).encode() +
+                              b"  /dev/mmcblk0p26")
+        with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_CPIO_FORMAT"):
+            self.run_pair()
 
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())

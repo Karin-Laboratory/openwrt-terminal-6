@@ -41,6 +41,59 @@ def p25_verifier():
     return mod
 
 
+
+def newc_regular_files(archive):
+    """Parse an uncompressed newc archive; reject malformed or ambiguous records."""
+    offset = 0
+    seen = set()
+    trailer = False
+    while offset < len(archive):
+        require(offset + 110 <= len(archive), "P26_INITRAMFS_CPIO_FORMAT")
+        header = archive[offset:offset + 110]
+        require(header[:6] == b"070701", "P26_INITRAMFS_CPIO_FORMAT")
+        try:
+            fields = [int(header[i:i + 8], 16) for i in range(6, 110, 8)]
+        except ValueError:
+            raise ValueError("UNSIGNED_PAIR_BLOCKED_P26_INITRAMFS_CPIO_FORMAT")
+        mode, size, namesize = fields[1], fields[6], fields[11]
+        require(1 <= namesize <= 4096, "P26_INITRAMFS_CPIO_FORMAT")
+        offset += 110
+        require(offset + namesize <= len(archive), "P26_INITRAMFS_CPIO_FORMAT")
+        raw_name = archive[offset:offset + namesize]
+        require(raw_name.endswith(b"\0") and b"\0" not in raw_name[:-1],
+                "P26_INITRAMFS_CPIO_FORMAT")
+        name = raw_name[:-1]
+        name_end = offset + namesize
+        aligned_name_end = (name_end + 3) & ~3
+        require(aligned_name_end <= len(archive) and
+                not any(archive[name_end:aligned_name_end]),
+                "P26_INITRAMFS_CPIO_FORMAT")
+        offset = aligned_name_end
+        require(offset + size <= len(archive), "P26_INITRAMFS_CPIO_FORMAT")
+        data = archive[offset:offset + size]
+        data_end = offset + size
+        aligned_data_end = (data_end + 3) & ~3
+        require(aligned_data_end <= len(archive) and
+                not any(archive[data_end:aligned_data_end]),
+                "P26_INITRAMFS_CPIO_FORMAT")
+        offset = aligned_data_end
+        if name == b"TRAILER!!!":
+            require(size == 0 and offset == len(archive),
+                    "P26_INITRAMFS_CPIO_FORMAT")
+            trailer = True
+            break
+        require(name not in seen and not name.startswith(b"/") and
+                b".." not in name.split(b"/"), "P26_INITRAMFS_CPIO_FORMAT")
+        seen.add(name)
+        # A symlinked parent can redirect the apparently correct hash path.
+        if mode & 0o170000 == 0o120000:
+            require(name not in (b"etc", b"etc/air6"),
+                    "P26_INITRAMFS_CPIO_FORMAT")
+        if mode & 0o170000 == 0o100000:
+            yield name, data
+    require(trailer, "P26_INITRAMFS_CPIO_FORMAT")
+
+
 def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
                 independent, cpio, out, p25_verify=None):
     paths = (p25, kernel, ramdisk, dtb, config, p26, producer, independent, cpio)
@@ -79,7 +132,9 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # The actual kernel initramfs must contain the same complete-P26 hash.
     # This is a build binding, NOT evidence that an early boot check runs.
     bound = (p26_hash + "  /dev/mmcblk0p26").encode("ascii")
-    require(cpio.read_bytes().count(bound) == 1, "P26_INITRAMFS_SHA_BINDING")
+    require(sum(name == b"etc/air6/p26.sha256" and data == bound + b"\n"
+                for name, data in newc_regular_files(cpio.read_bytes())) == 1,
+            "P26_INITRAMFS_SHA_BINDING")
     require(original.get("squashfs_sha256") ==
             approved.get("squashfs_sha256") and
             original.get("squashfs_bytes") ==
