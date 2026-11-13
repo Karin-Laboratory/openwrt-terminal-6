@@ -44,7 +44,9 @@ def parse_addr(value):
 
 def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output):
     require(not output.exists() and not output.is_symlink(), "OUTPUT_EXISTS")
-    require(not output.parent.is_symlink(), "OUTPUT_PARENT_SYMLINK")
+    require(output.parent.is_dir() and
+            not any(parent.is_symlink() for parent in output.parents),
+            "OUTPUT_PARENT_SYMLINK")
     receipt_path = output.with_name(output.name + ".json")
     require(not receipt_path.exists() and not receipt_path.is_symlink(), "RECEIPT_EXISTS")
     kernel = read_regular(kernel_path)
