@@ -89,7 +89,8 @@ class PairTests(unittest.TestCase):
             self.run_pair()
 
     def test_mismatched_initramfs_p26_hash_rejected(self):
-        self.cpio.write_bytes(newc([("etc/p26.sha256",\n            b"0" * 64 + b"  /dev/mmcblk0p26", 0o100644)]))
+        self.cpio.write_bytes(newc([("etc/p26.sha256",
+            b"0" * 64 + b"  /dev/mmcblk0p26", 0o100644)]))
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
             self.run_pair()
         self.assertFalse(self.out.exists())
