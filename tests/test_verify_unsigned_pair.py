@@ -45,7 +45,7 @@ class PairTests(unittest.TestCase):
         self.out = self.base / "pair.json"
         self.cpio = self.base / "initramfs.cpio"
         self.cpio.write_bytes(newc([("etc/air6/p26.sha256",
-                                   (pair.digest(self.p26) + "  /dev/mmcblk0p26").encode("ascii"),
+                                   (pair.digest(self.p26) + "  /dev/mmcblk0p26\n").encode("ascii"),
                                    0o100644)]))
         self.producer.write_text(json.dumps({
             "schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
