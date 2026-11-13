@@ -28,6 +28,10 @@ Read the [engineering integration status](docs/ENGINEERING-STATUS-20261027.md), 
 
 **Stock GNSS research (separate from OpenWrt):** A privately owned Air Terminal 6 running the stock OS produced a 3D fix and 4,609 navigation-message delivery events across two tests; SBAS/L1Sb and L1S reception remain **unverified**. See the [sanitized GNSS investigation (Japanese, English summary)](docs/GNSS-RESEARCH-20261112.ja.md). This does **not** establish GNSS support in the public OpenWrt build.
 
+## Stock UART / LK / P43-P44 shared field evidence
+
+For owners and AI agents beginning with a physical Windows/Linux UART connection, see the [sanitized stock-console and partition field guide](docs/STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md) and [machine-readable evidence JSON](docs/STOCK-UART-P43P44-EVIDENCE-20261113.json). These document observed shell identities, UART settings, partition geometry examples and verification gaps; **not a tested stock-SSH persistence installer or safe real-device partition application**.
+
 ## Start here
 
 This is a **public source development repository with unsigned image-build work underway**, not a firmware download page. Browse [technical status](docs/STATUS.md) to distinguish what worked on a research unit from what is reproducible from this tree. Review [roadmap](docs/ROADMAP.md) for next engineering milestones and [build contract](docs/BUILD-CONTRACT.md) for offline checks. Report bugs or propose small source improvements via Issues and PRs, following [CONTRIBUTING.md](CONTRIBUTING.md).
