@@ -14,6 +14,20 @@ pair = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pair)
 
 
+
+def newc(files):
+    out = bytearray()
+    for name, content, mode in files + [("TRAILER!!!", b"", 0)]:
+        name = name.encode() + b"\\0"
+        fields = [0, mode, 0, 0, 1, 0, len(content), 0, 0, 0, 0, len(name), 0]
+        out.extend(b"070701" + b"".join(f"{v:08x}".encode() for v in fields))
+        out.extend(name)
+        out.extend(bytes((-len(out)) % 4))
+        out.extend(content)
+        out.extend(bytes((-len(out)) % 4))
+    return bytes(out)
+
+
 class PairTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -75,10 +89,22 @@ class PairTests(unittest.TestCase):
             self.run_pair()
 
     def test_mismatched_initramfs_p26_hash_rejected(self):
-        self.cpio.write_bytes(b"newc" + b"0" * 64 + b"  /dev/mmcblk0p26")
+        self.cpio.write_bytes(newc([("etc/p26.sha256",\n            b"0" * 64 + b"  /dev/mmcblk0p26", 0o100644)]))
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
             self.run_pair()
         self.assertFalse(self.out.exists())
+
+    def test_hash_only_in_symlink_rejected(self):
+        self.cpio.write_bytes(newc([("etc/p26.sha256",
+            (pair.digest(self.p26) + "  /dev/mmcblk0p26").encode(), 0o120777)]))
+        with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
+            self.run_pair()
+
+    def test_malformed_cpio_rejected(self):
+        self.cpio.write_bytes(b"newc" + pair.digest(self.p26).encode() +
+                              b"  /dev/mmcblk0p26")
+        with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_CPIO_FORMAT"):
+            self.run_pair()
 
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
