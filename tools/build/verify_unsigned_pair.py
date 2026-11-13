@@ -60,7 +60,7 @@ def newc_regular_files(archive):
         offset += 110
         require(offset + namesize <= len(archive), "P26_INITRAMFS_CPIO_FORMAT")
         raw_name = archive[offset:offset + namesize]
-        require(raw_name.endswith(b"\\0") and b"\\0" not in raw_name[:-1],
+        require(raw_name.endswith(b"\0") and b"\0" not in raw_name[:-1],
                 "P26_INITRAMFS_CPIO_FORMAT")
         name = raw_name[:-1]
         offset = (offset + namesize + 3) & ~3
