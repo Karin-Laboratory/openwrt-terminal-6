@@ -8,6 +8,12 @@ on:
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
       - patches/mt6990/0003-air6-check-sgmii-pll-errors.patch
       - tests/test_mt6990_native_subtarget.py
+      - tools/build/install_p44_extension.py
+      - tests/test_install_p44_extension.py
+      - tools/build/pack_p26_rootfs.py
+      - tools/build/verify_p26_independent.py
+      - tests/test_pack_p26_rootfs.py
+      - tests/test_verify_p26_independent.py
       - config/source-catalog.json
       - .github/workflows/mt6990-native-subtarget.yml
 permissions:
@@ -190,7 +196,42 @@ jobs:
           # OpenWrt package/install populates only a staging root directory.
           # Unlike target/install it cannot produce a device boot/flash image.
           # CONFIG_SIGNED_PACKAGES=n prevents package-index signing.
-          make -C "$work/openwrt" -j1 package/install
+          # OpenWrt package ownership must be captured at install time, not
+          # reconstructed by blanket chown after staging. Keep fakeroot's
+          # inode metadata in this ephemeral job for packing and verification.
+          command -v fakeroot >/dev/null || { echo 'P26_BLOCKED_FAKEROOT_UNAVAILABLE' >&2; exit 1; }
+          # The previous native run failed inside package/install with only
+          # OpenWrt's generic make error. Preserve the real first failing
+          # command and stderr in this same run; do not retry a blind build.
+          # OpenWrt invokes host fakeroot inside package/install. Reuse the
+          # outer fakeroot daemon so APK ownership metadata survives for p26.
+          host_fakeroot="$work/openwrt/staging_dir/host/bin/fakeroot"
+          test -x "$host_fakeroot"
+          mv "$host_fakeroot" "$host_fakeroot.original"
+          cat > "$host_fakeroot" <<'FAKEROOT_WRAPPER'
+          #!/bin/sh
+          if [ -n "${FAKEROOTKEY:-}" ]; then
+            # OpenWrt may invoke fakeroot with -i/-s state options. The
+            # outer daemon already owns this metadata, so strip only known
+            # fakeroot options before executing the nested command.
+            while [ "$#" -gt 0 ]; do
+              case "$1" in
+                -i|-s|-b) [ "$#" -ge 2 ] || exit 2; shift 2 ;;
+                -u|-l) shift ;;
+                --) shift; break ;;
+                -*) echo "P26_BLOCKED_FAKEROOT_WRAPPER_UNKNOWN_OPTION: $1" >&2; exit 2 ;;
+                *) break ;;
+              esac
+            done
+            [ "$#" -gt 0 ] || { echo "P26_BLOCKED_FAKEROOT_WRAPPER_NO_COMMAND" >&2; exit 2; }
+            exec "$@"
+          fi
+          exec "${0}.original" "$@"
+          FAKEROOT_WRAPPER
+          chmod 0755 "$host_fakeroot"
+          fakeroot -s "$work/p26-fakeroot.state" -- make -C "$work/openwrt" -j1 V=s package/install
+          mv "$host_fakeroot.original" "$host_fakeroot"
+          test -s "$work/p26-fakeroot.state"
           rootfs="$(find "$work/openwrt/build_dir" -maxdepth 3 \
             -type d -name 'root-mediatek' -print -quit)"
           test -n "$rootfs" && test -d "$rootfs"
@@ -204,7 +245,10 @@ jobs:
           # A generic OpenWrt root password may initially be empty. Lock it
           # in this ephemeral research stage; SSH must not autostart before
           # owner-specific public-key provisioning in a separate process.
-          python3 - "$rootfs/etc/shadow" <<'PY'
+          # Re-enter the saved package/install fakeroot metadata namespace for
+          # the shadow edit. Writing outside fakeroot can replace the inode and
+          # lose the target UID/GID tracked by the package installer.
+          fakeroot -i "$work/p26-fakeroot.state" -s "$work/p26-fakeroot.state" -- python3 - "$rootfs/etc/shadow" <<'PY'
           from pathlib import Path
           import sys
           path = Path(sys.argv[1])
@@ -222,9 +266,58 @@ jobs:
                   found += 1
           if found != 1:
               raise SystemExit("Expected exactly one root shadow record")
-          path.write_text("\n".join(lines) + "\n")
+          # Preserve the installed inode: pathlib.write_text() truncates in place,
+          # but use an explicit descriptor to avoid accidental replacement during
+          # future refactors. Fakeroot metadata is keyed to this inode.
+          with path.open("r+", encoding="utf-8") as handle:
+              handle.seek(0)
+              handle.write("\n".join(lines) + "\n")
+              handle.truncate()
           print("SBAT6_ROOT_PASSWORD_LOCKED_IN_EPHEMERAL_STAGE")
           PY
+          # Install public RC14-derived, noncritical P44 extension hook
+          # in the SAME target fakeroot metadata namespace as package/install.
+          fakeroot -i "$work/p26-fakeroot.state" -s "$work/p26-fakeroot.state" -- \
+            python3 "$GITHUB_WORKSPACE/tools/build/install_p44_extension.py" "$rootfs"
+          sh -n "$rootfs/etc/init.d/air6-p44-extension"
+          sh -n "$rootfs/usr/libexec/air6/p44-extension-runner"
+          # Verify the real, fakeroot-tracked installed hook, not only
+          # synthetic installer tests. All paths must survive P26 readback.
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 - "$rootfs" <<'PY'
+          import os
+          from pathlib import Path
+          import stat
+          import sys
+          root = Path(sys.argv[1])
+          expected = {
+              "etc/init.d/air6-p44-extension": 0o755,
+              "usr/libexec/air6/p44-extension-runner": 0o755,
+          }
+          for rel, mode in expected.items():
+              node = root / rel
+              meta = node.lstat()
+              if (not stat.S_ISREG(meta.st_mode)
+                      or meta.st_uid != 0 or meta.st_gid != 0
+                      or stat.S_IMODE(meta.st_mode) != mode):
+                  raise SystemExit("P26_BLOCKED_P44_HOOK_METADATA_" +
+                                   rel.replace("/", "_"))
+          service = root / "etc/rc.d/S99air6-p44-extension"
+          if (not service.is_symlink()
+                  or os.readlink(service) != "../init.d/air6-p44-extension"
+                  or service.resolve() != (root / "etc/init.d/air6-p44-extension").resolve()):
+              raise SystemExit("P26_BLOCKED_P44_INIT_LINK")
+          runner = (root / "usr/libexec/air6/p44-extension-runner").read_text()
+          required = (' /overlay ext4 ', '"$base/enabled"', '"$base/disabled"',
+                      'timeout 15 "$script"', 'extension exit status=$status')
+          if not all(token in runner for token in required):
+              raise SystemExit("P26_BLOCKED_P44_HOOK_CONTRACT")
+          for rel in ("overlay/air6/enabled", "overlay/air6/boot.sh",
+                      "overlay/air6/disabled"):
+              if (root / rel).exists() or (root / rel).is_symlink():
+                  raise SystemExit("P26_BLOCKED_PREACTIVATED_P44_EXTENSION")
+          print("PUBLIC_P26_P44_HOOK_STAGED_ROOT_METADATA_PASS")
+          PY
+          python3 -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_install_p44_extension.py -v
           find "$rootfs/etc/rc.d" -maxdepth 1 -name '*dropbear*' \
             -type l -delete
           if find "$rootfs" -type f -path '*/lib/firmware/*' \
@@ -252,6 +345,116 @@ jobs:
           test -s "$work/sbat6-rootfs-stage.tar.gz"
           sha256sum "$work/sbat6-rootfs-stage.tar.gz"
           echo 'PUBLIC_MT6990_NONINSTALLABLE_ROOTFS_STAGE_BUILD_PASS'
+          # Same-run provenance is generated from the actual installed APK database.
+          # This is a private intermediate receipt, not proof of p26 manufacture.
+          python3 - "$rootfs" "$work" "$pin" <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import sys
+          root, work, pin = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+          database = root / "lib/apk/db/installed"
+          if not database.is_file() or database.is_symlink():
+              raise SystemExit("P26_BLOCKED_REAL_INSTALLED_PACKAGE_DB_MISSING")
+          raw = database.read_bytes()
+          if not raw:
+              raise SystemExit("P26_BLOCKED_EMPTY_INSTALLED_PACKAGE_DB")
+          packages = sorted(set(
+              line[2:].strip() for line in raw.decode("utf-8").splitlines()
+              if line.startswith("P:") and line[2:].strip()
+          ))
+          required = {"base-files", "busybox", "procd", "ubus", "uci",
+                      "netifd", "dropbear"}
+          if not required.issubset(packages):
+              raise SystemExit("P26_BLOCKED_INSTALLED_PACKAGE_INVENTORY_INCOMPLETE:"
+                               + ",".join(sorted(required - set(packages))))
+          record = {
+              "openwrt_commit": pin,
+              "source_built": True,
+              "package_install": True,
+              "packages": packages,
+              "feeds": {},
+              "installed_db_sha256": hashlib.sha256(raw).hexdigest(),
+              "workflow_checkout_sha": __import__("os").environ["GITHUB_SHA"],
+              "provenance_scope": "SAME_RUN_EPHEMERAL_NATIVE_PACKAGE_INSTALL",
+          }
+          (work / "p26-source-receipt.json").write_text(
+              json.dumps(record, sort_keys=True, indent=2) + "\n")
+          print("P26_SAME_RUN_PACKAGE_INSTALL_RECEIPT_READY",
+                len(packages), record["installed_db_sha256"])
+          PY
+          # Produce an ephemeral real p26 from THIS job's actual package/install
+          # root, then independently read back its full 128 MiB and filesystem.
+          # No Actions artifact, cache, release, signing, or device interaction.
+          # Extract Ubuntu's packaged squashfs-tools without root privileges.
+          # Reuse native tools if present; keep all binaries inside this job.
+          if ! command -v mksquashfs >/dev/null || ! command -v unsquashfs >/dev/null; then
+            mkdir -p "$work/squashfs-deb" "$work/squashfs-tools"
+            (cd "$work/squashfs-deb" && apt download squashfs-tools)
+            deb="$(find "$work/squashfs-deb" -maxdepth 1 -name 'squashfs-tools_*.deb' -print -quit)"
+            test -n "$deb" && test -s "$deb"
+            dpkg-deb -x "$deb" "$work/squashfs-tools"
+            export PATH="$work/squashfs-tools/usr/bin:$PATH"
+          fi
+          command -v mksquashfs
+          command -v unsquashfs
+          test -x "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py" || \
+            test -f "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py"
+          install -d -m 0700 "$work/private-p26"
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py" \
+            --rootfs "$rootfs" \
+            --source-receipt "$work/p26-source-receipt.json" \
+            --output "$work/private-p26/packed"
+          test "$(stat -c %s "$work/private-p26/packed/rootfs_a.p26")" -eq 134217728
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 "$GITHUB_WORKSPACE/tools/build/verify_p26_independent.py" \
+            --rootfs "$rootfs" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --squashfs "$work/private-p26/packed/rootfs.squashfs" \
+            --producer-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --attestation "$work/private-p26/packed/p26-independent-attestation.json"
+          python3 - "$work/private-p26/packed/p26-receipt.json" \
+            "$work/private-p26/packed/p26-independent-attestation.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          producer, independent = (json.loads(Path(p).read_text()) for p in sys.argv[1:])
+          if (producer["p26_sha256"] != independent["p26_sha256"]
+                  or producer["status"] != "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK"
+                  or independent["status"] != "P26_INDEPENDENT_FS_READBACK_VERIFIED"):
+              raise SystemExit("P26_BLOCKED_ATTESTATION_MISMATCH")
+          print("PUBLIC_P26_PRODUCER_AND_INDEPENDENT_RECEIPT_IDENTITY_PASS",
+                independent["p26_sha256"])
+          PY
+          echo 'PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS'
+          echo 'LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution'
+          # Keep a concise, non-binary manufacture receipt in the Actions
+          # summary. Never upload/cache the image or the full producer receipts.
+          python3 - "$work/private-p26/packed/p26-receipt.json" \
+            "$work/private-p26/packed/p26-independent-attestation.json" \
+            "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json
+          from pathlib import Path
+          import re
+          import sys
+          producer, independent = (json.loads(Path(p).read_text()) for p in sys.argv[1:3])
+          if (not isinstance(producer.get("p26_sha256"), str)
+                  or not re.fullmatch(r"[0-9a-f]{64}", producer["p26_sha256"])
+                  or producer.get("p26_sha256") != independent.get("p26_sha256")
+                  or producer.get("partition_bytes") != 134217728
+                  or independent.get("partition_bytes") != 134217728
+                  or type(producer.get("squashfs_bytes")) is not int
+                  or producer["squashfs_bytes"] <= 0
+                  or independent.get("status") != "P26_INDEPENDENT_FS_READBACK_VERIFIED"):
+              raise SystemExit("P26 summary identity gate failed")
+          summary = Path(sys.argv[3])
+          with summary.open("a", encoding="utf-8") as stream:
+              stream.write("## Unsigned Air6 source-build receipt\n\n")
+              stream.write("| Item | Result |\n|---|---|\n")
+              stream.write(f"| P26 | {producer['partition_bytes']} bytes; SHA-256 `{producer['p26_sha256']}` |\n")
+              stream.write(f"| SquashFS | {producer['squashfs_bytes']} bytes; SHA-256 `{producer['squashfs_sha256']}` |\n")
+              stream.write("| Independent filesystem/readback | PASS |\n")
+              stream.write("| Signature / hardware boot / distribution | NOT PERFORMED / NOT PROVEN |\n\n")
+          PY
           # Build an external diagnostic PID1 cpio with the SAME pinned
           # OpenWrt cross-toolchain as the native MT6990 kernel Image.
           # It is not a procd boot test or a device-installable image.
@@ -371,15 +574,23 @@ jobs:
           # rootfs as a procd-PID1 initramfs, not the freestanding diagnostic
           # ELF. It shares the native kernel toolchain/package build above.
           # No target/install, image recipe, signing, upload or device access.
-          python3 - "$rootfs" "$work/air6-procd-initramfs.cpio" <<'PY'
+          python3 - "$rootfs" "$work/air6-procd-initramfs.cpio" "$work/private-p26/packed/rootfs_a.p26" <<'PY'
           import importlib.util
+          import hashlib
           import os
           from pathlib import Path
           import stat
           import struct
           import sys
 
-          root, output = Path(sys.argv[1]), Path(sys.argv[2])
+          root, output, p26_path = map(Path, sys.argv[1:4])
+          if p26_path.is_symlink() or not p26_path.is_file() or p26_path.stat().st_size != 134217728:
+              raise SystemExit("P25_BLOCKED_P26_BINDING_IMAGE_INVALID")
+          p26_digest = hashlib.sha256()
+          with p26_path.open("rb") as stream:
+              for block in iter(lambda: stream.read(1024 * 1024), b""):
+                  p26_digest.update(block)
+          p26_sha = p26_digest.hexdigest()
           if not root.is_dir() or root.is_symlink() or output.exists():
               raise SystemExit("Unsafe procd initramfs staging paths")
           for name in ("sbin/procd", "sbin/netifd", "sbin/ubusd",
@@ -441,6 +652,19 @@ jobs:
                   ("dev/console", 5, 1, 0o600), ("dev/null", 1, 3, 0o666)):
               entries.setdefault(name, (stat.S_IFCHR | perms, b"", major, minor))
           entries["init"] = (stat.S_IFLNK | 0o777, b"sbin/init", 0, 0)
+          # Bind this run's exact validated 128 MiB P26 identity in the P25
+          # kernel's built-in initramfs. No historical/private SHA literals.
+          if "etc/air6" in entries or "etc/air6/p26.sha256" in entries:
+              raise SystemExit("P25_BLOCKED_P26_BINDING_PATH_COLLISION")
+          entries["etc/air6"] = (stat.S_IFDIR | 0o755, b"", 0, 0)
+          entries["etc/air6/p26.sha256"] = (
+              stat.S_IFREG | 0o444,
+              (p26_sha + "  /dev/mmcblk0p26\n").encode("ascii"), 0, 0)
+          checker = Path(os.environ["GITHUB_WORKSPACE"]) / "tools/boot/verify_bound_p26.sh"
+          if "usr/libexec/air6/verify-bound-p26" in entries or not checker.is_file():
+              raise SystemExit("P25_BLOCKED_P26_CHECKER_STAGING")
+          entries["usr/libexec/air6/verify-bound-p26"] = (
+              stat.S_IFREG | 0o755, checker.read_bytes(), 0, 0)
           archive = bytearray()
           for ino, name in enumerate(sorted(entries), 1):
               mode, payload, major, minor = entries[name]
@@ -452,7 +676,19 @@ jobs:
           print("PUBLIC_MT6990_NATIVE_PROCD_PID1_INITRAMFS_BUILD_PASS",
                 "entries=" + str(len(entries)), "bytes=" + str(len(archive)))
           PY
+          sh -n "$GITHUB_WORKSPACE/tools/boot/verify_bound_p26.sh"
+          python3 -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_verify_bound_p26.py -v
           test -s "$work/air6-procd-initramfs.cpio"
+          python3 - "$work/air6-procd-initramfs.cpio" "$work/private-p26/packed/rootfs_a.p26" <<'PY'
+          import hashlib
+          from pathlib import Path
+          import sys
+          cpio, p26 = map(Path, sys.argv[1:])
+          digest = hashlib.sha256(p26.read_bytes()).hexdigest().encode("ascii")
+          if cpio.read_bytes().count(digest + b"  /dev/mmcblk0p26") != 1:
+              raise SystemExit("P25_BLOCKED_P26_SHA_BINDING_NOT_IN_INITRAMFS")
+          print("PUBLIC_P25_INITRAMFS_SAME_RUN_P26_SHA_BINDING_PASS", digest.decode())
+          PY
           sha256sum "$work/air6-procd-initramfs.cpio"
           # Integrate actual MT6990 analog PHY and IFRAO clock providers into
           # the SAME native OpenWrt 6.18.60 kernel that embeds procd below.
@@ -522,6 +758,9 @@ jobs:
           sha256sum "$kernel/usr/initramfs_data.o" \
             "$kernel/arch/arm64/boot/Image"
           echo 'PUBLIC_MT6990_SAME_KERNEL_EMBEDDED_PROCD_PID1_IMAGE_BUILD_PASS'
+          # Preserve this procd PID1 Image for isolated QEMU smoke testing.
+          # A distinct source-built Air6 first-stage Image is rebuilt AFTER
+          # this generic QEMU test, never passed to QEMU virt without devices.
           # Boot this exact native OpenWrt Image (with its real procd rootfs)
           # under QEMU virt. No Air6 DTB is passed: virt uses QEMU-generated
           # DT and PL011 console. Require real PID1, netifd and bridge runtime.
@@ -590,3 +829,77 @@ jobs:
           echo 'LIMIT: QEMU virt cannot establish Air6 bootloader/DTB/AP compatibility'
           echo 'LIMIT: native procd QEMU virt boot only; Air6 device boot not tested'
           echo 'LIMIT: no device boot, signing, installable image, private material or rights approval'
+          # RC14 public translation: a *separate* Air6 first-stage initramfs,
+          # sourced only from this job's native BusyBox/runtime and verified P26.
+          # The QEMU procd smoke Image above remains a distinct artifact.
+          sh -n "$GITHUB_WORKSPACE/tools/boot/air6_first_stage.sh"
+          python3 -m py_compile "$GITHUB_WORKSPACE/tools/build/build_air6_first_stage.py"
+          python3 "$GITHUB_WORKSPACE/tools/build/build_air6_first_stage.py" \
+            --rootfs "$rootfs" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --output "$work/air6-first-stage-initramfs.cpio"
+          test -s "$work/air6-first-stage-initramfs.cpio"
+          # The following must be available *built in*, not as unavailable
+          # modules in the initial ramdisk (the first stage does not modprobe).
+          "$kernel/scripts/config" --file "$kernel/.config" \
+            --enable EXT4_FS --enable SQUASHFS --enable SQUASHFS_XZ \
+            --enable OVERLAY_FS --enable CRYPTO_SHA256 \
+            --enable MMC --enable MMC_BLOCK --enable BLK_DEV_INITRD
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
+          for option in EXT4_FS SQUASHFS SQUASHFS_XZ OVERLAY_FS \
+                        MMC MMC_BLOCK BLK_DEV_INITRD; do
+            grep -qx "CONFIG_$option=y" "$kernel/.config" || {
+              echo "P25_BLOCKED_MISSING_FIRST_STAGE_BUILTIN_$option" >&2
+              exit 1
+            }
+          done
+          "$kernel/scripts/config" --file "$kernel/.config" \
+            --set-str INITRAMFS_SOURCE "$work/air6-first-stage-initramfs.cpio"
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" olddefconfig
+          PATH="$(dirname "$compiler"):$PATH" timeout 1800s \
+            make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" -j2 Image
+          test -s "$kernel/usr/initramfs_data.o"
+          sha256sum "$work/air6-first-stage-initramfs.cpio" \
+            "$kernel/arch/arm64/boot/Image"
+          echo 'PUBLIC_AIR6_FIRST_STAGE_KERNEL_IMAGE_SOURCE_BUILT_PASS'
+          # Unsigned P25 only when caller has supplied a validated exact boot
+          # configuration; the public repo intentionally contains no private
+          # load addresses, proprietary template or signer.
+          gzip -n -9 -c "$kernel/arch/arm64/boot/Image" > "$work/air6-native-Image.gz"
+          gzip -n -9 -c "$work/air6-first-stage-initramfs.cpio" > "$work/air6-native-initramfs.cpio.gz"
+          native_dtb="$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
+          test -s "$native_dtb"
+          if test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}"; then
+            test -f "$SBAT6_P25_BOOT_V2_CONFIG"
+            install -d -m 0700 "$work/private-p25"
+            p25="$work/private-p25/boot_a.unsigned.p25"
+            python3 "$GITHUB_WORKSPACE/tools/boot/pack_p25_unsigned_v2.py" \
+              --kernel "$work/air6-native-Image.gz" \
+              --ramdisk "$work/air6-native-initramfs.cpio.gz" \
+              --dtb "$native_dtb" \
+              --config "$SBAT6_P25_BOOT_V2_CONFIG" --output "$p25"
+            python3 "$GITHUB_WORKSPACE/tools/boot/verify_p25_independent.py" \
+              --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
+              --ramdisk "$work/air6-native-initramfs.cpio.gz" --dtb "$native_dtb" \
+              --config "$SBAT6_P25_BOOT_V2_CONFIG"
+            python3 "$GITHUB_WORKSPACE/tools/build/verify_unsigned_pair.py" \
+              --p25 "$p25" --kernel "$work/air6-native-Image.gz" \
+              --ramdisk "$work/air6-native-initramfs.cpio.gz" \
+              --dtb "$native_dtb" --config "$SBAT6_P25_BOOT_V2_CONFIG" \
+              --p26 "$work/private-p26/packed/rootfs_a.p26" \
+              --producer "$work/private-p26/packed/p26-receipt.json" \
+              --independent "$work/private-p26/packed/p26-independent-attestation.json" \
+              --cpio "$work/air6-first-stage-initramfs.cpio" \
+              --out "$work/private-p25/unsigned-p25-p26-pair.json"
+            echo 'PUBLIC_AIR6_SOURCE_P25_P26_FIRST_STAGE_PAIR_BYTE_IDENTITY_PASS'
+          else
+            echo 'P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE'
+            printf '%s\n' '## P25 manufacture status' '' \
+              'BLOCKED: no independently validated SBAT6_P25_BOOT_V2_CONFIG was supplied.' \
+              'No P25 candidate or P25/P26 pair receipt was produced.' \
+              'P26 bytes remain ephemeral; no firmware artifact was uploaded.' \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo 'LIMIT: Air6 bootloader acceptance and hardware cold boot NOT verified'
