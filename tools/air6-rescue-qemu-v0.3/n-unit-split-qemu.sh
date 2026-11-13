@@ -34,7 +34,19 @@ fs_blocks() {
     /bin/busybox od -An -tu4 | /bin/busybox tr -d '[:space:]'
 }
 check_mounts() {
-  if /bin/busybox awk -v a="$P43" -v b="$P44" '$1==a || $1==b {found=1} END {exit !found}' /proc/mounts; then
+  # Compare kernel major:minor IDs, not mount-source path spellings.
+  # /proc/mounts can name the same device through a symlink or UUID alias.
+  [ -r /proc/self/mountinfo ] || fail "mountinfo unavailable"
+  [ -r /sys/class/block/vda43/dev ] || fail "P43 device identity unavailable"
+  id43=$(cat /sys/class/block/vda43/dev) || fail "cannot read P43 identity"
+  case "$id43" in *:*) : ;; *) fail "invalid P43 device identity" ;; esac
+  id44=
+  if [ -b "$P44" ]; then
+    [ -r /sys/class/block/vda44/dev ] || fail "P44 device identity unavailable"
+    id44=$(cat /sys/class/block/vda44/dev) || fail "cannot read P44 identity"
+    case "$id44" in *:*) : ;; *) fail "invalid P44 device identity" ;; esac
+  fi
+  if /bin/busybox awk -v a="$id43" -v b="$id44" '$3==a || (b!="" && $3==b) {found=1} END {exit !found}' /proc/self/mountinfo; then
     fail "P43 or P44 is mounted"
   fi
 }
