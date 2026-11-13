@@ -7,6 +7,7 @@ P26 filesystem readback must have been completed by its separate verifier.
 """
 import argparse
 import hashlib
+import gzip
 import importlib.util
 import json
 from pathlib import Path
@@ -135,6 +136,13 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     require(sum(name == b"etc/air6/p26.sha256" and data == bound + b"\n"
                 for name, data in newc_regular_files(cpio.read_bytes())) == 1,
             "P26_INITRAMFS_SHA_BINDING")
+    # Bind the separately supplied newc bytes to the exact compressed ramdisk
+    # that the independent p25 verifier checked inside the boot image.
+    try:
+        embedded_cpio = gzip.decompress(ramdisk.read_bytes())
+    except (OSError, EOFError) as exc:
+        raise ValueError("UNSIGNED_PAIR_BLOCKED_P25_RAMDISK_GZIP") from exc
+    require(embedded_cpio == cpio.read_bytes(), "P25_RAMDISK_CPIO_IDENTITY")
     require(original.get("squashfs_sha256") ==
             approved.get("squashfs_sha256") and
             original.get("squashfs_bytes") ==
