@@ -39,6 +39,39 @@ class HashInputTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'output exists'):
             self.run_create()
 
+    def test_short_write_removes_partial_output(self):
+        real_open = Path.open
+        output = self.out
+
+        class ShortWrite:
+            def __init__(self, stream):
+                self.stream = stream
+
+            def __enter__(self):
+                self.stream.__enter__()
+                return self
+
+            def __exit__(self, *args):
+                return self.stream.__exit__(*args)
+
+            def write(self, payload):
+                self.stream.write(payload[:-1])
+                return len(payload) - 1
+
+            def flush(self):
+                self.stream.flush()
+
+        def injected_open(path, *args, **kwargs):
+            stream = real_open(path, *args, **kwargs)
+            if path == output and args and args[0] == 'xb':
+                return ShortWrite(stream)
+            return stream
+
+        with patch.object(Path, 'open', injected_open):
+            with self.assertRaisesRegex(OSError, 'short P26 hash payload write'):
+                self.run_create()
+        self.assertFalse(self.out.exists())
+
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
         with self.assertRaisesRegex(ValueError, 'identity mismatch'):
