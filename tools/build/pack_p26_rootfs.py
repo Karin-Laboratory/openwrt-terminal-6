@@ -160,39 +160,45 @@ def produce(root, output, source_receipt):
             shutil.which("unsquashfs") is not None, "SQUASHFS_TOOLS_MISSING")
     os.umask(0o077)
     output.mkdir(mode=0o700)
-    raw = output / "rootfs.squashfs"
-    full = output / "rootfs_a.p26"
-    # Fixed time improves repeatability; pin squashfs-tools version independently.
-    # Exact byte reproducibility still depends on pinned squashfs-tools version.
-    subprocess.run(["mksquashfs", str(root), str(raw), "-noappend", "-comp", "xz",
-                    "-b", "262144", "-processors", "1", "-no-progress",
-                    "-all-time", "0", "-mkfs-time", "0", "-no-xattrs"],
-                   check=True, timeout=1800)
-    size = raw.stat().st_size
-    require(0 < size < PARTITION_BYTES, "SQUASHFS_EXCEEDS_P26")
-    with raw.open("rb") as src, full.open("xb") as dst:
-        shutil.copyfileobj(src, dst, 1 << 20)
-        dst.truncate(PARTITION_BYTES)  # Zero-padding, as in real R34.
-    require(full.stat().st_size == PARTITION_BYTES, "PARTITION_SIZE")
-    with raw.open("rb") as src, full.open("rb") as img:
-        for chunk in iter(lambda: src.read(1 << 20), b""):
-            require(img.read(len(chunk)) == chunk, "PREFIX_READBACK")
-        for chunk in iter(lambda: img.read(1 << 20), b""):
-            require(not chunk.strip(b"\x00"), "PADDING_NOT_ZERO")
-    receipt = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
-               "partition_bytes": PARTITION_BYTES, "p26_sha256": digest(full),
-               "squashfs_bytes": size, "squashfs_sha256": digest(raw),
-               "openwrt_commit": record["openwrt_commit"],
-               "feeds": record.get("feeds"), "packages": record.get("packages"),
-               "squashfs_tools": subprocess.check_output(
-                   ["mksquashfs", "-version"], text=True).splitlines()[0],
-               "signed": False, "hardware": "NONE", "public_binary": False}
-    (output / "p26-receipt.json").write_text(json.dumps(receipt, indent=2,
-                                                     sort_keys=True) + "\n")
-    print("P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK", PARTITION_BYTES,
-          receipt["p26_sha256"])
-    return receipt
+    try:
+        raw = output / "rootfs.squashfs"
+        full = output / "rootfs_a.p26"
+        # Fixed time improves repeatability; pin squashfs-tools version independently.
+        # Exact byte reproducibility still depends on pinned squashfs-tools version.
+        subprocess.run(["mksquashfs", str(root), str(raw), "-noappend", "-comp", "xz",
+                        "-b", "262144", "-processors", "1", "-no-progress",
+                        "-all-time", "0", "-mkfs-time", "0", "-no-xattrs"],
+                       check=True, timeout=1800)
+        size = raw.stat().st_size
+        require(0 < size < PARTITION_BYTES, "SQUASHFS_EXCEEDS_P26")
+        with raw.open("rb") as src, full.open("xb") as dst:
+            shutil.copyfileobj(src, dst, 1 << 20)
+            dst.truncate(PARTITION_BYTES)  # Zero-padding, as in real R34.
+        require(full.stat().st_size == PARTITION_BYTES, "PARTITION_SIZE")
+        with raw.open("rb") as src, full.open("rb") as img:
+            for chunk in iter(lambda: src.read(1 << 20), b""):
+                require(img.read(len(chunk)) == chunk, "PREFIX_READBACK")
+            for chunk in iter(lambda: img.read(1 << 20), b""):
+                require(not chunk.strip(b"\x00"), "PADDING_NOT_ZERO")
+        receipt = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
+                   "partition_bytes": PARTITION_BYTES, "p26_sha256": digest(full),
+                   "squashfs_bytes": size, "squashfs_sha256": digest(raw),
+                   "openwrt_commit": record["openwrt_commit"],
+                   "feeds": record.get("feeds"), "packages": record.get("packages"),
+                   "squashfs_tools": subprocess.check_output(
+                       ["mksquashfs", "-version"], text=True).splitlines()[0],
+                   "signed": False, "hardware": "NONE", "public_binary": False}
+        (output / "p26-receipt.json").write_text(json.dumps(receipt, indent=2,
+                                                         sort_keys=True) + "\n")
+        print("P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK", PARTITION_BYTES,
+              receipt["p26_sha256"])
+        return receipt
 
+    except Exception:
+        # Only remove the fresh directory created by this invocation.
+        # Never touch the staging root, source receipt, or pre-existing paths.
+        shutil.rmtree(output)
+        raise
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
