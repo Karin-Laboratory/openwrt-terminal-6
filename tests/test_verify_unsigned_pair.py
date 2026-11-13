@@ -128,6 +128,24 @@ class PairTests(unittest.TestCase):
                     self.run_pair()
                 self.assertFalse(self.out.exists())
 
+    def test_nonzero_newc_alignment_padding_rejected(self):
+        bound = (pair.digest(self.p26) + "  /dev/mmcblk0p26\n").encode()
+        archive = newc([("etc/air6/p26.sha256", bound, 0o100644)])
+        # A valid newc record pads the filename and payload to 4 bytes.
+        name_end = 110 + len("etc/air6/p26.sha256".encode()) + 1
+        data_start = (name_end + 3) & ~3
+        data_end = data_start + len(bound)
+        for pad_start, pad_end in ((name_end, data_start),
+                                   (data_end, (data_end + 3) & ~3)):
+            if pad_start == pad_end:
+                continue
+            damaged = bytearray(archive)
+            damaged[pad_start] = 0x41
+            self.cpio.write_bytes(damaged)
+            with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_CPIO_FORMAT"):
+                self.run_pair()
+            self.assertFalse(self.out.exists())
+
     def test_malformed_cpio_rejected(self):
         self.cpio.write_bytes(b"newc" + pair.digest(self.p26).encode() +
                               b"  /dev/mmcblk0p26")
