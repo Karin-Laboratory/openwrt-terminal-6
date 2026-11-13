@@ -75,6 +75,10 @@ def newc_regular_files(archive):
         require(name not in seen and not name.startswith(b"/") and
                 b".." not in name.split(b"/"), "P26_INITRAMFS_CPIO_FORMAT")
         seen.add(name)
+        # A symlinked parent can redirect the apparently correct hash path.
+        if mode & 0o170000 == 0o120000:
+            require(name not in (b"etc", b"etc/air6"),
+                    "P26_INITRAMFS_CPIO_FORMAT")
         if mode & 0o170000 == 0o100000:
             yield name, data
     require(trailer, "P26_INITRAMFS_CPIO_FORMAT")
