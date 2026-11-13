@@ -208,6 +208,43 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "UNPROVISIONED_AUTOSTART"):
                 mod.check_tree(root)
 
+    def test_failed_mksquashfs_removes_only_new_output(self):
+        import json
+        import subprocess
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            stage = base / "stage"
+            stage.mkdir()
+            self.make_root(stage)
+            out_parent = base / "private"
+            out_parent.mkdir(mode=0o700)
+            sentinel = out_parent / "keep.txt"
+            sentinel.write_text("unchanged")
+            source = base / "source.json"
+            source.write_text(json.dumps({
+                "openwrt_commit": "5799d2da76998be50432b0a3325b42713b4b619b",
+                "package_install": True, "source_built": True,
+                "packages": ["base-files", "busybox", "procd", "ubus",
+                             "uci", "netifd", "dropbear"],
+                "feeds": {}
+            }))
+            output = out_parent / "new-output"
+
+            def fail_after_partial_output(*args, **kwargs):
+                (output / "rootfs.squashfs").write_bytes(b"partial")
+                raise subprocess.CalledProcessError(1, "mksquashfs")
+
+            with patch.object(mod, "check_tree", return_value=True), \
+                 patch.object(mod, "check_target_ownership", return_value=True), \
+                 patch.object(mod.shutil, "which", return_value="/usr/bin/mock"), \
+                 patch.object(mod.subprocess, "run", side_effect=fail_after_partial_output):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    mod.produce(stage, output, source)
+            self.assertFalse(output.exists())
+            self.assertEqual(sentinel.read_text(), "unchanged")
+            self.assertTrue(stage.is_dir())
+            self.assertTrue(source.is_file())
+
     def test_output_inside_rootfs_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
