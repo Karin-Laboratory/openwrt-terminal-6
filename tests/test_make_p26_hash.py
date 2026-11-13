@@ -112,7 +112,7 @@ class HashInputTests(unittest.TestCase):
         if hasattr(caught.exception, '__notes__'):
             self.assertIn('rollback failure', ' '.join(caught.exception.__notes__))
         # A failed cleanup leaves a partial file; never report successful evidence.
-        self.assertEqual(self.out.read_bytes(), b'1')
+        self.assertEqual(self.out.read_bytes(), self.digest[:1].encode())
 
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
