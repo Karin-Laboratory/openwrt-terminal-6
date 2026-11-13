@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Host-only rejection tests of unsigned pair receipt identity gates."""
 import hashlib
+import gzip
 import importlib.util
 import json
 from pathlib import Path
@@ -47,6 +48,7 @@ class PairTests(unittest.TestCase):
         self.cpio.write_bytes(newc([("etc/air6/p26.sha256",
                                    (pair.digest(self.p26) + "  /dev/mmcblk0p26\n").encode("ascii"),
                                    0o100644)]))
+        self.parts[1].write_bytes(gzip.compress(self.cpio.read_bytes(), mtime=0))
         self.producer.write_text(json.dumps({
             "schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
             "signed": False, "hardware": "NONE",
@@ -151,6 +153,14 @@ class PairTests(unittest.TestCase):
                               b"  /dev/mmcblk0p26")
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_CPIO_FORMAT"):
             self.run_pair()
+
+    def test_unrelated_p25_ramdisk_rejected(self):
+        # A valid hash file supplied separately is insufficient if the
+        # independently verified boot ramdisk contains different bytes.
+        self.parts[1].write_bytes(gzip.compress(newc([("tmp/decoy", b"x", 0o100644)]), mtime=0))
+        with self.assertRaisesRegex(ValueError, "P25_RAMDISK_CPIO_IDENTITY"):
+            self.run_pair()
+        self.assertFalse(self.out.exists())
 
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
