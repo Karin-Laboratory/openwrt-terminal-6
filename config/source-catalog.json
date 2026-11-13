@@ -500,7 +500,7 @@
     },
     {
       "path": "tools/air6-rescue-qemu-v0.3/n-unit-split-qemu.sh",
-      "component": "rescue-qemu",
+      "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "aeb039356e0c1fbf0a36933b9297555474bd6de3",
@@ -671,7 +671,7 @@
     },
     {
       "path": "tools/qa/test_onboarding_contract.py",
-      "component": "qa",
+      "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "0a05c9b6cbe343e586a6c15f4253ae2c55d12b6e",
