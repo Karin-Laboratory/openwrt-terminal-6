@@ -107,7 +107,11 @@
     "on_insecure_ssh": "STOP_NO_PUBLIC_NETWORK_EXPOSURE",
     "on_insufficient_p43_capacity": "BLOCKED_NO_SHRINK",
     "on_ssh_persistence_resides_on_p43": "BLOCKED_UNTIL_SHRINK_COMPATIBILITY_VERIFIED",
-    "on_missing_runtime_utilities": "BLOCKED_NO_ASSUMED_STOCK_TOOLS"
+    "on_missing_runtime_utilities": "BLOCKED_NO_ASSUMED_STOCK_TOOLS",
+    "firmware_compatibility_registry": "docs/TERMINAL6-FW-COMPATIBILITY.json",
+    "unknown_firmware_or_bootloader": "BLOCKED_FW_OR_LAYOUT_UNKNOWN",
+    "bootloader_interface_rule": "LK is not U-Boot; do not infer fw_setenv/default-slot pinning or write raw A/B metadata.",
+    "s05_rule": "Persistent authenticated stock-B SSH after owner-approved reboot is required, NOT permanently selecting stock B as default; distinguish persistence from boot slot policy."
   },
   "stages": [
     {
@@ -144,7 +148,8 @@
       "goal": "LK debug console",
       "authorization": "read_only",
       "preconditions": [
-        "S01 passed"
+        "S01 passed",
+        "Confirm LK by boot log and console context; prompt alone is insufficient"
       ],
       "required_evidence": [
         "LK prompt and version/context logged without secrets",
@@ -171,7 +176,8 @@
       "authorization": "approval_for_boot_selection",
       "preconditions": [
         "S02 passed",
-        "owner confirms stock B recovery expectation"
+        "owner confirms stock B recovery expectation",
+        "Bootloader action plan must be FW/slot-specific, independently validated and owner approved; unknown LK commands are forbidden"
       ],
       "required_evidence": [
         "uname -m aarch64 observed",
@@ -182,7 +188,8 @@
       "stop_conditions": [
         "Slot not b",
         "wrong PID1",
-        "unknown kernel boot path"
+        "unknown kernel boot path",
+        "Unknown LK revision, unvalidated slot B boot selection or recovery"
       ],
       "when_unresolved": "collect safe observations, explain uncertainty, propose tested plan; never claim PASS",
       "states": [
@@ -201,7 +208,8 @@
       "authorization": "approval_for_service_or_network_change",
       "preconditions": [
         "S03 passed",
-        "known secure LAN isolated"
+        "known secure LAN isolated",
+        "No default password/credentials or unverified stock network address may be guessed"
       ],
       "required_evidence": [
         "Network device and address determined from live state",
@@ -231,14 +239,16 @@
       "preconditions": [
         "S04 passed",
         "persistent store and rollback plan identified",
-        "Identify persistence filesystem and whether it lives on P43; if yes, validate dependency with upcoming shrink before treating S05 as durable"
+        "Identify persistence filesystem and whether it lives on P43; if yes, validate dependency with upcoming shrink before treating S05 as durable",
+        "Do not change A/B retry, priority or success flags merely to get SSH persistence"
       ],
       "required_evidence": [
         "Before/after config comparison",
         "stock B reboot observed",
         "SSH auth and command after restart",
         "host identity checked and keys safeguarded",
-        "Persistence location, rollback and post-P43-resize compatibility recorded (if on P43)"
+        "Persistence location, rollback and post-P43-resize compatibility recorded (if on P43)",
+        "Actual reboot selected stock B, with no unexplained fallback; persisted SSH not inferred from bootctrl flags"
       ],
       "stop_conditions": [
         "Persistent storage unknown",
@@ -263,7 +273,8 @@
       "authorization": "read_only",
       "preconditions": [
         "Stock identity independently reconfirmed",
-        "storage tools available"
+        "storage tools available",
+        "Observe firmware, GPT variant and per-unit layout before any proposed partition changes"
       ],
       "required_evidence": [
         "eMMC partition mapping observed",
@@ -304,7 +315,8 @@
         "target ranges resolved dynamically",
         "owner approves exact plan",
         "Target ext4 and partition sizes determined from this unit, not hardcoded 440MiB; minimum size plus conservative safety margin proven to fit",
-        "P43-backed SSH persistence verified compatible with shrink or migrated to a validated independent persistent location"
+        "P43-backed SSH persistence verified compatible with shrink or migrated to a validated independent persistent location",
+        "Reject if unit firmware/layout not covered by an independently verified profile"
       ],
       "required_evidence": [
         "Offline ext4 resize/readback",
