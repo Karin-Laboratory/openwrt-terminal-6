@@ -1,6 +1,6 @@
 #!/bin/sh
 # QEMU-only Air6 P43/P44 split test v0.2. Never use on real eMMC.
-# Controlled fault injection: after-resize, after-gpt, before-format.
+# --apply operates on a disposable QEMU virtio test image ONLY. It is NOT the private v0.4 installer.\n# These guards are defense-in-depth and not proof of virtualization; never execute on a real device.\n# Controlled fault injection: after-resize, after-gpt, before-format.
 set -eu
 DISK=/dev/vda
 P43=/dev/vda43
@@ -66,7 +66,9 @@ check_p44_mount() {
 }
 MODE=$1
 [ -b "$DISK" ] && [ -b "$P43" ] || fail "QEMU virtio disk not found"
-[ ! -e /dev/mmcblk0 ] || fail "an eMMC is present; not a QEMU-only environment"
+for node in /dev/mmcblk* /sys/class/block/mmcblk*; do
+  [ ! -e "$node" ] || fail "an eMMC-like block device is present; not a QEMU-only environment"
+done
 [ "$(get_size vda)" = "$SECTORS" ] || fail "unexpected disk sector count"
 /sbin/sgdisk -v "$DISK" || fail "GPT validation failed"
 [ "$(get_guid)" = "$EXPECTED_GUID" ] || fail "unexpected P43 GUID"
