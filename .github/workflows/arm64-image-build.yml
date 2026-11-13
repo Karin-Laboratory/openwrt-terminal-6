@@ -4,6 +4,10 @@ on:
     paths:
       - .github/workflows/arm64-image-build.yml
       - scripts/air6-diagnostic-init.c
+      - scripts/check-air6-compiled-fdt.py
+      - tools/build/pack_p25_boot_v2.py
+      - tools/build/verify_p25_boot_v2.py
+      - tests/test_pack_p25_boot_v2.py
       - scripts/build-minimal-arm64-initramfs.py
       - scripts/build-arm64-busybox-smoke.sh
       - scripts/build-arm64-musl-busybox-stage.sh
@@ -24,6 +28,10 @@ on:
     paths:
       - .github/workflows/arm64-image-build.yml
       - scripts/air6-diagnostic-init.c
+      - scripts/check-air6-compiled-fdt.py
+      - tools/build/pack_p25_boot_v2.py
+      - tools/build/verify_p25_boot_v2.py
+      - tests/test_pack_p25_boot_v2.py
       - scripts/build-minimal-arm64-initramfs.py
       - scripts/build-arm64-busybox-smoke.sh
       - scripts/build-arm64-musl-busybox-stage.sh
@@ -301,18 +309,39 @@ jobs:
           timeout 1200s make ARCH=arm64 -j4 dtbs
           for dtb in mt6990-air-terminal-6.dtb mt6990-air-terminal-6-ethernet-test.dtb; do
             test -s "arch/arm64/boot/dts/mediatek/$dtb"
-            python3 - "arch/arm64/boot/dts/mediatek/$dtb" <<'PY'
-          from pathlib import Path
-          import sys
-          blob = Path(sys.argv[1]).read_bytes()
-          assert blob[:4] == bytes.fromhex('d00dfeed'), "not a DTB"
-          for needle in (b'softbank,air-terminal-6\x00', b'mediatek,mt7531\x00'):
-              assert needle in blob, f"missing compiled DT property: {needle!r}"
-          print("AIR6_KERNEL_TREE_DTB_CONTENT_PASS", sys.argv[1])
-          PY
+            python3 "$GITHUB_WORKSPACE/scripts/check-air6-compiled-fdt.py" \
+              "arch/arm64/boot/dts/mediatek/$dtb"
           done
           sha256sum arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6*.dtb
           wc -c arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6*.dtb
           echo 'UPSTREAM_KERNEL_TREE_AIR6_DTBS_BUILD_PASS'
+          # Real bytes from THIS same-source Image and DTB. Metadata remains
+          # synthetic; no LK/vendor64 acceptance and no public binary upload.
+          gzip -n -c arch/arm64/boot/Image > "$tmp/air6-Image.gz"
+          python3 - "$tmp/p25-public-header.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          Path(sys.argv[1]).write_text(json.dumps({
+              "format": "aosp-boot-v2-metadata-v1",
+              "metadata_provenance": "synthetic-research-only",
+              "page_size": 2048, "kernel_addr": 0,
+              "tags_addr": 0, "dtb_addr": 0, "os_version": 0,
+              "board": "research", "cmdline": ""
+          }) + "\n")
+          PY
+          python3 "$GITHUB_WORKSPACE/tools/build/pack_p25_boot_v2.py" \
+            --kernel "$tmp/air6-Image.gz" \
+            --dtb arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb \
+            --metadata "$tmp/p25-public-header.json" \
+            --output "$tmp/p25-unsigned-AOSP-v2-research.img" \
+            --receipt "$tmp/p25-unsigned-AOSP-v2-research.json"
+          python3 "$GITHUB_WORKSPACE/tools/build/verify_p25_boot_v2.py" \
+            --p25 "$tmp/p25-unsigned-AOSP-v2-research.img" \
+            --receipt "$tmp/p25-unsigned-AOSP-v2-research.json" \
+            --kernel "$tmp/air6-Image.gz" \
+            --dtb arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb
+          sha256sum "$tmp/p25-unsigned-AOSP-v2-research.img"
+          echo 'PUBLIC_AOSP_V2_REAL_KERNEL_DTB_P25_32M_INDEPENDENT_READBACK_PASS'
+          echo 'LIMIT: synthetic v2 addresses; LK vendor64, boot, signing and distribution unverified'
           echo 'LIMIT: MT6990 SoC DTSI provenance/rights and matching drivers remain unverified; no dtbs_check or device boot.'
           echo 'LIMIT: Image contains procd preinit/inittab/netifd registration policy; no verified runtime, external network, wpad, SSH, boot or AP evidence.'
