@@ -64,6 +64,42 @@ for p in entry["required_reading"]:
 for s in entry["audit_scenarios"]:
     assert s["expected"] in {d["result"] for d in entry["machine_decisions"]}
 assert "agent-entry.json" in (ROOT / "AGENT-START.ja.md").read_text(encoding="utf-8")
+# Offline P43 evidence classifier tests (no devices, shell execution or write APIs).
+import runpy
+inspector = runpy.run_path(str(ROOT / "tools/qa/p43_unsplit_offline.py"))["inspect"]
+fixture = {
+    "disk_sectors": 9000000, "logical_sector_bytes": 512,
+    "gpt_primary_valid": True, "gpt_backup_valid": True,
+    "p43": {"start_lba": 1500000, "end_lba": 7600000,
+            "ext4_block_bytes": 4096, "ext4_total_blocks": 750000,
+            "ext4_used_blocks": 50000, "ext4_minimum_blocks": 70000,
+            "candidate_target_mib": 600, "safety_margin_mib": 100},
+    "p44_present": False, "p43_mounted": False, "journal_clean": True,
+    "backup_verified": True, "recovery_route_verified": True,
+    "source_evidence_level": "OBSERVED_LOCAL", "ssh_state_on_p43": False
+}
+assert inspector(fixture)["status"] == "INSPECT_ONLY_NO_DEVICE_PASS"
+assert inspector(fixture)["device_success"] is False
+import copy
+bad = copy.deepcopy(fixture); bad["p43"]["candidate_target_mib"] = 100
+assert "BLOCKED_P43_CAPACITY" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); bad["p43_mounted"] = True
+assert "BLOCKED_STORAGE" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); bad["journal_clean"] = False
+assert "BLOCKED_STORAGE" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); bad["ssh_state_on_p43"] = True
+assert "BLOCKED_SSH_P43_DEPENDENCY" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); bad["p44_present"] = True
+assert "P44_PRESENT_VERIFY_INSTEAD_OF_CREATE" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); del bad["p43"]["ext4_minimum_blocks"]
+assert inspector(bad)["status"] == "BLOCKED_STORAGE_EVIDENCE"
+bad = copy.deepcopy(fixture); bad["source_evidence_level"] = "SIMULATED_ONLY"
+assert "NO_CURRENT_DEVICE_EVIDENCE" in inspector(bad)["reasons"]
+assert len(entry["stage_readiness"]["stages"]) == 8
+assert entry["stage_readiness"]["first_public_documentation_blocker"] == "S03"
+assert {s["id"] for s in entry["audit_scenarios"]} >= {"T08","T09","T10"}
+assert "ext4_minimum_blocks" in (ROOT / "tools/qa/p43_unsplit_offline.py").read_text()
+print("UNSPLIT_OFFLINE_CLASSIFIER_PASS")
 print("AGENT_ENTRY_OFFLINE_AUDIT_PASS")
 
 print("ONBOARDING_DOCS_JSON_CONSISTENCY_PASS")
