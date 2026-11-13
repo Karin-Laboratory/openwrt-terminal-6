@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """Host-only consistency checks for first-time owner / agent onboarding."""
 import json
 import pathlib
