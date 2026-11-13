@@ -95,6 +95,18 @@ class TestP25BootV2(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "DTB_MAGIC"):
             p25.build(self.kernel, self.ramdisk, self.dtb, self.cfg, self.output)
 
+    def test_rejects_symlinked_output_ancestor(self):
+        root = Path(self.tmp.name)
+        real = root / "real"
+        nested = real / "nested"
+        nested.mkdir(parents=True)
+        alias = root / "alias"
+        alias.symlink_to(real, target_is_directory=True)
+        output = alias / "nested" / "unsigned.p25"
+        with self.assertRaisesRegex(ValueError, "OUTPUT_PARENT_SYMLINK"):
+            p25.build(self.kernel, self.ramdisk, self.dtb, self.cfg, output)
+        self.assertFalse((nested / "unsigned.p25").exists())
+
     def test_no_implicit_hardware_addresses(self):
         self.cfg.write_text("{}")
         with self.assertRaisesRegex(ValueError, "CONFIG_KEYS"):
