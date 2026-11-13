@@ -1,0 +1,20 @@
+name: First-time onboarding docs QA
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'START-HERE.ja.md'
+      - 'docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json'
+      - 'docs/RELEASE-GATES.md'
+      - 'tools/qa/test_onboarding_contract.py'
+      - '.github/workflows/onboarding-docs-qa.yml'
+  workflow_dispatch:
+jobs:
+  consistency:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate agent-neutral onboarding contract
+        run: python3 tools/qa/test_onboarding_contract.py
