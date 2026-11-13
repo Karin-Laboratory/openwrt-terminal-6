@@ -116,6 +116,18 @@ class PairTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
             self.run_pair()
 
+    def test_symlinked_hash_parent_rejected(self):
+        bound = (pair.digest(self.p26) + "  /dev/mmcblk0p26\n").encode()
+        for parent in ("etc", "etc/air6"):
+            with self.subTest(parent=parent):
+                self.cpio.write_bytes(newc([
+                    ("etc/air6/p26.sha256", bound, 0o100644),
+                    (parent, b"tmp", 0o120777),
+                ]))
+                with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_CPIO_FORMAT"):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+
     def test_malformed_cpio_rejected(self):
         self.cpio.write_bytes(b"newc" + pair.digest(self.p26).encode() +
                               b"  /dev/mmcblk0p26")
