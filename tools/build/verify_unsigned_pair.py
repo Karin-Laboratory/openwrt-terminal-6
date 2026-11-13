@@ -63,10 +63,20 @@ def newc_regular_files(archive):
         require(raw_name.endswith(b"\0") and b"\0" not in raw_name[:-1],
                 "P26_INITRAMFS_CPIO_FORMAT")
         name = raw_name[:-1]
-        offset = (offset + namesize + 3) & ~3
+        name_end = offset + namesize
+        aligned_name_end = (name_end + 3) & ~3
+        require(aligned_name_end <= len(archive) and
+                not any(archive[name_end:aligned_name_end]),
+                "P26_INITRAMFS_CPIO_FORMAT")
+        offset = aligned_name_end
         require(offset + size <= len(archive), "P26_INITRAMFS_CPIO_FORMAT")
         data = archive[offset:offset + size]
-        offset = (offset + size + 3) & ~3
+        data_end = offset + size
+        aligned_data_end = (data_end + 3) & ~3
+        require(aligned_data_end <= len(archive) and
+                not any(archive[data_end:aligned_data_end]),
+                "P26_INITRAMFS_CPIO_FORMAT")
+        offset = aligned_data_end
         if name == b"TRAILER!!!":
             require(size == 0 and offset == len(archive),
                     "P26_INITRAMFS_CPIO_FORMAT")
