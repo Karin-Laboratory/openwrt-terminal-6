@@ -197,7 +197,13 @@ def produce(root, output, source_receipt):
     except Exception:
         # Only remove the fresh directory created by this invocation.
         # Never touch the staging root, source receipt, or pre-existing paths.
-        shutil.rmtree(output)
+        try:
+            shutil.rmtree(output)
+        except OSError as cleanup_error:
+            # Preserve the manufacturing failure as the primary exception.
+            # The incomplete directory remains for explicit operator cleanup.
+            if hasattr(original_error := __import__("sys").exception(), "add_note"):
+                original_error.add_note(f"P26 partial output cleanup failed: {cleanup_error}")
         raise
 
 def main():
