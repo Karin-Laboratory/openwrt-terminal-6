@@ -10,7 +10,9 @@
     "START-HERE.ja.md",
     "docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json",
     "docs/STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md",
-    "docs/STOCK-UART-P43P44-EVIDENCE-20261113.json"
+    "docs/STOCK-UART-P43P44-EVIDENCE-20261113.json",
+    "docs/AB-FALLBACK-RESEARCH.md",
+    "docs/TERMINAL6-FW-COMPATIBILITY.json"
   ],
   "trust_policy": {
     "source": "Pinned public repository commit and SHA recorded in receipt",
@@ -233,6 +235,18 @@
       "result": "BLOCKED_STORAGE_EVIDENCE",
       "allowed": "Host-only offline evidence intake",
       "forbidden": "Run e2fsck repair, resize or GPT mutation"
+    },
+    {
+      "condition": "Firmware/bootloader/slot identity or GPT geometry (when relevant) is missing or differs from documented profile",
+      "result": "BLOCKED_FW_OR_LAYOUT_UNKNOWN",
+      "allowed": "Read-only locally authorized observations",
+      "forbidden": "Guess default credentials, use old offsets or run boot configuration commands"
+    },
+    {
+      "condition": "Mutating operation has no independently validated per-unit implementation profile",
+      "result": "BLOCKED_NO_VALIDATED_MUTATION_PROFILE",
+      "allowed": "Plan and offline simulate, ask owner to obtain safe instrumentation",
+      "forbidden": "Interpret generic approval as permission to invent commands"
     }
   ],
   "audit_scenarios": [
@@ -285,6 +299,16 @@
       "id": "T10",
       "device": "unknown journal state, missing minimum size and backup",
       "expected": "BLOCKED_STORAGE_EVIDENCE"
+    },
+    {
+      "id": "T11",
+      "device": "Unknown stock firmware or bootloader and historical unit values only",
+      "expected": "BLOCKED_FW_OR_LAYOUT_UNKNOWN"
+    },
+    {
+      "id": "T12",
+      "device": "SSH persistence method unknown and no validated mutation profile",
+      "expected": "BLOCKED_NO_VALIDATED_MUTATION_PROFILE"
     }
   ],
   "security_addendum": {
@@ -396,5 +420,55 @@
     "p43_v04_r3_public_visibility": "UNVERIFIED; private draft vs alleged public URL/discussion conflict requires independent verification and distribution-rights review",
     "qemu_script": "tools/air6-rescue-qemu-v0.3/n-unit-split-qemu.sh is v0.2 QEMU-specific and has a working --apply for disposable virtio disk, unlike private v0.4 installer.sh whose --apply rejects.",
     "r4_candidate": "UNVERIFIED; never infer r4 implementation exists"
+  },
+  "stage_identity_contract": {
+    "source": "docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json",
+    "preflight": "Fetch JSON and initialize agent, not S01 PASS",
+    "stage_ids": {
+      "S01": "serial_link",
+      "S02": "lk_identify",
+      "S03": "stock_emergency_identify",
+      "S04": "stock_ssh_session",
+      "S05": "stock_ssh_persistence",
+      "S06": "partition_readonly_assessment",
+      "S07": "partition_mutation",
+      "S08": "final_reboot_acceptance"
+    },
+    "cannot_infer_pass_from": "Document interpretation or hypothesized ability to run a command is not an observed stage PASS."
+  },
+  "compatibility_gate": {
+    "reference": "docs/TERMINAL6-FW-COMPATIBILITY.json",
+    "require_before_commands": [
+      "positively identified target device",
+      "current console type",
+      "current observed boot slot",
+      "current firmware/kernel and LK context when available"
+    ],
+    "require_before_state_change": [
+      "unit-specific validated plan",
+      "A/B fallback effects understood",
+      "current GPT and P43/P44 geometry when storage relevant",
+      "backup/recovery validated",
+      "fresh explicit owner approval"
+    ],
+    "unknown_result": "BLOCKED_FW_OR_LAYOUT_UNKNOWN",
+    "no_validated_mutation_profile": "BLOCKED_NO_VALIDATED_MUTATION_PROFILE",
+    "retries": "Do not fix SSH by forcing default slot B or altering priority/success/retry flags without a separately validated and authorized need."
+  },
+  "audit_external_findings": {
+    "assessment": "Some external audit findings refer to a different numbering of S01-S08 and assume default-slot pinning is an S05 requirement. Both are inaccurate against canonical workflow.",
+    "accepted": [
+      "Version-specific A/B fallback plan is incomplete",
+      "Stock SSH persistence remains unverified for new units",
+      "Real-device GPT partition split with backup and rollback not proven",
+      "Firmware revision must be observed before using any device-specific action"
+    ],
+    "not_accepted": [
+      "Entrance JSON reading means S01 PASS",
+      "A documented plan means S03/S04 were reached",
+      "S05 requires permanently forcing slot B",
+      "S06 includes partition mutation, or S07 is only ext4 verification",
+      "Previously observed kernel version uniquely identifies firmware compatibility"
+    ]
   }
 }
