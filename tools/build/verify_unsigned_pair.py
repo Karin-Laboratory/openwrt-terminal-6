@@ -118,7 +118,8 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # The actual kernel initramfs must contain the same complete-P26 hash.
     # This is a build binding, NOT evidence that an early boot check runs.
     bound = (p26_hash + "  /dev/mmcblk0p26").encode("ascii")
-    require(sum(data.count(bound) for _, data in newc_regular_files(cpio.read_bytes())) == 1,
+    require(sum(name == b"etc/air6/p26.sha256" and data == bound + b"\n"
+                for name, data in newc_regular_files(cpio.read_bytes())) == 1,
             "P26_INITRAMFS_SHA_BINDING")
     require(original.get("squashfs_sha256") ==
             approved.get("squashfs_sha256") and
