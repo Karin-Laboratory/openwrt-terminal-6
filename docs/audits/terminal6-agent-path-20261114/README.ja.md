@@ -68,3 +68,5 @@
 - [07 オフラインP43判定器の使い方](07-offline-inspector-usage.ja.md)と[合成入力JSON](p43-synthetic.example.json): 実機を操作しない一次評価
 
 監査時点の`audit-result.json`は**当初のNOT READY判定のスナップショット**として保持している。今回の是正で実機S03〜S08をPASSにしたわけではない。
+
+- [08 外部AI監査の再評価・訂正](08-gemini-review-remediation.ja.md): 公式工程名への照合、A/B・FW差分の安全ゲートを追加
