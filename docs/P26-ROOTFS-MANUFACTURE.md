@@ -40,6 +40,12 @@ python3 tools/build/pack_p26_rootfs.py \
 
 The output is `rootfs.squashfs`, `rootfs_a.p26`, and `p26-receipt.json`, all confined to the caller's private output directory. Never commit, cache, upload as an Actions artifact, or publish them. The receipt records a preliminary full-file SHA and partition size but explicitly states **AWAIT_INDEPENDENT_FS_READBACK**.
 
+### Same-run independent readback attestation (2026-11-15)
+
+The native P26 job now asks the separate `verify_p26_independent.py` process to write a new `p26-independent-attestation.json` **only after** full 128 MiB partition verification, zero-padding inspection, and extracted SquashFS tree/metadata comparison. Its receipt binds the exact P26 SHA-256 and the SHA-256 of the producer's provisional `p26-receipt.json`; a subsequent same-job check refuses mismatched identities or statuses.
+
+This is a source-only backport of the attestation interface already developed on public PR #133 (MIT, rights review pending). The two receipt files remain ephemeral in the CI workspace and are not uploaded. Neither the attestation nor successful synthetic tests establishes an Air6-accepted P25 image, P25/P26 pair, real device boot, or distribution rights. Only a **successful exact-head native CI run** may establish that a genuine source-built P26 was produced and independently read back.
+
 
 ## PR #118 to PR #127 handoff (not yet executed)
 
