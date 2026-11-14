@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Offline tests for real procd-stage to kernel initramfs construction."""
 import gzip
+from contextlib import contextmanager
 import hashlib
 import importlib.util
 import io
@@ -219,6 +220,43 @@ class ProcdImageStageTests(unittest.TestCase):
             ]):
                 with self.assertRaisesRegex(OSError, "temporary cleanup sync failure"):
                     stage.package(rootfs, source, root / "out", root / "manifest")
+            self.assertEqual(list(root.glob(".air6-stage-*")), [])
+
+    def test_short_staged_write_leaves_no_outputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rootfs, source = self.make_source(root)
+            original_named = stage.tempfile.NamedTemporaryFile
+            calls = 0
+
+            @contextmanager
+            def short_first_write(*args, **kwargs):
+                nonlocal calls
+                with original_named(*args, **kwargs) as actual:
+                    calls += 1
+                    if calls == 1:
+                        class ShortWriter:
+                            name = actual.name
+
+                            def write(self, payload):
+                                return actual.write(payload[:max(0, len(payload) - 1)])
+
+                            def flush(self):
+                                return actual.flush()
+
+                            def fileno(self):
+                                return actual.fileno()
+
+                        yield ShortWriter()
+                    else:
+                        yield actual
+
+            with mock.patch.object(stage.tempfile, "NamedTemporaryFile",
+                                   side_effect=short_first_write):
+                with self.assertRaisesRegex(OSError, "short staged output write"):
+                    stage.package(rootfs, source, root / "out", root / "manifest")
+            self.assertFalse((root / "out").exists())
+            self.assertFalse((root / "manifest").exists())
             self.assertEqual(list(root.glob(".air6-stage-*")), [])
 
     def test_no_existing_output_overwrite(self):
