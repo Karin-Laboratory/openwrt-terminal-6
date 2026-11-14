@@ -152,14 +152,24 @@ def package(rootfs: Path, source_manifest: Path, output: Path, manifest_out: Pat
                 original.add_note(f"rollback directory sync failed for {parent}: {cleanup_error}")
         raise
     finally:
+        cleaned_parents = set()
         for temporary in staged:
             try:
                 temporary.unlink(missing_ok=True)
+                cleaned_parents.add(temporary.parent)
             except OSError as cleanup_error:
                 active = sys.exception()
                 if active is None:
                     raise
                 active.add_note(f"temporary cleanup failed for {temporary}: {cleanup_error}")
+        for parent in cleaned_parents:
+            try:
+                _sync_parent(parent)
+            except OSError as cleanup_error:
+                active = sys.exception()
+                if active is None:
+                    raise
+                active.add_note(f"temporary cleanup directory sync failed for {parent}: {cleanup_error}")
     return record
 
 
