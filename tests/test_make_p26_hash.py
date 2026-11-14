@@ -61,6 +61,9 @@ class HashInputTests(unittest.TestCase):
             def flush(self):
                 self.stream.flush()
 
+            def fileno(self):
+                return self.stream.fileno()
+
         def injected_open(path, *args, **kwargs):
             stream = real_open(path, *args, **kwargs)
             if path == output and args and args[0] == 'xb':
@@ -95,6 +98,9 @@ class HashInputTests(unittest.TestCase):
             def flush(self):
                 self.stream.flush()
 
+            def fileno(self):
+                return self.stream.fileno()
+
         def injected_open(path, *args, **kwargs):
             stream = real_open(path, *args, **kwargs)
             if path == output and args and args[0] == 'xb':
@@ -113,6 +119,12 @@ class HashInputTests(unittest.TestCase):
             self.assertIn('rollback failure', ' '.join(caught.exception.__notes__))
         # A failed cleanup leaves a partial file; never report successful evidence.
         self.assertEqual(self.out.read_bytes(), self.digest[:1].encode())
+
+    def test_fsync_failure_removes_unverified_output(self):
+        with patch.object(mod.os, 'fsync', side_effect=OSError('injected fsync failure')):
+            with self.assertRaisesRegex(OSError, 'injected fsync failure'):
+                self.run_create()
+        self.assertFalse(self.out.exists())
 
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
