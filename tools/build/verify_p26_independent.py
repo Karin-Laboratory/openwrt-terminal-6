@@ -170,6 +170,13 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
         # independent attestation. Do not mask the original failure.
         try:
             attestation.unlink(missing_ok=True)
+            # Make rollback durable too: a crash must not resurrect a
+            # partially written attestation directory entry.
+            rollback_fd = os.open(attestation.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(rollback_fd)
+            finally:
+                os.close(rollback_fd)
         except OSError:
             pass
         raise
