@@ -7,6 +7,7 @@ This verifier is deliberately not an attestation of OpenWrt source provenance.
 """
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import stat
@@ -101,10 +102,73 @@ def verify(root, p26, raw):
             raise ValueError("TREE_METADATA_OR_CONTENT_MISMATCH: " + repr(differences[:12]))
     return sha(p26)
 
+
+def attest(producer_receipt, attestation, p26, raw, verified_sha):
+    """Separate readback attestation, never mutate producer's provisional receipt.
+
+    Caller MUST invoke this only after verify(root, p26, raw) succeeds.
+    """
+    for path in (producer_receipt, p26, raw):
+        if (not path.is_file() or path.is_symlink()
+                or any(parent.is_symlink() for parent in path.parents)):
+            raise ValueError("ATTEST_INPUT_INVALID")
+    if (attestation.exists() or attestation.is_symlink()
+            or any(parent.is_symlink() for parent in attestation.parents)):
+        raise ValueError("ATTEST_OUTPUT_EXISTS_OR_SYMLINK")
+    # Independent verification happened before this call. Rehash the actual
+    # partition again immediately before attestation so an intervening
+    # modification cannot inherit an obsolete verified_sha from the caller.
+    if p26.stat().st_size != SIZE or sha(p26) != verified_sha:
+        raise ValueError("ATTEST_P26_CHANGED_AFTER_VERIFY")
+    record = json.loads(producer_receipt.read_text())
+    required = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
+                "partition_bytes": SIZE, "signed": False,
+                "hardware": "NONE", "public_binary": False}
+    if (not isinstance(record, dict)
+            or type(record.get("schema")) is not int
+            or type(record.get("partition_bytes")) is not int
+            or type(record.get("squashfs_bytes")) is not int
+            or any(record.get(k) != v for k, v in required.items())):
+        raise ValueError("ATTEST_PRODUCER_SCOPE")
+    if (record.get("p26_sha256") != verified_sha
+            or record.get("squashfs_sha256") != sha(raw)
+            or record.get("squashfs_bytes") != raw.stat().st_size
+            or p26.stat().st_size != SIZE):
+        raise ValueError("ATTEST_PRODUCER_IDENTITY")
+    evidence = {
+        "schema": 1, "status": "P26_INDEPENDENT_FS_READBACK_VERIFIED",
+        "p26_sha256": verified_sha,
+        "producer_receipt_sha256": sha(producer_receipt),
+        "partition_bytes": SIZE,
+        "squashfs_sha256": record["squashfs_sha256"],
+        "squashfs_bytes": record["squashfs_bytes"],
+        "verification": "INDEPENDENT_FULL_PARTITION_AND_EXTRACTED_METADATA",
+        "signed": False, "hardware": "NONE",
+        "public_binary": False,
+        "not_proven": ["physical Air6 boot", "LK acceptance",
+                       "radio/runtime behavior", "publication rights"]
+    }
+    # Exclusive creation prevents a stale or previously attested result from
+    # silently surviving a later changed p26 producer run.
+    with attestation.open("x", encoding="utf-8") as f:
+        json.dump(evidence, f, sort_keys=True, indent=2)
+        f.write("\n")
+    return evidence
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rootfs", type=Path, required=True)
     parser.add_argument("--p26", type=Path, required=True)
     parser.add_argument("--squashfs", type=Path, required=True)
+    parser.add_argument("--producer-receipt", type=Path)
+    parser.add_argument("--attestation", type=Path)
     args = parser.parse_args()
-    print("P26_INDEPENDENT_READBACK_PASS", verify(args.rootfs, args.p26, args.squashfs))
+    if (args.producer_receipt is None) != (args.attestation is None):
+        parser.error("receipt and attestation must be specified together")
+    checked_sha = verify(args.rootfs, args.p26, args.squashfs)
+    if args.producer_receipt is not None:
+        result = attest(args.producer_receipt, args.attestation, args.p26,
+                        args.squashfs, checked_sha)
+        print("P26_INDEPENDENT_ATTESTATION_PASS", result["p26_sha256"])
+    print("P26_INDEPENDENT_READBACK_PASS", checked_sha)
