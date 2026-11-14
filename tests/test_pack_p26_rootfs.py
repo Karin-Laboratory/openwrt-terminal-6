@@ -275,6 +275,30 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_ANCESTOR_SYMLINK"):
                 mod.produce(root, Path(d) / "out", alias / "source.json")
 
+    def test_feed_receipt_requires_immutable_commit_ids(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            root = base / "stage"
+            root.mkdir()
+            self.make_root(root)
+            receipt = base / "source.json"
+            record = {
+                "openwrt_commit": "5799d2da76998be50432b0a3325b42713b4b619b",
+                "package_install": True, "source_built": True,
+                "packages": ["base-files", "busybox", "procd", "ubus",
+                             "uci", "netifd", "dropbear"],
+            }
+            for feeds in ({}, {"packages": "main"},
+                          {"packages": "a" * 39},
+                          {"packages": "g" * 40},
+                          {"packages": True}):
+                record["feeds"] = feeds
+                receipt.write_text(json.dumps(record))
+                with self.subTest(feeds=feeds):
+                    with self.assertRaisesRegex(ValueError, "PINNED_FEEDS_RECEIPT_REQUIRED"):
+                        mod.produce(root, base / "out", receipt)
+
     def test_output_requires_verified_source_receipt(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
