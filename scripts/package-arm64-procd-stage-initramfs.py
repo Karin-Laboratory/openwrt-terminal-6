@@ -128,13 +128,22 @@ def package(rootfs: Path, source_manifest: Path, output: Path, manifest_out: Pat
         for temporary, destination in zip(staged, (output, manifest_out)):
             os.link(temporary, destination)
             published.append(destination)
-    except BaseException:
+    except BaseException as original:
         for destination in reversed(published):
-            destination.unlink()
+            try:
+                destination.unlink()
+            except OSError as cleanup_error:
+                original.add_note(f"rollback failed for {destination}: {cleanup_error}")
         raise
     finally:
         for temporary in staged:
-            temporary.unlink(missing_ok=True)
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError as cleanup_error:
+                active = sys.exception()
+                if active is None:
+                    raise
+                active.add_note(f"temporary cleanup failed for {temporary}: {cleanup_error}")
     return record
 
 
