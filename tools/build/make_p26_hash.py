@@ -66,10 +66,24 @@ def create(p26, producer, independent, output):
                 raise OSError('short P26 hash payload write')
             stream.flush()
             os.fsync(stream.fileno())
+        # Persist the directory entry as well as the payload before reporting
+        # an input that may be embedded in the unsigned P25 initramfs.
+        dir_fd = os.open(output.parent, os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0))
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
     except BaseException as original_error:
         if created:
             try:
                 output.unlink(missing_ok=True)
+                # Persist removal too: a failed directory sync must not leave
+                # a plausible hash input after power loss and rollback.
+                rollback_fd = os.open(output.parent, os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0))
+                try:
+                    os.fsync(rollback_fd)
+                finally:
+                    os.close(rollback_fd)
             except OSError as cleanup_error:
                 # Preserve the primary failure even if rollback itself fails.
                 if hasattr(original_error, 'add_note'):

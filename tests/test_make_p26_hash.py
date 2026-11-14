@@ -126,6 +126,47 @@ class HashInputTests(unittest.TestCase):
                 self.run_create()
         self.assertFalse(self.out.exists())
 
+    def test_success_syncs_file_then_parent_directory(self):
+        import stat
+        real_fsync = mod.os.fsync
+        kinds = []
+        def observed_fsync(fd):
+            kinds.append('directory' if stat.S_ISDIR(mod.os.fstat(fd).st_mode) else 'file')
+            return real_fsync(fd)
+        with patch.object(mod.os, 'fsync', side_effect=observed_fsync):
+            self.assertEqual(self.run_create(), self.digest)
+        self.assertEqual(kinds, ['file', 'directory'])
+
+    def test_directory_fsync_failure_removes_output(self):
+        real_fsync = mod.os.fsync
+        calls = []
+        def injected_fsync(fd):
+            calls.append(fd)
+            if len(calls) == 2:
+                raise OSError('directory fsync failure')
+            return real_fsync(fd)
+        with patch.object(mod.os, 'fsync', side_effect=injected_fsync):
+            with self.assertRaisesRegex(OSError, 'directory fsync failure'):
+                self.run_create()
+        self.assertEqual(len(calls), 2)
+        self.assertFalse(self.out.exists())
+
+    def test_directory_sync_failure_persists_rollback_removal(self):
+        import stat
+        real_fsync = mod.os.fsync
+        kinds = []
+        def injected_fsync(fd):
+            kind = 'directory' if stat.S_ISDIR(mod.os.fstat(fd).st_mode) else 'file'
+            kinds.append(kind)
+            if kinds == ['file', 'directory']:
+                raise OSError('directory fsync failure')
+            return real_fsync(fd)
+        with patch.object(mod.os, 'fsync', side_effect=injected_fsync):
+            with self.assertRaisesRegex(OSError, 'directory fsync failure'):
+                self.run_create()
+        self.assertEqual(kinds, ['file', 'directory', 'directory'])
+        self.assertFalse(self.out.exists())
+
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
         with self.assertRaisesRegex(ValueError, 'identity mismatch'):
