@@ -8,6 +8,7 @@ Requires the independent P26 filesystem readback receipt.
 import argparse
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 
@@ -64,6 +65,7 @@ def create(p26, producer, independent, output):
             if count != len(payload):
                 raise OSError('short P26 hash payload write')
             stream.flush()
+            os.fsync(stream.fileno())
     except BaseException:
         if created:
             output.unlink(missing_ok=True)
