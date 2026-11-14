@@ -149,7 +149,14 @@ def produce(root, output, source_receipt):
             all(isinstance(p, str) and p for p in record["packages"]) and
             set(("base-files", "busybox", "procd", "ubus", "uci", "netifd", "dropbear")).issubset(record["packages"]),
             "INCOMPLETE_PACKAGE_INVENTORY")
-    require(isinstance(record.get("feeds"), dict), "PINNED_FEEDS_RECEIPT_REQUIRED")
+    # A bare {} (or a mutable branch label) is not a pinned feed receipt.
+    feeds = record.get("feeds")
+    require(isinstance(feeds, dict) and bool(feeds) and
+            all(isinstance(name, str) and name and
+                isinstance(commit, str) and len(commit) == 40 and
+                all(c in "0123456789abcdef" for c in commit)
+                for name, commit in feeds.items()),
+            "PINNED_FEEDS_RECEIPT_REQUIRED")
     check_tree(root)
     check_target_ownership(root)
     require(output.is_absolute() and not output.exists() and
