@@ -72,6 +72,13 @@ class HashInputTests(unittest.TestCase):
                 self.run_create()
         self.assertFalse(self.out.exists())
 
+    def test_fsync_failure_removes_partial_output(self):
+        with patch.object(mod.os, 'fsync', side_effect=OSError('injected fsync failure')) as fsync:
+            with self.assertRaisesRegex(OSError, 'injected fsync failure'):
+                self.run_create()
+        fsync.assert_called_once()
+        self.assertFalse(self.out.exists())
+
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
         with self.assertRaisesRegex(ValueError, 'identity mismatch'):
