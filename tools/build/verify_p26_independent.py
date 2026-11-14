@@ -124,7 +124,11 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     required = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
                 "partition_bytes": SIZE, "signed": False,
                 "hardware": "NONE", "public_binary": False}
-    if not isinstance(record, dict) or any(record.get(k) != v for k, v in required.items()):
+    if (not isinstance(record, dict)
+            or type(record.get("schema")) is not int
+            or type(record.get("partition_bytes")) is not int
+            or type(record.get("squashfs_bytes")) is not int
+            or any(record.get(k) != v for k, v in required.items())):
         raise ValueError("ATTEST_PRODUCER_SCOPE")
     if (record.get("p26_sha256") != verified_sha
             or record.get("squashfs_sha256") != sha(raw)
