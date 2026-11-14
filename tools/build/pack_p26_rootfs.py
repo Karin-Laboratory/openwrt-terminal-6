@@ -140,6 +140,7 @@ def produce(root, output, source_receipt):
     require(source_receipt.is_file() and not source_receipt.is_symlink(),
             "SOURCE_RECEIPT_REQUIRED")
     record = json.loads(source_receipt.read_text())
+    require(isinstance(record, dict), "SOURCE_RECEIPT_NOT_OBJECT")
     require(record.get("openwrt_commit") ==
             "5799d2da76998be50432b0a3325b42713b4b619b",
             "UNPINNED_OPENWRT_SOURCE")
