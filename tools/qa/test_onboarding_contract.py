@@ -69,7 +69,7 @@ assert "agent-entry.json" in (ROOT / "AGENT-START.ja.md").read_text(encoding="ut
 import runpy
 inspector = runpy.run_path(str(ROOT / "tools/qa/p43_unsplit_offline.py"))["inspect"]
 fixture = {
-    "disk_sectors": 9000000, "logical_sector_bytes": 512, "last_usable_lba": 8999966,
+    "disk_sectors": 9000000, "logical_sector_bytes": 512, "last_usable_lba": 8999966, "gpt_partition_entry_sectors": 32,
     "gpt_primary_valid": True, "gpt_backup_valid": True,
     "p43": {"start_lba": 1500000, "end_lba": 7600000,
             "ext4_block_bytes": 4096, "ext4_total_blocks": 750000,
@@ -77,6 +77,8 @@ fixture = {
             "candidate_target_mib": 600, "safety_margin_mib": 100},
     "p44_present": False, "p43_mounted": False, "journal_clean": True,
     "backup_verified": True, "recovery_route_verified": True,
+    "backup_evidence": {"reference": "local-private-backup-receipt", "verification_method": "independent SHA256 readback", "verified_at": "2026-11-14T09:00:00+09:00"},
+    "recovery_evidence": {"reference": "local-private-recovery-receipt", "verification_method": "offline recovery test", "verified_at": "2026-11-14T09:00:00+09:00"},
     "source_evidence_level": "OBSERVED_LOCAL", "ssh_state_on_p43": False
 }
 assert inspector(fixture)["status"] == "INSPECT_ONLY_NO_DEVICE_PASS"
@@ -91,6 +93,18 @@ bad = copy.deepcopy(fixture); del bad["last_usable_lba"]
 assert inspector(bad)["status"] == "BLOCKED_STORAGE_EVIDENCE"
 bad = copy.deepcopy(fixture); bad["last_usable_lba"] = bad["p43"]["end_lba"] - 1
 assert "P43_OUTSIDE_GPT_USABLE_RANGE" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); bad["last_usable_lba"] = bad["disk_sectors"] - 1
+assert "INVALID_GPT_USABLE_RANGE" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); bad["gpt_partition_entry_sectors"] = 0
+assert inspector(bad)["status"] == "BLOCKED_STORAGE_EVIDENCE"
+bad = copy.deepcopy(fixture); del bad["backup_evidence"]
+assert "MISSING_BACKUP_EVIDENCE" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); bad["recovery_evidence"] = {}
+assert "MISSING_OR_INVALID_RECOVERY_EVIDENCE" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); bad["p43"]["ext4_block_bytes"] = "4096"
+out = inspector(bad)
+assert out["status"] == "BLOCKED_STORAGE_EVIDENCE"
+assert out["device_success"] is False and out["writes_performed"] is False
 bad = copy.deepcopy(fixture); bad["ssh_state_on_p43"] = None
 assert inspector(bad)["status"] == "BLOCKED_STORAGE_EVIDENCE"
 bad = copy.deepcopy(fixture); bad["p43_mounted"] = True
