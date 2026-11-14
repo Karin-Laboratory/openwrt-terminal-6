@@ -126,6 +126,17 @@ class HashInputTests(unittest.TestCase):
                 self.run_create()
         self.assertFalse(self.out.exists())
 
+    def test_success_syncs_file_then_parent_directory(self):
+        import stat
+        real_fsync = mod.os.fsync
+        kinds = []
+        def observed_fsync(fd):
+            kinds.append('directory' if stat.S_ISDIR(mod.os.fstat(fd).st_mode) else 'file')
+            return real_fsync(fd)
+        with patch.object(mod.os, 'fsync', side_effect=observed_fsync):
+            self.assertEqual(self.run_create(), self.digest)
+        self.assertEqual(kinds, ['file', 'directory'])
+
     def test_directory_fsync_failure_removes_output(self):
         real_fsync = mod.os.fsync
         calls = []
