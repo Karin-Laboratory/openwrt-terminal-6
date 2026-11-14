@@ -148,7 +148,8 @@ class HashInputTests(unittest.TestCase):
         with patch.object(mod.os, 'fsync', side_effect=injected_fsync):
             with self.assertRaisesRegex(OSError, 'directory fsync failure'):
                 self.run_create()
-        self.assertEqual(len(calls), 2)
+        # The failed publish sync is followed by a rollback directory sync.
+        self.assertEqual(len(calls), 3)
         self.assertFalse(self.out.exists())
 
     def test_directory_sync_failure_persists_rollback_removal(self):
