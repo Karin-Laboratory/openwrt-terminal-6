@@ -211,6 +211,21 @@ class HashInputTests(unittest.TestCase):
                     finally:
                         path.write_bytes(previous)
 
+    def test_reject_duplicate_json_keys_in_either_receipt(self):
+        # Duplicate keys are accepted by json.loads by default, but make
+        # independently audited evidence ambiguous.
+        for path in (self.producer, self.independent):
+            with self.subTest(receipt=path.name):
+                original = path.read_bytes()
+                try:
+                    data = original.decode('utf-8')
+                    path.write_text(data.replace('"schema": 1', '"schema": 1, "schema": 1', 1))
+                    with self.assertRaisesRegex(ValueError, 'duplicate P26 receipt JSON key'):
+                        self.run_create()
+                    self.assertFalse(self.out.exists())
+                finally:
+                    path.write_bytes(original)
+
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
         with self.assertRaisesRegex(ValueError, 'identity mismatch'):
