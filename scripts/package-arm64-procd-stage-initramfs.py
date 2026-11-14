@@ -131,7 +131,9 @@ def package(rootfs: Path, source_manifest: Path, output: Path, manifest_out: Pat
         ):
             with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".air6-stage-", delete=False) as tmp:
                 staged.append(Path(tmp.name))
-                tmp.write(payload)
+                written = tmp.write(payload)
+                if written != len(payload):
+                    raise OSError(f"short staged output write: {written}/{len(payload)} bytes")
                 tmp.flush()
                 os.fsync(tmp.fileno())
         for temporary, destination in zip(staged, (output, manifest_out)):
