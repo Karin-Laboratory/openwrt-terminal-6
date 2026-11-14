@@ -32,9 +32,9 @@ def create(p26, producer, independent, output):
         raise ValueError('output parent missing')
     original = json.loads(producer.read_text())
     approved = json.loads(independent.read_text())
-    if (original.get('schema') != 1 or original.get('status') != 'P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK'
+    if (type(original.get('schema')) is not int or original.get('schema') != 1 or original.get('status') != 'P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK'
             or original.get('signed') is not False or original.get('hardware') != 'NONE'
-            or approved.get('schema') != 1 or approved.get('status') != 'P26_INDEPENDENT_FS_READBACK_VERIFIED'
+            or type(approved.get('schema')) is not int or approved.get('schema') != 1 or approved.get('status') != 'P26_INDEPENDENT_FS_READBACK_VERIFIED'
             or approved.get('verification') != 'INDEPENDENT_FULL_PARTITION_AND_EXTRACTED_METADATA'
             or approved.get('signed') is not False or approved.get('hardware') != 'NONE'
             or approved.get('producer_receipt_sha256') != sha256(producer)):
