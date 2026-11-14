@@ -178,6 +178,29 @@ class ProcdImageStageTests(unittest.TestCase):
             self.assertFalse(manifest.exists())
             self.assertEqual(list(root.glob(".air6-stage-*")), [])
 
+    def test_directory_entries_are_synced_after_publish(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rootfs, source = self.make_source(root)
+            with mock.patch.object(stage, "_sync_parent", wraps=stage._sync_parent) as sync:
+                stage.package(rootfs, source, root / "out", root / "manifest")
+            self.assertIn(mock.call(root), sync.call_args_list)
+            self.assertTrue((root / "out").is_file())
+            self.assertTrue((root / "manifest").is_file())
+
+    def test_sync_failure_rolls_back_both_outputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rootfs, source = self.make_source(root)
+            with mock.patch.object(stage, "_sync_parent", side_effect=[
+                OSError("simulated sync failure"), None
+            ]):
+                with self.assertRaisesRegex(OSError, "simulated sync failure"):
+                    stage.package(rootfs, source, root / "out", root / "manifest")
+            self.assertFalse((root / "out").exists())
+            self.assertFalse((root / "manifest").exists())
+            self.assertEqual(list(root.glob(".air6-stage-*")), [])
+
     def test_no_existing_output_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

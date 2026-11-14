@@ -33,6 +33,15 @@ EXPECTED = set(BINARIES) | set(DIRS) | set(POLICY) | {"bin/sh"}
 SOURCE_SCOPE = "NONINSTALLABLE_SBAT6_MUSL_BUSYBOX_UBUSD_UBUS_UCI_PROCD_NETIFD_ROOTFS_STAGE"
 
 
+def _sync_parent(directory: Path) -> None:
+    """Persist directory entry changes after publishing or rolling back outputs."""
+    fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 def package(rootfs: Path, source_manifest: Path, output: Path, manifest_out: Path) -> dict:
     for path in (rootfs, source_manifest):
         if path.is_symlink() or not path.is_file():
@@ -128,12 +137,19 @@ def package(rootfs: Path, source_manifest: Path, output: Path, manifest_out: Pat
         for temporary, destination in zip(staged, (output, manifest_out)):
             os.link(temporary, destination)
             published.append(destination)
+        for parent in {output.parent, manifest_out.parent}:
+            _sync_parent(parent)
     except BaseException as original:
         for destination in reversed(published):
             try:
                 destination.unlink()
             except OSError as cleanup_error:
                 original.add_note(f"rollback failed for {destination}: {cleanup_error}")
+        for parent in {destination.parent for destination in published}:
+            try:
+                _sync_parent(parent)
+            except OSError as cleanup_error:
+                original.add_note(f"rollback directory sync failed for {parent}: {cleanup_error}")
         raise
     finally:
         for temporary in staged:
