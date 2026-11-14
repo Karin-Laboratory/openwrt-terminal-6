@@ -32,15 +32,15 @@ def create(p26, producer, independent, output):
         raise ValueError('output parent missing')
     original = json.loads(producer.read_text())
     approved = json.loads(independent.read_text())
-    if (original.get('schema') != 1 or original.get('status') != 'P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK'
+    if (type(original.get('schema')) is not int or original.get('schema') != 1 or original.get('status') != 'P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK'
             or original.get('signed') is not False or original.get('hardware') != 'NONE'
-            or approved.get('schema') != 1 or approved.get('status') != 'P26_INDEPENDENT_FS_READBACK_VERIFIED'
+            or type(approved.get('schema')) is not int or approved.get('schema') != 1 or approved.get('status') != 'P26_INDEPENDENT_FS_READBACK_VERIFIED'
             or approved.get('verification') != 'INDEPENDENT_FULL_PARTITION_AND_EXTRACTED_METADATA'
             or approved.get('signed') is not False or approved.get('hardware') != 'NONE'
             or approved.get('producer_receipt_sha256') != sha256(producer)):
         raise ValueError('P26 independent receipt mismatch')
-    if (p26.stat().st_size != P26_BYTES or original.get('partition_bytes') != P26_BYTES
-            or approved.get('partition_bytes') != P26_BYTES):
+    if (p26.stat().st_size != P26_BYTES or type(original.get('partition_bytes')) is not int or original.get('partition_bytes') != P26_BYTES
+            or type(approved.get('partition_bytes')) is not int or approved.get('partition_bytes') != P26_BYTES):
         raise ValueError('P26 partition size mismatch')
     digest = sha256(p26)
     if (original.get('p26_sha256') != digest or approved.get('p26_sha256') != digest
