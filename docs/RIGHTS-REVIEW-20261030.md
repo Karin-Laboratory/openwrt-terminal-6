@@ -1,31 +1,31 @@
 # Source rights and redistribution audit queue (2026-10-30)
 
-> **Current engineering scope (2026-11-04):** The [p25/p26 mainline policy](MAINLINE-P25-P26-POLICY.md) permits implementation, proven backports, local tests and ephemeral unsigned image builds without finishing this entire 73-entry inventory. Each **publicly committed** source contribution still needs a defensible origin/license, and distributed binaries require component-specific compliance. Pending inventory status is **not a development stop-work gate**.
+> **Current engineering scope (2026-11-04):** The [p25/p26 mainline policy](MAINLINE-P25-P26-POLICY.md) permits implementation, proven backports, local tests and ephemeral unsigned image builds without finishing this entire 77-entry inventory. Each **publicly committed** source contribution still needs a defensible origin/license, and distributed binaries require component-specific compliance. Pending inventory status is **not a development stop-work gate**.
 
 
 **Issue #2, ongoing review. This document does not grant copyright, contributor authorization, secure disclosure clearance, or firmware redistribution permission.**
 
 ## Verified inventory facts (catalog refreshed 2026-11-01)
 
-- `config/source-catalog.json` currently contains **73** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
+- `config/source-catalog.json` currently contains **77** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
 - The clean Public repository is already visible. GitHub-hosted CI has passed the source-only tests and reachable-history scanner, but this is narrower than complete publication/right-to-redistribute and sensitive artifact reviews.
 - **Public distribution remains source-only**; unsigned p25/p26 image construction in private or ephemeral CI is the current goal. Signed/installable releases, vendor radio/EEPROM materials, signing and device operations remain outside routine public distribution.
 
 ## Inventory by declared origin/license (not legal conclusions)
 
-<!-- source-catalog-inventory: inputs=73; pending=73 -->
+<!-- source-catalog-inventory: inputs=77; pending=77 -->
 
-The summary is a **2026-11-01 source-catalog snapshot**. Changes to catalog entries must update this breakdown and pass the source-only inventory consistency test. Counts represent declared entries, not permission to redistribute.
+The summary reflects the **current branch source catalog** (original inventory dated 2026-11-01). Changes to catalog entries must update this breakdown and pass the source-only inventory consistency test. Counts represent declared entries, not permission to redistribute.
 
 | Declared origin / SPDX | Files | Example paths | Legal review state |
 | --- | ---: | --- | --- |
 | linux-v6.18-derived / GPL-2.0-only | 2 | `patches/rfc/0001-mediatek-quiesce-workers-before-cleanup.patch` | pending; verify Linux upstream provenance |
 | modified-gpl-parent-derived / GPL-2.0-only | 3 | `patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch`; GPL-derived PHY fixes | pending; check exact parent and licensing |
 | research-transformer / GPL-2.0-only | 1 | `scripts/research/sba6d_stage10_clean_patch.py` | pending; distinguish transform from original |
-| independent-original / MIT | 62 | `tools/boot/slot_observation.py`; source build/tests | pending; verify actual authorship |
+| independent-original / MIT | 66 | `tools/boot/slot_observation.py`; source build/tests | pending; verify actual authorship |
 | research-board-overlay / GPL-2.0-only | 1 | `board/mt6990-air-terminal-6-sgmii1-experimental.dtso` | pending; check wiring evidence |
 | independent-original / GPL-2.0-only | 4 | `board/mt6990-air-terminal-6.dts`, ethernet test DTS | pending; verify authorship |
-| **Total** | **73** | Catalog entries; additional `missing_dependencies` are not source files | **73 pending** |
+| **Total** | **77** | Catalog entries; additional `missing_dependencies` are not source files | **77 pending** |
 
 The labels are not a copyright ruling. New/modified source retains a catalog identity and **pending** status until supported by evidence, but pending does not prevent development or isolated builds. Public backports carry a short PR origin URL/revision (or self-authored observation basis), license and any unresolved concerns.
 
@@ -42,7 +42,7 @@ The labels are not a copyright ruling. New/modified source retains a catalog ide
 
 ## Minimal per-change provenance; distribution review separately
 
-During normal development, a **one-line PR origin/revision/license note** is sufficient; do not mass-approve `rights_review` from labels or CI. Before distributing specific source or binaries, resolve significant third-party permission questions and satisfy applicable GPL source and notice duties. A fuller private record (rights holder, license, permission evidence, reviewer and date) is useful for **disputed or unclear components**, not a standing 73-file precondition to developing firmware.
+During normal development, a **one-line PR origin/revision/license note** is sufficient; do not mass-approve `rights_review` from labels or CI. Before distributing specific source or binaries, resolve significant third-party permission questions and satisfy applicable GPL source and notice duties. A fuller private record (rights holder, license, permission evidence, reviewer and date) is useful for **disputed or unclear components**, not a standing 77-file precondition to developing firmware.
 
 ## Hard boundaries for future implementation
 
