@@ -156,6 +156,13 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
             f.write("\n")
             f.flush()
             os.fsync(f.fileno())
+        # Persist the newly created directory entry before reporting success.
+        # A synced file alone does not guarantee its name survives a crash.
+        dir_fd = os.open(attestation.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
     except BaseException:
         # A failed write must never leave a truncated file looking like an
         # independent attestation. Do not mask the original failure.
