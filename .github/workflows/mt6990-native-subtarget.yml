@@ -364,7 +364,35 @@ jobs:
           fakeroot -i "$work/p26-fakeroot.state" -- python3 "$GITHUB_WORKSPACE/tools/build/verify_p26_independent.py" \
             --rootfs "$rootfs" \
             --p26 "$work/private-p26/packed/rootfs_a.p26" \
-            --squashfs "$work/private-p26/packed/rootfs.squashfs"
+            --squashfs "$work/private-p26/packed/rootfs.squashfs" \
+            --producer-receipt "$work/private-p26/packed/p26-receipt.json" \
+            --attestation "$work/private-p26/packed/p26-independent-attestation.json"
+          python3 - "$work/private-p26/packed/p26-receipt.json" \
+            "$work/private-p26/packed/p26-independent-attestation.json" <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import re
+          import sys
+          source, independent = map(Path, sys.argv[1:])
+          producer = json.loads(source.read_text())
+          verified = json.loads(independent.read_text())
+          digest = producer.get("p26_sha256")
+          if (not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+                  or verified.get("p26_sha256") != digest
+                  or verified.get("producer_receipt_sha256") != hashlib.sha256(source.read_bytes()).hexdigest()
+                  or producer.get("status") != "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK"
+                  or verified.get("status") != "P26_INDEPENDENT_FS_READBACK_VERIFIED"
+                  or verified.get("verification") != "INDEPENDENT_FULL_PARTITION_AND_EXTRACTED_METADATA"
+                  or type(producer.get("partition_bytes")) is not int
+                  or producer["partition_bytes"] != 134217728
+                  or type(verified.get("partition_bytes")) is not int
+                  or verified["partition_bytes"] != 134217728
+                  or verified.get("signed") is not False
+                  or verified.get("hardware") != "NONE"):
+              raise SystemExit("P26_BLOCKED_SAME_RUN_ATTESTATION_MISMATCH")
+          print("PUBLIC_P26_ATTESTED_SAME_RUN_READBACK_PASS", digest)
+          PY
           echo 'PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS'
           echo 'LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution'
           # Build an external diagnostic PID1 cpio with the SAME pinned
