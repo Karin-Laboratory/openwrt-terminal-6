@@ -168,6 +168,35 @@ class HashInputTests(unittest.TestCase):
         self.assertEqual(kinds, ['file', 'directory', 'directory'])
         self.assertFalse(self.out.exists())
 
+    def test_reject_boolean_schema_and_partition_size(self):
+        # bool compares equal to 1 in Python, but is not a valid receipt integer.
+        for receipt_path, field, replacement in (
+            (self.producer, 'schema', True),
+            (self.independent, 'schema', True),
+            (self.producer, 'partition_bytes', True),
+            (self.independent, 'partition_bytes', True),
+        ):
+            with self.subTest(receipt=receipt_path.name, field=field):
+                original_bytes = receipt_path.read_bytes()
+                try:
+                    data = json.loads(original_bytes)
+                    data[field] = replacement
+                    receipt_path.write_text(json.dumps(data))
+                    if receipt_path == self.producer:
+                        independent_data = json.loads(self.independent.read_text())
+                        independent_bytes = self.independent.read_bytes()
+                        independent_data['producer_receipt_sha256'] = mod.sha256(self.producer)
+                        self.independent.write_text(json.dumps(independent_data))
+                    else:
+                        independent_bytes = None
+                    with self.assertRaisesRegex(ValueError, 'receipt mismatch|partition size mismatch'):
+                        self.run_create()
+                    self.assertFalse(self.out.exists())
+                finally:
+                    receipt_path.write_bytes(original_bytes)
+                    if independent_bytes is not None:
+                        self.independent.write_bytes(independent_bytes)
+
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
         with self.assertRaisesRegex(ValueError, 'identity mismatch'):
