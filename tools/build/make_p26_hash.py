@@ -66,6 +66,12 @@ def create(p26, producer, independent, output):
                 raise OSError('short P26 hash payload write')
             stream.flush()
             os.fsync(stream.fileno())
+        # Persist the newly created directory entry, not only file contents.
+        directory_fd = os.open(output.parent, os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0))
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
     except BaseException:
         if created:
             output.unlink(missing_ok=True)
