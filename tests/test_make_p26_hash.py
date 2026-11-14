@@ -197,6 +197,20 @@ class HashInputTests(unittest.TestCase):
                     if independent_bytes is not None:
                         self.independent.write_bytes(independent_bytes)
 
+    def test_reject_non_object_receipts(self):
+        # JSON permits scalar and array top-level values; receipts do not.
+        for path in (self.producer, self.independent):
+            for invalid in ([], None, 'text', 7, True):
+                with self.subTest(receipt=path.name, invalid=invalid):
+                    previous = path.read_bytes()
+                    try:
+                        path.write_text(json.dumps(invalid))
+                        with self.assertRaisesRegex(ValueError, 'JSON objects'):
+                            self.run_create()
+                        self.assertFalse(self.out.exists())
+                    finally:
+                        path.write_bytes(previous)
+
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
         with self.assertRaisesRegex(ValueError, 'identity mismatch'):
