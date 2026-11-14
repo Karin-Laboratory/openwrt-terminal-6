@@ -76,3 +76,5 @@
 
 - [12 第3回再監査の是正](12-reaudit3-remediation.ja.md): CI checkout固定、バックアップGPT境界、証跡の型・必須条件を修正
 - [13 修正版の再監査（第3回）](13-reaudit3-20261115.ja.md): head aa4097ac。判定は NOT READY のまま（S02 まで到達、最初の BLOCKED は S03）
+
+- [14 履歴スキャナ9件の要確認リストと診断改善](14-history-scanner-triage-20261115.ja.md): CIの残余9件を検査無効化せず個別レビューへ
