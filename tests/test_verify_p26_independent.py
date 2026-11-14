@@ -110,6 +110,14 @@ class IndependentP26Tests(unittest.TestCase):
                     mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
                 self.assertFalse(output.exists())
 
+    def test_attestation_write_failure_removes_partial_receipt(self):
+        receipt = self._producer_receipt()
+        output = self.base / "verified.json"
+        with patch.object(mod.json, "dump", side_effect=OSError("injected write failure")):
+            with self.assertRaisesRegex(OSError, "injected write failure"):
+                mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertFalse(output.exists())
+
     def test_partition_size_rejected(self):
         self.p26.write_bytes(b"short")
         with self.assertRaisesRegex(ValueError, "PARTITION_SIZE"):
