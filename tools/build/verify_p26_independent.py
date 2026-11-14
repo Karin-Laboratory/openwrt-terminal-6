@@ -150,9 +150,20 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     }
     # Exclusive creation prevents a stale or previously attested result from
     # silently surviving a later changed p26 producer run.
-    with attestation.open("x", encoding="utf-8") as f:
-        json.dump(evidence, f, sort_keys=True, indent=2)
-        f.write("\n")
+    try:
+        with attestation.open("x", encoding="utf-8") as f:
+            json.dump(evidence, f, sort_keys=True, indent=2)
+            f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
+    except BaseException:
+        # A failed write must never leave a truncated file looking like an
+        # independent attestation. Do not mask the original failure.
+        try:
+            attestation.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
     return evidence
 
 
