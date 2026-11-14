@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import io
 import json
+from unittest import mock
 from pathlib import Path
 import struct
 import tarfile
@@ -123,6 +124,28 @@ class ProcdImageStageTests(unittest.TestCase):
             source.write_text(json.dumps(manifest))
             with self.assertRaisesRegex(ValueError, "boot policy identity mismatch"):
                 stage.package(rootfs, source, root / "out", root / "manifest")
+
+    def test_second_publish_failure_rolls_back_first_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rootfs, source = self.make_source(root)
+            out, manifest = root / "out", root / "manifest"
+            original_link = stage.os.link
+            calls = 0
+
+            def fail_second(src, dst):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise OSError("simulated second publish failure")
+                return original_link(src, dst)
+
+            with mock.patch.object(stage.os, "link", side_effect=fail_second):
+                with self.assertRaisesRegex(OSError, "simulated"):
+                    stage.package(rootfs, source, out, manifest)
+            self.assertFalse(out.exists())
+            self.assertFalse(manifest.exists())
+            self.assertEqual(list(root.glob(".air6-stage-*")), [])
 
     def test_no_existing_output_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:
