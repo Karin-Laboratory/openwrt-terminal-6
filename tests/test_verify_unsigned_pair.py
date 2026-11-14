@@ -162,6 +162,15 @@ class PairTests(unittest.TestCase):
             self.run_pair()
         self.assertFalse(self.out.exists())
 
+    def test_gzip_expansion_larger_than_expected_newc_rejected(self):
+        # The compressed input is tiny, but its expanded size exceeds the
+        # independently supplied newc. No full expansion may be allocated.
+        self.parts[1].write_bytes(gzip.compress(self.cpio.read_bytes() +
+                                                 b"x" * (2 * 1024 * 1024), mtime=0))
+        with self.assertRaisesRegex(ValueError, "P25_RAMDISK_CPIO_IDENTITY"):
+            self.run_pair()
+        self.assertFalse(self.out.exists())
+
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
         image[-1] = 1
