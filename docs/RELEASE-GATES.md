@@ -3,6 +3,12 @@
 > **Current 2026-11-04 distinction:** [Unsigned p25/p26 development](MAINLINE-P25-P26-POLICY.md) may proceed locally and in ephemeral CI. These are **distribution/device-release conditions**, not an authorization gate for writing or testing code. Public PRs require rights for the source disclosed; generated binaries must not be published by routine public CI through artifacts, caches, Releases or registries. Before any later binary distribution, provide corresponding source and notices required by the actual component licenses, whether signed or unsigned.
 
 
+## Historical source-only gates versus actual RC16 publication (2026-11-13)
+
+On **2026-11-11**, the maintainer published the [Alpha3 RC16 experimental pre-release](https://github.com/Karin-Laboratory/openwrt-terminal-6/releases/tag/sba6d-nora2-rc16-20261110-r1), containing signed P25 and paired P26 images. Therefore the historical statements below saying there is no firmware release or that such images must not be distributed are **older policy/gate positions**, not descriptions of current asset availability. Their technical and compliance concerns **remain open**; the owner-authorized release **does not certify** their completion.
+
+The public source-mainline CI policy remains source-only for its ordinary build workflow, separately from the specific manually published RC16 binary pair. The pre-release is not a validated general installation path: P44 is required, the P43/P44 tool is not bundled, stock SSH persistence and complete third-party rollback are not established, and the separately validated developer P44 LAN/SSH fix is not in the released pair. Start at [START-HERE](../START-HERE.ja.md) and inspect the release notes before considering any device changes.
+
 Current track-by-track integration and self-hosted build evidence: [engineering status 2026-10-27](ENGINEERING-STATUS-20261027.md). Pending runs are not counted as PASS.
 
 For the dated branch-tip, GitHub-conversation and source-equivalent ARM64 build review, see [2026-10-27 additional audit](PREPUBLICATION-REF-AND-BUILD-AUDIT-20261027.md). It is limited in scope and does not clear these gates.

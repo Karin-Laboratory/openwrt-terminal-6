@@ -17,6 +17,7 @@ Hardware research snapshot: 2026-10-27; public source/CI evidence updated: **202
 | Modem LTE IPv4 | **Stage 9B/10 OpenWrt packet traffic succeeded** | Stage10 source-only patch, deterministic transformation and offline tests | Full public-build recovery and legally redistributable runtime |
 | Modem 5G NR | **Not verified** | No NR implementation claim | Registration and end-to-end NR packet evidence |
 | Modem IPv6 | **Not verified** | No IPv6 claim | IPv6 PDU/session and traffic tests |
+| GNSS (stock OS only) | 3D location fix; 4,609 navigation-message delivery events across two trials (GPS/GLONASS/BeiDou/Galileo). SBAS/SBS events: 0; L1Sb tracking and L1S reception **unverified** | [Sanitized stock GNSS research report](GNSS-RESEARCH-20261112.ja.md), **not** a GNSS port or runtime in this tree | GNSS integration/driver support on OpenWrt; independent SBAS/L1S capture evidence |
 
 ## Observed LTE packet success
 

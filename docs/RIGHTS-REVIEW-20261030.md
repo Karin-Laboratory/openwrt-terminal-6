@@ -1,11 +1,11 @@
 # Source rights and redistribution audit queue (2026-10-30)
 
-> **Current engineering scope (2026-11-04):** The [p25/p26 mainline policy](MAINLINE-P25-P26-POLICY.md) permits implementation, proven backports, local tests and ephemeral unsigned image builds without finishing this entire 82-entry inventory. Each **publicly committed** source contribution still needs a defensible origin/license, and distributed binaries require component-specific compliance. Pending inventory status is **not a development stop-work gate**.
+> **Current engineering scope (2026-11-04):** The [p25/p26 mainline policy](MAINLINE-P25-P26-POLICY.md) permits implementation, proven backports, local tests and ephemeral unsigned image builds without finishing this entire 84-entry inventory. Each **publicly committed** source contribution still needs a defensible origin/license, and distributed binaries require component-specific compliance. Pending inventory status is **not a development stop-work gate**.
 
 
 **Issue #2, ongoing review. This document does not grant copyright, contributor authorization, secure disclosure clearance, or firmware redistribution permission.**
 
-## Verified inventory facts (catalog refreshed 2026-11-05)
+## Verified inventory facts (catalog refreshed 2026-11-01)
 
 - `config/source-catalog.json` currently contains **84** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
 - The clean Public repository is already visible. GitHub-hosted CI has passed the source-only tests and reachable-history scanner, but this is narrower than complete publication/right-to-redistribute and sensitive artifact reviews.
@@ -15,7 +15,7 @@
 
 <!-- source-catalog-inventory: inputs=84; pending=84 -->
 
-The summary is a **2026-11-05 source-catalog snapshot**. Changes to catalog entries must update this breakdown and pass the source-only inventory consistency test. Counts represent declared entries, not permission to redistribute.
+The summary is a **2026-11-01 source-catalog snapshot**. Changes to catalog entries must update this breakdown and pass the source-only inventory consistency test. Counts represent declared entries, not permission to redistribute.
 
 | Declared origin / SPDX | Files | Example paths | Legal review state |
 | --- | ---: | --- | --- |
