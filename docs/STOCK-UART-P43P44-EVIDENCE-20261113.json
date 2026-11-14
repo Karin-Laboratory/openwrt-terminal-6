@@ -1,0 +1,139 @@
+{
+  "schema_version": "1.0",
+  "purpose": "publicly shareable sanitized observed facts to reduce repeated research; not executable authorization",
+  "documented_at": "2026-11-13",
+  "applies_to": "SoftBank Air Terminal 6 / SBA6D family; per-unit confirmation mandatory",
+  "source_document": "docs/STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md",
+  "evidence_levels": {
+    "confirmed_on_unit": "observed on at least one research unit; not necessarily A/B/C",
+    "confirmed_in_simulation": "reproduced in QEMU only",
+    "expected_common": "likely shared in the family, not measured across all versions",
+    "not_verified": "unknown; never claim success"
+  },
+  "approved_reuse_scope": "generic commands, environment classification, filesystem concepts, sanitized capacity examples, warnings",
+  "excluded_from_publication": [
+    "signing secrets",
+    "credentials and SSH private keys",
+    "OEM dumps",
+    "per-device serial or MAC",
+    "SIM data",
+    "RF calibration",
+    "unpublished vulnerabilities or exploit paths",
+    "raw private UART logs"
+  ],
+  "connection": {
+    "physical": "USB to 3.3V TTL UART with RX/TX/GND wiring verified on target",
+    "uart": {
+      "baud": 115200,
+      "data_bits": 8,
+      "parity": "none",
+      "stop_bits": 1,
+      "flow_control": "none",
+      "status": "confirmed_on_unit"
+    },
+    "host_clients": [
+      "Tera Term on Windows",
+      "picocom or an equivalent serial terminal on Linux"
+    ],
+    "serial_exclusivity": "only one process may own the COM/tty device at once"
+  },
+  "environment_detection": {
+    "lk": {
+      "description": "LK bootloader debug console, not Linux",
+      "prompt_example": "]",
+      "status": "confirmed_on_unit"
+    },
+    "stock_emergency": {
+      "description": "Stock Linux launched with init=/bin/sh",
+      "pid1": "sh",
+      "observed_kernel": "5.4.238",
+      "architecture": "aarch64",
+      "status": "confirmed_on_unit"
+    },
+    "stock_normal": {
+      "description": "Stock Linux ordinary userspace",
+      "pid1": "procd",
+      "observed_kernel": "5.4.238",
+      "status": "confirmed_on_unit"
+    },
+    "commands_only_in_linux": [
+      "uname -m",
+      "uname -r",
+      "cat /proc/cmdline",
+      "cat /proc/1/comm",
+      "cat /proc/mounts",
+      "ls /sys/class/block"
+    ],
+    "policy": "Do not infer shell identity from prompt alone. Verify active slot, PID1 and kernel."
+  },
+  "storage": {
+    "p43": {
+      "fs": "ext4",
+      "role": "existing data",
+      "status": "confirmed_on_unit"
+    },
+    "split_example": {
+      "p43_gpt_approx_mib": 453,
+      "p43_ext4_mib": 440,
+      "p44_approx_gib": 2.5,
+      "status": "confirmed_on_unit",
+      "scope": "example from already split unit, not a universal target"
+    },
+    "qemu_trial": {
+      "source_p43_approx_gib": 2.94,
+      "test_data_mib": 200,
+      "data_sha_preserved": true,
+      "status": "confirmed_in_simulation"
+    },
+    "device_identity_rules": [
+      "resolve eMMC node dynamically",
+      "match GPT metadata and actual mounted state",
+      "never hardcode /dev/mmcblk0 vs /dev/mmcblk1",
+      "never reuse another device GUID or LBA"
+    ],
+    "known_blockers": [
+      "P43 mounted",
+      "e2fsck -fn reports findings",
+      "unknown GPT",
+      "missing backup or recovery route",
+      "P44 already present",
+      "unproven interrupted-write recovery"
+    ],
+    "real_unsplit_partition_application": "not_verified"
+  },
+  "ssh": {
+    "stock_normal_root_public_key_ssh": "confirmed_on_unit",
+    "stock_emergency_temporary_ssh_from_fresh_unit": "not_verified",
+    "fresh_stock_persistent_ssh": "not_verified",
+    "persistent_success_requires": [
+      "reboot stock slot B",
+      "external verified SSH authentication",
+      "remote command",
+      "host identity check",
+      "recovery path remains intact"
+    ],
+    "caution": "previous stock SSH success is not a universal onboarding recipe"
+  },
+  "agent_rules": {
+    "on_unverified_action": "inspect read-only, develop and validate plan, ask for explicit owner approval before device mutation",
+    "approval_gates": [
+      "SSH persistence altering stock config",
+      "ext4 repair or resize",
+      "GPT changes",
+      "P44 formatting",
+      "boot slot or bootctrl modifications"
+    ],
+    "classification_required": [
+      "observed",
+      "inferred",
+      "not_tested"
+    ],
+    "never_claim_from_simulation": "on-device verification success",
+    "no_automatic_sensitive_publication": true,
+    "no_automatic_unverified_apply": true
+  },
+  "related_public_repositories": [
+    "https://github.com/Karin-Laboratory/openwrt-terminal-6",
+    "https://github.com/Karin-Laboratory/Debian13-Terminal6"
+  ]
+}

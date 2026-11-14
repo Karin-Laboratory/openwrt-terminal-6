@@ -4,7 +4,11 @@ Public-source community development for the SoftBank Air Terminal 6 (SBAT6 serie
 
 > **2026-11-02 Alpha 3 RC1 Developer Preview:** [Read the Alpha 3 source and technical-status announcement](docs/ALPHA3-RC1-20261102.md). This shares research milestones and collaboration guidance, **not a publicly downloadable, installable or C-device-boot-verified RC1 firmware**. For testing interest, see [Discussions #50](https://github.com/Karin-Laboratory/openwrt-terminal-6/discussions/50).
 
-> **Public distribution remains source-only today. Local and ephemeral unsigned p25/p26 builds are engineering work, not downloadable or supported firmware. No signing keys, install instructions, or confirmed safe recovery procedure are supplied. Do not flash images based on this repository.**
+> **Release status (updated 2026-11-13):** An [experimental Alpha3 RC16 pre-release](https://github.com/Karin-Laboratory/openwrt-terminal-6/releases/tag/sba6d-nora2-rc16-20261110-r1) was published on 2026-11-11 with a **signed P25, paired P26, checksums and documentation**. It is **not** a turnkey installer or a generally validated third-party flashing path. An already prepared P44 ext4 is required, the P43/P44 splitter is not included, and the P44-only LAN/SSH fix from a developer test is not in the released P25/P26. The public mainline **source build/reproducibility track remains separate** from this owner-authorized experimental binary release. Rights, safe recovery, and independent reproducibility checks remain incomplete. **Start with [START-HERE (日本語)](START-HERE.ja.md), not by flashing these images.**
+
+## First-time owner or AI agent
+
+**[START-HERE.ja.md](START-HERE.ja.md)** is the entry point for Windows/Linux UART, stock-shell identification, read-only device inventory, SSH and P43/P44 prerequisite assessment. The distinct [agent workflow JSON](docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json) defines evidence and explicit approval checkpoints. **Neither is an authorization to write an unverified device.**
 
 ## Current mainline priority (2026-11-04)
 
@@ -26,11 +30,17 @@ Read the [board DTS reconstruction evidence](board/DTS-RECONSTRUCTION-20261029.m
 
 Read the [engineering integration status](docs/ENGINEERING-STATUS-20261027.md), [technical status](docs/STATUS.md), [source provenance](docs/PROVENANCE.md) and [publication gates](docs/RELEASE-GATES.md). The original research and binary evidence are retained separately in non-public archives; they are not imported into this Git history.
 
+**Stock GNSS research (separate from OpenWrt):** A privately owned Air Terminal 6 running the stock OS produced a 3D fix and 4,609 navigation-message delivery events across two tests; SBAS/L1Sb and L1S reception remain **unverified**. See the [sanitized GNSS investigation (Japanese, English summary)](docs/GNSS-RESEARCH-20261112.ja.md). This does **not** establish GNSS support in the public OpenWrt build.
+
+## Stock UART / LK / P43-P44 shared field evidence
+
+For owners and AI agents beginning with a physical Windows/Linux UART connection, see the [sanitized stock-console and partition field guide](docs/STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md) and [machine-readable evidence JSON](docs/STOCK-UART-P43P44-EVIDENCE-20261113.json). These document observed shell identities, UART settings, partition geometry examples and verification gaps; **not a tested stock-SSH persistence installer or safe real-device partition application**.
+
 ## Start here
 
-This is a **public source development repository with unsigned image-build work underway**, not a firmware download page. Browse [technical status](docs/STATUS.md) to distinguish what worked on a research unit from what is reproducible from this tree. Review [roadmap](docs/ROADMAP.md) for next engineering milestones and [build contract](docs/BUILD-CONTRACT.md) for offline checks. Report bugs or propose small source improvements via Issues and PRs, following [CONTRIBUTING.md](CONTRIBUTING.md).
+This repository contains a **public source-development track** and links to a **separate, owner-authorized experimental RC16 binary pre-release**. The existence of release assets does not establish a complete installation or recovery procedure. For device owners and AI agents, begin at [START-HERE.ja.md](START-HERE.ja.md). Browse [technical status](docs/STATUS.md) to distinguish what worked on a research unit from what is reproducible from this tree. Review [roadmap](docs/ROADMAP.md) for next engineering milestones and [build contract](docs/BUILD-CONTRACT.md) for offline checks. Report bugs or propose small source improvements via Issues and PRs, following [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**What you can do today:** inspect the code, patches and the new [independently authored Air6 DTS source candidate](board/mt6990-air-terminal-6.dts), run host-side syntax tests, review provenance and discuss upstream integration. The DTS is **not** a complete or verified Air6 board definition; unvalidated hardware consumers are disabled. **What you cannot do from this repository:** build a complete supported SBAT6 firmware or safely flash a device.
+**What you can do today:** inspect the code, patches and the new [independently authored Air6 DTS source candidate](board/mt6990-air-terminal-6.dts), run host-side syntax tests, review provenance and discuss upstream integration. The DTS is **not** a complete or verified Air6 board definition; unvalidated hardware consumers are disabled. **What is not established:** a supported reproducible SBAT6 firmware build, a universal initial SSH-persistence method, or a proven safe split/flash procedure for unprepared third-party units.
 
 ## Where to look
 
@@ -41,7 +51,7 @@ This is a **public source development repository with unsigned image-build work 
 | Can I reproduce a check without hardware? | [Source build contract](docs/BUILD-CONTRACT.md) and [tests](tests/) |
 | Where did the source come from? | [Source provenance and license notes](docs/PROVENANCE.md) |
 | How do I help? | [Contribution guide](CONTRIBUTING.md) |
-| Is there a flashable release? | [Publication and firmware gates](docs/RELEASE-GATES.md) (no installable release) |
+| Are release binaries available? | [Experimental Alpha3 RC16 pre-release](https://github.com/Karin-Laboratory/openwrt-terminal-6/releases/tag/sba6d-nora2-rc16-20261110-r1), with prerequisites and limitations; [release gates](docs/RELEASE-GATES.md) still apply |
 
 ## Contents
 
