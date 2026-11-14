@@ -110,6 +110,20 @@ class IndependentP26Tests(unittest.TestCase):
                     mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
                 self.assertFalse(output.exists())
 
+    def test_attestation_rejects_integer_boolean_scope_fields(self):
+        # JSON integer zero compares equal to False in Python, but is not a
+        # valid boolean assertion about signing or public distribution.
+        for field in ("signed", "public_binary"):
+            with self.subTest(field=field):
+                receipt = self._producer_receipt()
+                doc = json.loads(receipt.read_text())
+                doc[field] = 0
+                receipt.write_text(json.dumps(doc))
+                output = self.base / "verified.json"
+                with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_SCOPE"):
+                    mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+                self.assertFalse(output.exists())
+
     def test_attestation_write_failure_removes_partial_receipt(self):
         receipt = self._producer_receipt()
         output = self.base / "verified.json"
