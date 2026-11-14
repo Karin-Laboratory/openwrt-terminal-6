@@ -15,7 +15,7 @@
 
 <!-- source-catalog-inventory: inputs=77; pending=77 -->
 
-The summary is a **2026-11-01 source-catalog snapshot**. Changes to catalog entries must update this breakdown and pass the source-only inventory consistency test. Counts represent declared entries, not permission to redistribute.
+The summary reflects the **current branch source catalog** (original inventory dated 2026-11-01). Changes to catalog entries must update this breakdown and pass the source-only inventory consistency test. Counts represent declared entries, not permission to redistribute.
 
 | Declared origin / SPDX | Files | Example paths | Legal review state |
 | --- | ---: | --- | --- |
@@ -25,7 +25,7 @@ The summary is a **2026-11-01 source-catalog snapshot**. Changes to catalog entr
 | independent-original / MIT | 66 | `tools/boot/slot_observation.py`; source build/tests | pending; verify actual authorship |
 | research-board-overlay / GPL-2.0-only | 1 | `board/mt6990-air-terminal-6-sgmii1-experimental.dtso` | pending; check wiring evidence |
 | independent-original / GPL-2.0-only | 4 | `board/mt6990-air-terminal-6.dts`, ethernet test DTS | pending; verify authorship |
-| **Total** | **77** | Catalog entries; additional `missing_dependencies` are not source files | **75 pending** |
+| **Total** | **77** | Catalog entries; additional `missing_dependencies` are not source files | **77 pending** |
 
 The labels are not a copyright ruling. New/modified source retains a catalog identity and **pending** status until supported by evidence, but pending does not prevent development or isolated builds. Public backports carry a short PR origin URL/revision (or self-authored observation basis), license and any unresolved concerns.
 
@@ -42,7 +42,7 @@ The labels are not a copyright ruling. New/modified source retains a catalog ide
 
 ## Minimal per-change provenance; distribution review separately
 
-During normal development, a **one-line PR origin/revision/license note** is sufficient; do not mass-approve `rights_review` from labels or CI. Before distributing specific source or binaries, resolve significant third-party permission questions and satisfy applicable GPL source and notice duties. A fuller private record (rights holder, license, permission evidence, reviewer and date) is useful for **disputed or unclear components**, not a standing 75-file precondition to developing firmware.
+During normal development, a **one-line PR origin/revision/license note** is sufficient; do not mass-approve `rights_review` from labels or CI. Before distributing specific source or binaries, resolve significant third-party permission questions and satisfy applicable GPL source and notice duties. A fuller private record (rights holder, license, permission evidence, reviewer and date) is useful for **disputed or unclear components**, not a standing 77-file precondition to developing firmware.
 
 ## Hard boundaries for future implementation
 
