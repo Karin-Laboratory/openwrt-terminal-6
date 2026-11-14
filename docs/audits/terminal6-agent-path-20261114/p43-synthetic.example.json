@@ -21,5 +21,16 @@
   "recovery_route_verified": true,
   "source_evidence_level": "SIMULATED_ONLY",
   "ssh_state_on_p43": false,
-  "last_usable_lba": 8999966
+  "last_usable_lba": 8999966,
+  "gpt_partition_entry_sectors": 32,
+  "backup_evidence": {
+    "reference": "SYNTHETIC-RECEIPT-ONLY",
+    "verification_method": "synthetic example, no real backup",
+    "verified_at": "2026-11-14T09:00:00+09:00"
+  },
+  "recovery_evidence": {
+    "reference": "SYNTHETIC-RECEIPT-ONLY",
+    "verification_method": "synthetic example, no real recovery",
+    "verified_at": "2026-11-14T09:00:00+09:00"
+  }
 }
