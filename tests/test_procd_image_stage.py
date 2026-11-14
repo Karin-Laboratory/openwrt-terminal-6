@@ -201,6 +201,26 @@ class ProcdImageStageTests(unittest.TestCase):
             self.assertFalse((root / "manifest").exists())
             self.assertEqual(list(root.glob(".air6-stage-*")), [])
 
+    def test_temporary_cleanup_directory_is_synced(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rootfs, source = self.make_source(root)
+            with mock.patch.object(stage, "_sync_parent", wraps=stage._sync_parent) as sync:
+                stage.package(rootfs, source, root / "out", root / "manifest")
+            self.assertGreaterEqual(sync.call_args_list.count(mock.call(root)), 2)
+            self.assertEqual(list(root.glob(".air6-stage-*")), [])
+
+    def test_temporary_cleanup_sync_failure_is_reported(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rootfs, source = self.make_source(root)
+            with mock.patch.object(stage, "_sync_parent", side_effect=[
+                None, OSError("temporary cleanup sync failure")
+            ]):
+                with self.assertRaisesRegex(OSError, "temporary cleanup sync failure"):
+                    stage.package(rootfs, source, root / "out", root / "manifest")
+            self.assertEqual(list(root.glob(".air6-stage-*")), [])
+
     def test_no_existing_output_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
