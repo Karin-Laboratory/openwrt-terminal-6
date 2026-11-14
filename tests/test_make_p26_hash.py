@@ -79,6 +79,36 @@ class HashInputTests(unittest.TestCase):
         fsync.assert_called_once()
         self.assertFalse(self.out.exists())
 
+    def test_success_syncs_file_and_parent_directory(self):
+        real_fsync = mod.os.fsync
+        seen = []
+
+        def recording_fsync(fd):
+            seen.append(fd)
+            return real_fsync(fd)
+
+        with patch.object(mod.os, 'fsync', side_effect=recording_fsync):
+            self.assertEqual(self.run_create(), self.digest)
+        self.assertEqual(len(seen), 2)
+        self.assertTrue(self.out.is_file())
+
+    def test_directory_sync_failure_removes_hash_output(self):
+        real_fsync = mod.os.fsync
+        calls = 0
+
+        def injected_fsync(fd):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError('injected directory sync failure')
+            return real_fsync(fd)
+
+        with patch.object(mod.os, 'fsync', side_effect=injected_fsync):
+            with self.assertRaisesRegex(OSError, 'injected directory sync failure'):
+                self.run_create()
+        self.assertEqual(calls, 2)
+        self.assertFalse(self.out.exists())
+
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
         with self.assertRaisesRegex(ValueError, 'identity mismatch'):
