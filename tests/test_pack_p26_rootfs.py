@@ -289,17 +289,16 @@ class P26PackerTests(unittest.TestCase):
                 "packages": ["base-files", "busybox", "procd", "ubus",
                              "uci", "netifd", "dropbear"],
             }
+            record["feeds"] = {}
+            receipt.write_text(json.dumps(record))
+            # Core-only OpenWrt builds legitimately have no extra feeds.
+            with patch.object(mod, "check_tree", side_effect=RuntimeError("TREE_REACHED")):
+                with self.assertRaisesRegex(RuntimeError, "TREE_REACHED"):
+                    mod.produce(root, base / "out", receipt)
             for feeds in ({"packages": "main"},
                           {"packages": "a" * 39},
                           {"packages": "g" * 40},
                           {"packages": True}):
-            record["feeds"] = {}
-            receipt.write_text(json.dumps(record))
-            # An empty map is valid for a core-only OpenWrt package build.
-            # Reach tree validation, rather than failing the feed receipt gate.
-            with patch.object(mod, "check_tree", side_effect=RuntimeError("TREE_REACHED")):
-                with self.assertRaisesRegex(RuntimeError, "TREE_REACHED"):
-                    mod.produce(root, base / "out", receipt)
                 record["feeds"] = feeds
                 receipt.write_text(json.dumps(record))
                 with self.subTest(feeds=feeds):
