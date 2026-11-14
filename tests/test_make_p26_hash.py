@@ -168,6 +168,29 @@ class HashInputTests(unittest.TestCase):
         self.assertEqual(kinds, ['file', 'directory', 'directory'])
         self.assertFalse(self.out.exists())
 
+    def test_reject_boolean_schema_in_either_receipt(self):
+        for target in ('producer', 'independent'):
+            with self.subTest(target=target):
+                path = getattr(self, target)
+                original_bytes = path.read_bytes()
+                try:
+                    data = json.loads(original_bytes)
+                    data['schema'] = True
+                    path.write_text(json.dumps(data))
+                    if target == 'producer':
+                        independent = json.loads(self.independent.read_text())
+                        independent['producer_receipt_sha256'] = mod.sha256(self.producer)
+                        self.independent.write_text(json.dumps(independent))
+                    with self.assertRaisesRegex(ValueError, 'receipt mismatch'):
+                        self.run_create()
+                    self.assertFalse(self.out.exists())
+                finally:
+                    path.write_bytes(original_bytes)
+                    if target == 'producer':
+                        independent = json.loads(self.independent.read_text())
+                        independent['producer_receipt_sha256'] = mod.sha256(self.producer)
+                        self.independent.write_text(json.dumps(independent))
+
     def test_reject_modified_image(self):
         self.p26.write_bytes(b'12345679')
         with self.assertRaisesRegex(ValueError, 'identity mismatch'):
