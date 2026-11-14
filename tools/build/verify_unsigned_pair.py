@@ -139,11 +139,22 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
             "P26_INITRAMFS_SHA_BINDING")
     # Bind the separately supplied newc bytes to the exact compressed ramdisk
     # that the independent p25 verifier checked inside the boot image.
+    # Stream decompression and cap output at the independently supplied newc
+    # size. Never allocate an attacker-controlled expanded gzip payload.
+    expected_size = cpio.stat().st_size
     try:
-        embedded_cpio = gzip.decompress(ramdisk.read_bytes())
+        with gzip.open(ramdisk, "rb") as stream, cpio.open("rb") as expected:
+            while True:
+                chunk = stream.read(min(1024 * 1024, expected_size + 1))
+                reference = expected.read(len(chunk))
+                require(chunk == reference, "P25_RAMDISK_CPIO_IDENTITY")
+                expected_size -= len(chunk)
+                require(expected_size >= 0, "P25_RAMDISK_CPIO_IDENTITY")
+                if not chunk:
+                    require(expected_size == 0, "P25_RAMDISK_CPIO_IDENTITY")
+                    break
     except (OSError, EOFError, zlib.error) as exc:
         raise ValueError("UNSIGNED_PAIR_BLOCKED_P25_RAMDISK_GZIP") from exc
-    require(embedded_cpio == cpio.read_bytes(), "P25_RAMDISK_CPIO_IDENTITY")
     require(original.get("squashfs_sha256") ==
             approved.get("squashfs_sha256") and
             original.get("squashfs_bytes") ==
