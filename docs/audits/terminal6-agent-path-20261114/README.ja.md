@@ -72,3 +72,4 @@
 - [08 外部AI監査の再評価・訂正](08-gemini-review-remediation.ja.md): 公式工程名への照合、A/B・FW差分の安全ゲートを追加
 
 - [09 修正版の再監査](09-reaudit-20261114.ja.md): 修正版 head 28b0f479 を再監査。判定は NOT READY のまま（S02 まで到達、最初の BLOCKED は S03）
+- [11 修正版の再監査（第2回）](11-reaudit2-20261114.ja.md): head 153b04f3。判定は NOT READY のまま（S02 まで到達、最初の BLOCKED は S03）
