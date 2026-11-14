@@ -118,6 +118,33 @@ class IndependentP26Tests(unittest.TestCase):
                 mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
         self.assertFalse(output.exists())
 
+    def test_attestation_directory_sync_and_rollback(self):
+        receipt = self._producer_receipt()
+        output = self.base / "verified.json"
+        real_fsync = mod.os.fsync
+        calls = []
+
+        def count_sync(fd):
+            calls.append(fd)
+            return real_fsync(fd)
+
+        with patch.object(mod.os, "fsync", side_effect=count_sync):
+            mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(output.exists())
+        output.unlink()
+
+        def fail_directory_sync(fd):
+            calls.append(fd)
+            if len(calls) == 4:
+                raise OSError("injected directory fsync failure")
+            return real_fsync(fd)
+
+        with patch.object(mod.os, "fsync", side_effect=fail_directory_sync):
+            with self.assertRaisesRegex(OSError, "directory fsync failure"):
+                mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertFalse(output.exists())
+
     def test_partition_size_rejected(self):
         self.p26.write_bytes(b"short")
         with self.assertRaisesRegex(ValueError, "PARTITION_SIZE"):
