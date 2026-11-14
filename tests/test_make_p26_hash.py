@@ -168,6 +168,24 @@ class HashInputTests(unittest.TestCase):
         self.assertEqual(kinds, ['file', 'directory', 'directory'])
         self.assertFalse(self.out.exists())
 
+    def test_rollback_directory_sync_failure_preserves_original_error(self):
+        real_fsync = mod.os.fsync
+        calls = []
+        def injected_fsync(fd):
+            calls.append(fd)
+            if len(calls) == 2:
+                raise OSError('publish directory failure')
+            if len(calls) == 3:
+                raise OSError('rollback directory failure')
+            return real_fsync(fd)
+        with patch.object(mod.os, 'fsync', side_effect=injected_fsync):
+            with self.assertRaisesRegex(OSError, 'publish directory failure') as caught:
+                self.run_create()
+        self.assertEqual(len(calls), 3)
+        self.assertFalse(self.out.exists())
+        if hasattr(caught.exception, '__notes__'):
+            self.assertIn('rollback directory failure', ' '.join(caught.exception.__notes__))
+
     def test_reject_boolean_schema_in_either_receipt(self):
         for target in ('producer', 'independent'):
             with self.subTest(target=target):
