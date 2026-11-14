@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0.0",
+  "id": "terminal6-agent-path-offline-audit-20261114",
+  "mode": "OFFLINE_AUDIT",
+  "date": "2026-11-14",
+  "device_operations_performed": false,
+  "apply_guard_modified": false,
+  "sources": {
+    "public_repository": "Karin-Laboratory/openwrt-terminal-6",
+    "public_commit": "168a05ba6b66d3d1053e358530ba6b2f76924637",
+    "private_records_used_as_evidence_only": true,
+    "private_refs_reviewed": [
+      "SBAT6A-Offline-Archive main",
+      "PR #150 branch (P43/P44 v0.4 r3)",
+      "PR #155 description (Debian C-unit)",
+      "Issue #116 and C-unit stock-B SSH recovery branch"
+    ]
+  },
+  "final_verdict": "NOT_READY",
+  "safe_stop_design": "GOOD",
+  "furthest_stage_reachable_from_public_docs": "S02",
+  "first_blocked_stage": "S03",
+  "stages": {
+    "S01": {
+      "status": "PARTIAL",
+      "real_device_proof": "settings only",
+      "classes": [
+        "A",
+        "D"
+      ]
+    },
+    "S02": {
+      "status": "PARTIAL",
+      "real_device_proof": "prompt only",
+      "classes": [
+        "A",
+        "B"
+      ]
+    },
+    "S03": {
+      "status": "BLOCKED",
+      "real_device_proof": "research units only",
+      "classes": [
+        "B",
+        "D"
+      ]
+    },
+    "S04": {
+      "status": "BLOCKED",
+      "real_device_proof": "unit-specific only",
+      "classes": [
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    "S05": {
+      "status": "BLOCKED",
+      "real_device_proof": "two units, unit-specific, one power-cycle regression history",
+      "classes": [
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    "S06": {
+      "status": "BLOCKED",
+      "note": "PARTIAL for already-split units",
+      "real_device_proof": "none",
+      "classes": [
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    "S07": {
+      "status": "BLOCKED",
+      "real_device_proof": "none",
+      "classes": [
+        "C",
+        "D"
+      ]
+    },
+    "S08": {
+      "status": "BLOCKED",
+      "real_device_proof": "none",
+      "classes": [
+        "C",
+        "D"
+      ]
+    }
+  },
+  "verification_performed": {
+    "tools/qa/test_onboarding_contract.py": "AGENT_ENTRY_OFFLINE_AUDIT_PASS, ONBOARDING_DOCS_JSON_CONSISTENCY_PASS",
+    "scope": "static document consistency only; not device validation",
+    "tools/security/check_publication.py": "1 finding on pre-existing file tools/air6-rescue-qemu-v0.3/n-unit-split-qemu.sh (internal build directory); no findings on audit files"
+  },
+  "key_findings": [
+    "No public procedure to enter stock slot B Emergency Shell (S03).",
+    "v0.4 r3 preflight requires an existing P44 and exact sector counts; it rejects unsplit devices, so no unsplit read-only audit exists (S06).",
+    "v0.4 runtime packages only resize2fs and sgdisk; e2fsck, mkfs.ext4 and blkid are required but not packaged and unverified on stock.",
+    "Stock SSH persistence has two unit-specific private recipes; one stores state in P43 and can collide with the P43 shrink (S05/S07).",
+    "v0.4 r3 public/private status is contradictory (X01); GPL source/notice compliance unresolved."
+  ],
+  "consistency_findings": {
+    "verified_consistent": 7,
+    "high": [
+      "X01",
+      "X02"
+    ],
+    "medium": [
+      "X03",
+      "X04",
+      "X05",
+      "X06"
+    ],
+    "low": [
+      "X07",
+      "X08",
+      "X09",
+      "X10",
+      "X11"
+    ]
+  },
+  "evidence_not_transferable": "A QEMU PASS, a split test unit, Debian slot A success or an owner-specific stock B SSH does not prove an unsplit newcomer unit can be prepared."
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "purpose": "Fail-closed first-owner firmware and layout capability gate, not a device operation or firmware detection tool",
+  "reference_observations": [
+    {
+      "kernel_release": "5.4.238",
+      "origin": "research stock-B unit",
+      "support_status": "OBSERVED_ONLY"
+    }
+  ],
+  "required_observations": [
+    "device_family",
+    "firmware_version",
+    "kernel_release",
+    "bootloader_identity",
+    "boot_slot",
+    "gpt_geometry_current_unit",
+    "evidence_level"
+  ],
+  "validated_profiles": [],
+  "machine_results": {
+    "unknown": "BLOCKED_FW_OR_LAYOUT_UNKNOWN",
+    "known_reference_only": "OBSERVATION_NOT_APPROVAL",
+    "no_validated_profile": "BLOCKED_NO_VALIDATED_MUTATION_PROFILE"
+  },
+  "policy": {
+    "recheck_each_boot": true,
+    "read_only_identification_allowed": true,
+    "authorization": "Per-action owner approval PLUS independently validated unit-specific plan",
+    "no_inferred_bootloader_commands": true,
+    "no_default_credentials": true,
+    "no_reused_guid_lba_or_fixed_offsets": true,
+    "write_default": "DENY",
+    "boot_selection_default": "DENY"
+  },
+  "notes": [
+    "Linux kernel release does not uniquely identify firmware or LK implementation.",
+    "Neither historical A/B metadata nor Debian C-unit boot results validate a fresh stock unit.",
+    "Current-unit firmware, GPT and slot must be observed; any missing element is BLOCKED.",
+    "No validated boot-switch or partition-write profile currently exists."
+  ]
+}

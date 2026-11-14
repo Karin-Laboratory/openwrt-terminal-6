@@ -1,0 +1,36 @@
+{
+  "_NOTICE": "SYNTHETIC TRAINING DATA ONLY. NOT A REAL TERMINAL 6. NEVER REUSE GEOMETRY FOR DEVICE WRITES.",
+  "disk_sectors": 9000000,
+  "logical_sector_bytes": 512,
+  "gpt_primary_valid": true,
+  "gpt_backup_valid": true,
+  "p43": {
+    "start_lba": 1500000,
+    "end_lba": 7600000,
+    "ext4_block_bytes": 4096,
+    "ext4_total_blocks": 750000,
+    "ext4_used_blocks": 50000,
+    "ext4_minimum_blocks": 70000,
+    "candidate_target_mib": 600,
+    "safety_margin_mib": 100
+  },
+  "p44_present": false,
+  "p43_mounted": false,
+  "journal_clean": true,
+  "backup_verified": true,
+  "recovery_route_verified": true,
+  "source_evidence_level": "SIMULATED_ONLY",
+  "ssh_state_on_p43": false,
+  "last_usable_lba": 8999966,
+  "gpt_partition_entry_sectors": 32,
+  "backup_evidence": {
+    "reference": "SYNTHETIC-RECEIPT-ONLY",
+    "verification_method": "synthetic example, no real backup",
+    "verified_at": "2026-11-14T09:00:00+09:00"
+  },
+  "recovery_evidence": {
+    "reference": "SYNTHETIC-RECEIPT-ONLY",
+    "verification_method": "synthetic example, no real recovery",
+    "verified_at": "2026-11-14T09:00:00+09:00"
+  }
+}

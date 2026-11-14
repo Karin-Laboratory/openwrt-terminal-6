@@ -10,7 +10,9 @@
     "START-HERE.ja.md",
     "docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json",
     "docs/STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md",
-    "docs/STOCK-UART-P43P44-EVIDENCE-20261113.json"
+    "docs/STOCK-UART-P43P44-EVIDENCE-20261113.json",
+    "docs/AB-FALLBACK-RESEARCH.md",
+    "docs/TERMINAL6-FW-COMPATIBILITY.json"
   ],
   "trust_policy": {
     "source": "Pinned public repository commit and SHA recorded in receipt",
@@ -215,6 +217,36 @@
       "result": "PASS_ELIGIBLE",
       "allowed": "Finalize receipt",
       "forbidden": "Infer success from simulation or historical units"
+    },
+    {
+      "condition": "Measured P43 ext4 minimum and safety margin do not fit target or target inferred from historical 440MiB",
+      "result": "BLOCKED_P43_CAPACITY",
+      "allowed": "Read-only inventory and design a unit-specific plan",
+      "forbidden": "Shrink on historical fixed dimensions"
+    },
+    {
+      "condition": "Stock SSH persistence writes P43 and cannot prove it survives S07",
+      "result": "BLOCKED_SSH_P43_DEPENDENCY",
+      "allowed": "Document dependency and design backup/recovery",
+      "forbidden": "Claim S05 will survive storage mutation"
+    },
+    {
+      "condition": "Journal flags, ext4 minimum, backup or GPT geometry are unknown",
+      "result": "BLOCKED_STORAGE_EVIDENCE",
+      "allowed": "Host-only offline evidence intake",
+      "forbidden": "Run e2fsck repair, resize or GPT mutation"
+    },
+    {
+      "condition": "Firmware/bootloader/slot identity or GPT geometry (when relevant) is missing or differs from documented profile",
+      "result": "BLOCKED_FW_OR_LAYOUT_UNKNOWN",
+      "allowed": "Read-only locally authorized observations",
+      "forbidden": "Guess default credentials, use old offsets or run boot configuration commands"
+    },
+    {
+      "condition": "Mutating operation has no independently validated per-unit implementation profile",
+      "result": "BLOCKED_NO_VALIDATED_MUTATION_PROFILE",
+      "allowed": "Plan and offline simulate, ask owner to obtain safe instrumentation",
+      "forbidden": "Interpret generic approval as permission to invent commands"
     }
   ],
   "audit_scenarios": [
@@ -252,6 +284,31 @@
       "id": "T07",
       "device": "simulated P43 shrink with checksum success",
       "expected": "BLOCKED_UNPROVEN_APPLY"
+    },
+    {
+      "id": "T08",
+      "device": "P43 used and minimum ext4 size exceed proposed target",
+      "expected": "BLOCKED_P43_CAPACITY"
+    },
+    {
+      "id": "T09",
+      "device": "SSH uses P43 and shrink compatibility unproven",
+      "expected": "BLOCKED_SSH_P43_DEPENDENCY"
+    },
+    {
+      "id": "T10",
+      "device": "unknown journal state, missing minimum size and backup",
+      "expected": "BLOCKED_STORAGE_EVIDENCE"
+    },
+    {
+      "id": "T11",
+      "device": "Unknown stock firmware or bootloader and historical unit values only",
+      "expected": "BLOCKED_FW_OR_LAYOUT_UNKNOWN"
+    },
+    {
+      "id": "T12",
+      "device": "SSH persistence method unknown and no validated mutation profile",
+      "expected": "BLOCKED_NO_VALIDATED_MUTATION_PROFILE"
     }
   ],
   "security_addendum": {
@@ -260,5 +317,158 @@
     "private_data": "Receipts and raw evidence are local-private by default; public issue reports must be manually redacted.",
     "reboot": "Treat as a state-changing operation that may alter A/B retry counters; require approval and a recovery plan.",
     "storage": "A read-only inventory is not the same as running e2fsck -fn against a mounted/journal-pending ext4; do not interpret findings as safe auto-repair permission."
+  },
+  "stage_readiness": {
+    "assessment_date": "2026-11-14",
+    "scope": "Public artifacts only; no fresh-unit device evidence. This is documentation readiness, not device-level PASS.",
+    "stages": [
+      {
+        "id": "S01",
+        "status": "PARTIAL",
+        "blockers": [
+          "Physical 3.3V wiring and real UART capture require owner and device"
+        ],
+        "next": "Host/owner wiring and capture evidence"
+      },
+      {
+        "id": "S02",
+        "status": "PARTIAL",
+        "blockers": [
+          "LK entry/identification not proven on a fresh firmware revision"
+        ],
+        "next": "Record console type and boot evidence"
+      },
+      {
+        "id": "S03",
+        "status": "BLOCKED",
+        "blockers": [
+          "No general public validated path to stock slot B Emergency Shell; do not guess boot controls"
+        ],
+        "next": "Document owner-approved version-specific non-destructive approach and verify on-device"
+      },
+      {
+        "id": "S04",
+        "status": "BLOCKED",
+        "blockers": [
+          "No universal authorized temporary stock SSH setup for fresh unit"
+        ],
+        "next": "Inspect existing authenticated service/isolated LAN; do not bypass credentials"
+      },
+      {
+        "id": "S05",
+        "status": "BLOCKED",
+        "blockers": [
+          "Persistent SSH destination and restart behavior not universal",
+          "P43-backed persistence may conflict with S07 shrink"
+        ],
+        "next": "Inventory persistence store and backup, test cold power cycle"
+      },
+      {
+        "id": "S06",
+        "status": "BLOCKED",
+        "blockers": [
+          "Unsplit-device real read-only audit implementation and required utilities not verified"
+        ],
+        "next": "Collect read-only per-unit storage evidence; evaluate using offline inspector"
+      },
+      {
+        "id": "S07",
+        "status": "BLOCKED",
+        "blockers": [
+          "No validated real-device shrink/apply/recovery",
+          "P43 minimum/used/journal state must be checked; 440MiB is not a universal target"
+        ],
+        "next": "No writes; develop offline recovery-tested algorithm"
+      },
+      {
+        "id": "S08",
+        "status": "BLOCKED",
+        "blockers": [
+          "Post-reboot stock B SSH, P43 preservation and P44 ext4/GPT evidence absent"
+        ],
+        "next": "Full real-device acceptance only after all preceding gates"
+      }
+    ],
+    "first_public_documentation_blocker": "S03",
+    "overall": "NOT_READY",
+    "do_not_elevate_to_pass_without": "Independent fresh-unit evidence; simulated and historical evidence never suffice"
+  },
+  "readonly_assessment": {
+    "offline_tool": "tools/qa/p43_unsplit_offline.py",
+    "input_contract": "Sanitized, manually captured GPT and P43 ext4 metadata JSON, not raw disks, private dumps, GUIDs or device nodes",
+    "output_contract": "Machine-readable preliminary BLOCKED/INSPECT_ONLY classification; cannot validate disk identity or healthy filesystem on its own.",
+    "status": "HOST_ONLY_PRELIMINARY",
+    "missing_runtime_tools": [
+      "e2fsck",
+      "mkfs.ext4",
+      "blkid"
+    ],
+    "runtime_tools_status": "v0.4 r3 candidate runtime does not bundle these; installed presence in stock Emergency Shell is NOT_TESTED.",
+    "geometry_rule": "Never choose 440MiB from another unit. Require per-unit free/used blocks, minimum resize size, journal state, overhead/margin, backup and recovery; insufficient or unknown => BLOCKED.",
+    "effect": "No reading or writing actual /dev disks; no shell commands run; input JSON only"
+  },
+  "ssh_storage_dependency": {
+    "rule": "S05 persistence backed by P43 cannot be accepted for S07 without proof it survives offline shrink, cold reboot and independent rollback.",
+    "possible_storage_classes": [
+      "P43 ext4 (conflicts with resize until verified)",
+      "other persistent configuration storage (unverified on fresh unit)",
+      "RAM-only (not persistent)"
+    ],
+    "proof": "Identify location, config change diff, bounded storage use, backup, recovery, host key persistence, repeated restart and cold power cycle; no universal recipe claimed."
+  },
+  "tool_provenance_clarification": {
+    "p43_v04_r3_public_visibility": "UNVERIFIED; private draft vs alleged public URL/discussion conflict requires independent verification and distribution-rights review",
+    "qemu_script": "tools/air6-rescue-qemu-v0.3/n-unit-split-qemu.sh is v0.2 QEMU-specific and has a working --apply for disposable virtio disk, unlike private v0.4 installer.sh whose --apply rejects.",
+    "r4_candidate": "UNVERIFIED; never infer r4 implementation exists"
+  },
+  "stage_identity_contract": {
+    "source": "docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json",
+    "preflight": "Fetch JSON and initialize agent, not S01 PASS",
+    "stage_ids": {
+      "S01": "serial_link",
+      "S02": "lk_identify",
+      "S03": "stock_emergency_identify",
+      "S04": "stock_ssh_session",
+      "S05": "stock_ssh_persistence",
+      "S06": "partition_readonly_assessment",
+      "S07": "partition_mutation",
+      "S08": "final_reboot_acceptance"
+    },
+    "cannot_infer_pass_from": "Document interpretation or hypothesized ability to run a command is not an observed stage PASS."
+  },
+  "compatibility_gate": {
+    "reference": "docs/TERMINAL6-FW-COMPATIBILITY.json",
+    "require_before_commands": [
+      "positively identified target device",
+      "current console type",
+      "current observed boot slot",
+      "current firmware/kernel and LK context when available"
+    ],
+    "require_before_state_change": [
+      "unit-specific validated plan",
+      "A/B fallback effects understood",
+      "current GPT and P43/P44 geometry when storage relevant",
+      "backup/recovery validated",
+      "fresh explicit owner approval"
+    ],
+    "unknown_result": "BLOCKED_FW_OR_LAYOUT_UNKNOWN",
+    "no_validated_mutation_profile": "BLOCKED_NO_VALIDATED_MUTATION_PROFILE",
+    "retries": "Do not fix SSH by forcing default slot B or altering priority/success/retry flags without a separately validated and authorized need."
+  },
+  "audit_external_findings": {
+    "assessment": "Some external audit findings refer to a different numbering of S01-S08 and assume default-slot pinning is an S05 requirement. Both are inaccurate against canonical workflow.",
+    "accepted": [
+      "Version-specific A/B fallback plan is incomplete",
+      "Stock SSH persistence remains unverified for new units",
+      "Real-device GPT partition split with backup and rollback not proven",
+      "Firmware revision must be observed before using any device-specific action"
+    ],
+    "not_accepted": [
+      "Entrance JSON reading means S01 PASS",
+      "A documented plan means S03/S04 were reached",
+      "S05 requires permanently forcing slot B",
+      "S06 includes partition mutation, or S07 is only ext4 verification",
+      "Previously observed kernel version uniquely identifies firmware compatibility"
+    ]
   }
 }
