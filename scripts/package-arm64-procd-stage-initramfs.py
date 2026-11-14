@@ -10,9 +10,11 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import stat
 import sys
+import tempfile
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -111,8 +113,28 @@ def package(rootfs: Path, source_manifest: Path, output: Path, manifest_out: Pat
         "not_proven": ["procd PID1 runtime", "preinit/service startup runtime", "netifd runtime/bridge",
                        "Wi-Fi AP", "Air6 boot", "release rights"],
     }
-    output.write_bytes(compressed)
-    manifest_out.write_text(json.dumps(record, sort_keys=True, indent=2) + "\n")
+    staged = []
+    published = []
+    try:
+        for destination, payload in (
+            (output, compressed),
+            (manifest_out, (json.dumps(record, sort_keys=True, indent=2) + "\n").encode()),
+        ):
+            with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".air6-stage-", delete=False) as tmp:
+                staged.append(Path(tmp.name))
+                tmp.write(payload)
+                tmp.flush()
+                os.fsync(tmp.fileno())
+        for temporary, destination in zip(staged, (output, manifest_out)):
+            os.link(temporary, destination)
+            published.append(destination)
+    except BaseException:
+        for destination in reversed(published):
+            destination.unlink()
+        raise
+    finally:
+        for temporary in staged:
+            temporary.unlink(missing_ok=True)
     return record
 
 
