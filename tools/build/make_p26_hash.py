@@ -32,6 +32,8 @@ def create(p26, producer, independent, output):
         raise ValueError('output parent missing')
     original = json.loads(producer.read_text())
     approved = json.loads(independent.read_text())
+    if not isinstance(original, dict) or not isinstance(approved, dict):
+        raise ValueError('P26 receipts must be JSON objects')
     if (type(original.get('schema')) is not int or original.get('schema') != 1 or original.get('status') != 'P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK'
             or original.get('signed') is not False or original.get('hardware') != 'NONE'
             or type(approved.get('schema')) is not int or approved.get('schema') != 1 or approved.get('status') != 'P26_INDEPENDENT_FS_READBACK_VERIFIED'
