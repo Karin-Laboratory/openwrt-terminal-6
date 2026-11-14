@@ -8,6 +8,10 @@ on:
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
       - patches/mt6990/0003-air6-check-sgmii-pll-errors.patch
       - tests/test_mt6990_native_subtarget.py
+      - tools/build/pack_p26_rootfs.py
+      - tools/build/verify_p26_independent.py
+      - tests/test_pack_p26_rootfs.py
+      - tests/test_verify_p26_independent.py
       - config/source-catalog.json
       - .github/workflows/mt6990-native-subtarget.yml
 permissions:
@@ -190,7 +194,42 @@ jobs:
           # OpenWrt package/install populates only a staging root directory.
           # Unlike target/install it cannot produce a device boot/flash image.
           # CONFIG_SIGNED_PACKAGES=n prevents package-index signing.
-          make -C "$work/openwrt" -j1 package/install
+          # OpenWrt package ownership must be captured at install time, not
+          # reconstructed by blanket chown after staging. Keep fakeroot's
+          # inode metadata in this ephemeral job for packing and verification.
+          command -v fakeroot >/dev/null || { echo 'P26_BLOCKED_FAKEROOT_UNAVAILABLE' >&2; exit 1; }
+          # The previous native run failed inside package/install with only
+          # OpenWrt's generic make error. Preserve the real first failing
+          # command and stderr in this same run; do not retry a blind build.
+          # OpenWrt invokes host fakeroot inside package/install. Reuse the
+          # outer fakeroot daemon so APK ownership metadata survives for p26.
+          host_fakeroot="$work/openwrt/staging_dir/host/bin/fakeroot"
+          test -x "$host_fakeroot"
+          mv "$host_fakeroot" "$host_fakeroot.original"
+          cat > "$host_fakeroot" <<'FAKEROOT_WRAPPER'
+          #!/bin/sh
+          if [ -n "${FAKEROOTKEY:-}" ]; then
+            # OpenWrt may invoke fakeroot with -i/-s state options. The
+            # outer daemon already owns this metadata, so strip only known
+            # fakeroot options before executing the nested command.
+            while [ "$#" -gt 0 ]; do
+              case "$1" in
+                -i|-s|-b) [ "$#" -ge 2 ] || exit 2; shift 2 ;;
+                -u|-l) shift ;;
+                --) shift; break ;;
+                -*) echo "P26_BLOCKED_FAKEROOT_WRAPPER_UNKNOWN_OPTION: $1" >&2; exit 2 ;;
+                *) break ;;
+              esac
+            done
+            [ "$#" -gt 0 ] || { echo "P26_BLOCKED_FAKEROOT_WRAPPER_NO_COMMAND" >&2; exit 2; }
+            exec "$@"
+          fi
+          exec "${0}.original" "$@"
+          FAKEROOT_WRAPPER
+          chmod 0755 "$host_fakeroot"
+          fakeroot -s "$work/p26-fakeroot.state" -- make -C "$work/openwrt" -j1 V=s package/install
+          mv "$host_fakeroot.original" "$host_fakeroot"
+          test -s "$work/p26-fakeroot.state"
           rootfs="$(find "$work/openwrt/build_dir" -maxdepth 3 \
             -type d -name 'root-mediatek' -print -quit)"
           test -n "$rootfs" && test -d "$rootfs"
@@ -204,7 +243,10 @@ jobs:
           # A generic OpenWrt root password may initially be empty. Lock it
           # in this ephemeral research stage; SSH must not autostart before
           # owner-specific public-key provisioning in a separate process.
-          python3 - "$rootfs/etc/shadow" <<'PY'
+          # Re-enter the saved package/install fakeroot metadata namespace for
+          # the shadow edit. Writing outside fakeroot can replace the inode and
+          # lose the target UID/GID tracked by the package installer.
+          fakeroot -i "$work/p26-fakeroot.state" -s "$work/p26-fakeroot.state" -- python3 - "$rootfs/etc/shadow" <<'PY'
           from pathlib import Path
           import sys
           path = Path(sys.argv[1])
@@ -222,7 +264,13 @@ jobs:
                   found += 1
           if found != 1:
               raise SystemExit("Expected exactly one root shadow record")
-          path.write_text("\n".join(lines) + "\n")
+          # Preserve the installed inode: pathlib.write_text() truncates in place,
+          # but use an explicit descriptor to avoid accidental replacement during
+          # future refactors. Fakeroot metadata is keyed to this inode.
+          with path.open("r+", encoding="utf-8") as handle:
+              handle.seek(0)
+              handle.write("\n".join(lines) + "\n")
+              handle.truncate()
           print("SBAT6_ROOT_PASSWORD_LOCKED_IN_EPHEMERAL_STAGE")
           PY
           find "$rootfs/etc/rc.d" -maxdepth 1 -name '*dropbear*' \
@@ -252,6 +300,73 @@ jobs:
           test -s "$work/sbat6-rootfs-stage.tar.gz"
           sha256sum "$work/sbat6-rootfs-stage.tar.gz"
           echo 'PUBLIC_MT6990_NONINSTALLABLE_ROOTFS_STAGE_BUILD_PASS'
+          # Same-run provenance is generated from the actual installed APK database.
+          # This is a private intermediate receipt, not proof of p26 manufacture.
+          python3 - "$rootfs" "$work" "$pin" <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import sys
+          root, work, pin = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+          database = root / "lib/apk/db/installed"
+          if not database.is_file() or database.is_symlink():
+              raise SystemExit("P26_BLOCKED_REAL_INSTALLED_PACKAGE_DB_MISSING")
+          raw = database.read_bytes()
+          if not raw:
+              raise SystemExit("P26_BLOCKED_EMPTY_INSTALLED_PACKAGE_DB")
+          packages = sorted(set(
+              line[2:].strip() for line in raw.decode("utf-8").splitlines()
+              if line.startswith("P:") and line[2:].strip()
+          ))
+          required = {"base-files", "busybox", "procd", "ubus", "uci",
+                      "netifd", "dropbear"}
+          if not required.issubset(packages):
+              raise SystemExit("P26_BLOCKED_INSTALLED_PACKAGE_INVENTORY_INCOMPLETE:"
+                               + ",".join(sorted(required - set(packages))))
+          record = {
+              "openwrt_commit": pin,
+              "source_built": True,
+              "package_install": True,
+              "packages": packages,
+              "feeds": {},
+              "installed_db_sha256": hashlib.sha256(raw).hexdigest(),
+              "workflow_checkout_sha": __import__("os").environ["GITHUB_SHA"],
+              "provenance_scope": "SAME_RUN_EPHEMERAL_NATIVE_PACKAGE_INSTALL",
+          }
+          (work / "p26-source-receipt.json").write_text(
+              json.dumps(record, sort_keys=True, indent=2) + "\n")
+          print("P26_SAME_RUN_PACKAGE_INSTALL_RECEIPT_READY",
+                len(packages), record["installed_db_sha256"])
+          PY
+          # Produce an ephemeral real p26 from THIS job's actual package/install
+          # root, then independently read back its full 128 MiB and filesystem.
+          # No Actions artifact, cache, release, signing, or device interaction.
+          # Extract Ubuntu's packaged squashfs-tools without root privileges.
+          # Reuse native tools if present; keep all binaries inside this job.
+          if ! command -v mksquashfs >/dev/null || ! command -v unsquashfs >/dev/null; then
+            mkdir -p "$work/squashfs-deb" "$work/squashfs-tools"
+            (cd "$work/squashfs-deb" && apt download squashfs-tools)
+            deb="$(find "$work/squashfs-deb" -maxdepth 1 -name 'squashfs-tools_*.deb' -print -quit)"
+            test -n "$deb" && test -s "$deb"
+            dpkg-deb -x "$deb" "$work/squashfs-tools"
+            export PATH="$work/squashfs-tools/usr/bin:$PATH"
+          fi
+          command -v mksquashfs
+          command -v unsquashfs
+          test -x "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py" || \
+            test -f "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py"
+          install -d -m 0700 "$work/private-p26"
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 "$GITHUB_WORKSPACE/tools/build/pack_p26_rootfs.py" \
+            --rootfs "$rootfs" \
+            --source-receipt "$work/p26-source-receipt.json" \
+            --output "$work/private-p26/packed"
+          test "$(stat -c %s "$work/private-p26/packed/rootfs_a.p26")" -eq 134217728
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 "$GITHUB_WORKSPACE/tools/build/verify_p26_independent.py" \
+            --rootfs "$rootfs" \
+            --p26 "$work/private-p26/packed/rootfs_a.p26" \
+            --squashfs "$work/private-p26/packed/rootfs.squashfs"
+          echo 'PUBLIC_MT6990_REAL_SOURCE_BUILT_P26_INDEPENDENT_READBACK_PASS'
+          echo 'LIMIT: ephemeral unsigned p26 only; no physical boot, Wi-Fi, signing or distribution'
           # Build an external diagnostic PID1 cpio with the SAME pinned
           # OpenWrt cross-toolchain as the native MT6990 kernel Image.
           # It is not a procd boot test or a device-installable image.
