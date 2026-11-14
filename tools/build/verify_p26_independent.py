@@ -128,6 +128,8 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
             or type(record.get("schema")) is not int
             or type(record.get("partition_bytes")) is not int
             or type(record.get("squashfs_bytes")) is not int
+            or type(record.get("signed")) is not bool
+            or type(record.get("public_binary")) is not bool
             or any(record.get(k) != v for k, v in required.items())):
         raise ValueError("ATTEST_PRODUCER_SCOPE")
     if (record.get("p26_sha256") != verified_sha
