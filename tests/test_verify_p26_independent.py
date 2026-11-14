@@ -158,6 +158,9 @@ class IndependentP26Tests(unittest.TestCase):
             with self.assertRaisesRegex(OSError, "directory fsync failure"):
                 mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
         self.assertFalse(output.exists())
+        # Two syncs for the successful attempt, then file sync,
+        # failed directory sync and rollback directory sync.
+        self.assertEqual(len(calls), 5)
 
     def test_partition_size_rejected(self):
         self.p26.write_bytes(b"short")
