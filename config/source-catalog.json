@@ -373,6 +373,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_make_p26_hash.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "03ab68ad1e148db7a7ae01583904af144bbbe567",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_minimal_arm64_initramfs.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -490,6 +499,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/air6-rescue-qemu-v0.3/n-unit-split-qemu.sh",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "aeb039356e0c1fbf0a36933b9297555474bd6de3",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/board/check_air6_compiled_scope.py",
       "component": "board-dt",
       "origin": "independent-original",
@@ -549,6 +567,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "a3225a2d3500b3c581c53d551f4d0dabca4f52bf",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/make_p26_hash.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "e00b2f35776a70430d5ac33099f5d3601f333169",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -639,6 +666,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "80cec57e94d5d6fddde244329374e20d69778540",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/qa/test_onboarding_contract.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "0a05c9b6cbe343e586a6c15f4253ae2c55d12b6e",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
