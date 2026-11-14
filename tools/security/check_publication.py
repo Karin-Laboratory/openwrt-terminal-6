@@ -196,6 +196,30 @@ def current_findings(findings: set) -> int:
         scanned += 1
     return scanned
 
+def audit_error_code(exc: Exception) -> str:
+    """Classify history audit failures without exposing ref names or file data."""
+    if isinstance(exc, subprocess.CalledProcessError):
+        return "GIT_COMMAND_FAILED"
+    if isinstance(exc, OSError):
+        return "GIT_IO_ERROR"
+    reason = str(exc)
+    if "shallow clone" in reason:
+        return "SHALLOW_CLONE_FETCH_FULL_HISTORY"
+    if "replace ref" in reason:
+        return "REPLACE_REF_UNSUPPORTED"
+    if "non-commit Git ref" in reason:
+        return "NON_COMMIT_REF_UNSUPPORTED"
+    if "commit safety limit" in reason:
+        return "TOO_MANY_COMMITS"
+    if "Git refs changed" in reason:
+        return "REFS_CHANGED_DURING_SCAN"
+    if "duplicate Git ref" in reason:
+        return "DUPLICATE_REF_METADATA"
+    if "malformed" in reason:
+        return "MALFORMED_GIT_METADATA"
+    return "UNKNOWN_AUDIT_ERROR"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--history", action="store_true")
@@ -204,7 +228,7 @@ def main() -> int:
     try:
         scanned = history_findings(findings) if args.history else current_findings(findings)
     except (subprocess.CalledProcessError, ValueError, OSError) as exc:
-        print(f"BLOCKED: unable to complete Git audit ({type(exc).__name__})", file=sys.stderr)
+        print(f"BLOCKED: unable to complete Git audit ({audit_error_code(exc)})", file=sys.stderr)
         return 2
     for path, category in sorted(findings):
         # repr escapes control characters in paths; matched secret values are never shown.
