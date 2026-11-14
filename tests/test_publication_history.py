@@ -171,6 +171,20 @@ class HistoryScannerTests(unittest.TestCase):
                             for path, category in issues), issues)
         self.assertNotIn(fake_name, repr(issues))
 
+    def test_error_diagnostics_are_safe_and_fail_closed(self):
+        self.assertEqual(
+            gate.audit_error_code(ValueError("shallow clone: cannot certify reachable history")),
+            "SHALLOW_CLONE_FETCH_FULL_HISTORY",
+        )
+        self.assertEqual(
+            gate.audit_error_code(ValueError("non-commit Git ref: history cannot be certified")),
+            "NON_COMMIT_REF_UNSUPPORTED",
+        )
+        self.assertEqual(
+            gate.audit_error_code(ValueError("unknown unsafe /private/path token")),
+            "UNKNOWN_AUDIT_ERROR",
+        )
+
     def test_benign_history_stays_clean(self):
         (self.root / "first.txt").write_text("hello\n")
         self.commit("first safe document")
