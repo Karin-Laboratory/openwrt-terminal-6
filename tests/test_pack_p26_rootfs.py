@@ -305,6 +305,20 @@ class P26PackerTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "PINNED_FEEDS_RECEIPT_REQUIRED"):
                         mod.produce(root, base / "out", receipt)
 
+    def test_non_object_source_receipt_rejected_before_tree_checks(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            root = base / "stage"
+            root.mkdir()
+            self.make_root(root)
+            receipt = base / "source.json"
+            for value in ([], None, "text", 42, True):
+                receipt.write_text(json.dumps(value))
+                with self.subTest(value=value):
+                    with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_NOT_OBJECT"):
+                        mod.produce(root, base / "out", receipt)
+
     def test_output_requires_verified_source_receipt(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
