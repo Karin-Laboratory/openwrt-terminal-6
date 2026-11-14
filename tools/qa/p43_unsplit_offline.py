@@ -12,7 +12,8 @@ from pathlib import Path
 
 REQUIRED = ("disk_sectors", "logical_sector_bytes", "gpt_primary_valid",
             "gpt_backup_valid", "p43", "p44_present", "p43_mounted",
-            "journal_clean", "backup_verified", "recovery_route_verified")
+            "journal_clean", "backup_verified", "recovery_route_verified",
+            "ssh_state_on_p43", "source_evidence_level", "last_usable_lba")
 MAX_JSON_BYTES = 65536
 
 def positive_int(value):
@@ -21,19 +22,22 @@ def positive_int(value):
 def inspect(d):
     reasons = []
     if not isinstance(d, dict):
-        return {"status": "BLOCKED_STORAGE_EVIDENCE", "reasons": ["INVALID_INPUT"]}
+        return {"status": "BLOCKED_STORAGE_EVIDENCE", "reasons": ["INVALID_INPUT"], "device_success": False, "writes_performed": False}
     for name in REQUIRED:
         if name not in d:
             reasons.append("MISSING_" + name.upper())
     if reasons:
-        return {"status": "BLOCKED_STORAGE_EVIDENCE", "reasons": reasons}
+        return {"status": "BLOCKED_STORAGE_EVIDENCE", "reasons": reasons, "device_success": False, "writes_performed": False}
     disk = d["disk_sectors"]
     sector_bytes = d["logical_sector_bytes"]
+    last_usable = d["last_usable_lba"]
+    if not positive_int(disk) or sector_bytes not in (512, 4096) or not positive_int(last_usable) or last_usable >= disk:
+        reasons.append("INVALID_GPT_USABLE_RANGE")
     if not positive_int(disk) or sector_bytes not in (512, 4096):
         reasons.append("INVALID_DISK_GEOMETRY")
     for name in ("gpt_primary_valid", "gpt_backup_valid", "p44_present",
                  "p43_mounted", "journal_clean", "backup_verified",
-                 "recovery_route_verified"):
+                 "recovery_route_verified", "ssh_state_on_p43"):
         if type(d[name]) is not bool:
             reasons.append("INVALID_" + name.upper())
     p = d["p43"]
@@ -41,12 +45,12 @@ def inspect(d):
                     "ext4_used_blocks", "ext4_minimum_blocks", "candidate_target_mib",
                     "safety_margin_mib")
     if not isinstance(p, dict):
-        return {"status": "BLOCKED_STORAGE_EVIDENCE", "reasons": reasons+["INVALID_P43"]}
+        return {"status": "BLOCKED_STORAGE_EVIDENCE", "reasons": reasons+["INVALID_P43"], "device_success": False, "writes_performed": False}
     for name in required_p43:
         if name not in p:
             reasons.append("MISSING_P43_" + name.upper())
     if reasons:
-        return {"status": "BLOCKED_STORAGE_EVIDENCE", "reasons": sorted(set(reasons))}
+        return {"status": "BLOCKED_STORAGE_EVIDENCE", "reasons": sorted(set(reasons)), "device_success": False, "writes_performed": False}
     for name in required_p43:
         if not positive_int(p[name]):
             reasons.append("INVALID_P43_" + name.upper())
@@ -54,6 +58,8 @@ def inspect(d):
         return {"status": "BLOCKED_STORAGE_EVIDENCE", "reasons": sorted(set(reasons))}
     if p["start_lba"] > p["end_lba"] or p["end_lba"] >= disk:
         reasons.append("P43_OUTSIDE_DISK")
+    if positive_int(last_usable) and (p["start_lba"] > last_usable or p["end_lba"] > last_usable):
+        reasons.append("P43_OUTSIDE_GPT_USABLE_RANGE")
     if p["ext4_block_bytes"] not in (1024, 2048, 4096, 8192, 16384, 32768, 65536):
         reasons.append("UNKNOWN_EXT4_BLOCK_SIZE")
     if not (p["ext4_used_blocks"] <= p["ext4_total_blocks"] and
@@ -77,9 +83,9 @@ def inspect(d):
         reasons.append("BLOCKED_RECOVERY")
     if d["p44_present"]:
         reasons.append("P44_PRESENT_VERIFY_INSTEAD_OF_CREATE")
-    if d.get("ssh_state_on_p43") is True and d.get("ssh_survives_shrink_verified") is not True:
+    if d["ssh_state_on_p43"] is True and d.get("ssh_survives_shrink_verified") is not True:
         reasons.append("BLOCKED_SSH_P43_DEPENDENCY")
-    if d.get("source_evidence_level") != "OBSERVED_LOCAL":
+    if d["source_evidence_level"] != "OBSERVED_LOCAL":
         reasons.append("NO_CURRENT_DEVICE_EVIDENCE")
     return {
         "status": "BLOCKED" if reasons else "INSPECT_ONLY_NO_DEVICE_PASS",
