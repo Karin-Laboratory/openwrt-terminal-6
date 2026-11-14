@@ -15,3 +15,5 @@ python3 tools/qa/p43_unsplit_offline.py --input docs/audits/terminal6-agent-path
 `INSPECT_ONLY_NO_DEVICE_PASS` は入力の自己整合に明らかな問題がないという意味に過ぎません。**S06、S07、S08の実機PASSは意味しません**。ツールはデバイスアクセス、shell実行、fsck、resize、GPT変更、再起動を行いません。
 
 対象S03のLK移行は別途所有者の承認とファームウェア別の独立検証が必要です。生bootctrl値・固定アドレス・秘密情報を記載しないでください。
+
+**更新:** `ssh_state_on_p43` は必須の真偽値で、情報が不明なら**キー欠落のままBLOCKED**にする。`last_usable_lba` は一次・二次GPTから確認した最終使用可能LBAであり、P43がそこを越える入力は拒否する。これらの値を適当に補完してはいけない。検査器が受け付ける値は証跡の正しさを保証せず、実機の読取り専用採取処理は別途必要。
