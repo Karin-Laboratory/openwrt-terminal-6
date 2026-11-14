@@ -20,5 +20,6 @@
   "backup_verified": true,
   "recovery_route_verified": true,
   "source_evidence_level": "SIMULATED_ONLY",
-  "ssh_state_on_p43": false
+  "ssh_state_on_p43": false,
+  "last_usable_lba": 8999966
 }
