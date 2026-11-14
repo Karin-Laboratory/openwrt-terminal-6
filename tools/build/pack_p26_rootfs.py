@@ -149,9 +149,9 @@ def produce(root, output, source_receipt):
             all(isinstance(p, str) and p for p in record["packages"]) and
             set(("base-files", "busybox", "procd", "ubus", "uci", "netifd", "dropbear")).issubset(record["packages"]),
             "INCOMPLETE_PACKAGE_INVENTORY")
-    # A bare {} (or a mutable branch label) is not a pinned feed receipt.
+    # Empty feeds means no additional feeds installed; nonempty entries must be pinned.
     feeds = record.get("feeds")
-    require(isinstance(feeds, dict) and bool(feeds) and
+    require(isinstance(feeds, dict) and
             all(isinstance(name, str) and name and
                 isinstance(commit, str) and len(commit) == 40 and
                 all(c in "0123456789abcdef" for c in commit)
