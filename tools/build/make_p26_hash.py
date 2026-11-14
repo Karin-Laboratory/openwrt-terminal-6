@@ -77,6 +77,13 @@ def create(p26, producer, independent, output):
         if created:
             try:
                 output.unlink(missing_ok=True)
+                # Persist removal too: a failed directory sync must not leave
+                # a plausible hash input after power loss and rollback.
+                rollback_fd = os.open(output.parent, os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0))
+                try:
+                    os.fsync(rollback_fd)
+                finally:
+                    os.close(rollback_fd)
             except OSError as cleanup_error:
                 # Preserve the primary failure even if rollback itself fails.
                 if hasattr(original_error, 'add_note'):
