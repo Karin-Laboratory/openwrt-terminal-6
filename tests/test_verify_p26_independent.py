@@ -98,6 +98,18 @@ class IndependentP26Tests(unittest.TestCase):
             mod.attest(receipt, self.base / "verified.json", self.p26,
                        self.raw, mod.sha(self.p26))
 
+    def test_attestation_rejects_boolean_numeric_receipt_fields(self):
+        for field in ("schema", "partition_bytes", "squashfs_bytes"):
+            with self.subTest(field=field):
+                receipt = self._producer_receipt()
+                doc = json.loads(receipt.read_text())
+                doc[field] = True
+                receipt.write_text(json.dumps(doc))
+                output = self.base / "verified.json"
+                with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_SCOPE"):
+                    mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+                self.assertFalse(output.exists())
+
     def test_partition_size_rejected(self):
         self.p26.write_bytes(b"short")
         with self.assertRaisesRegex(ValueError, "PARTITION_SIZE"):
