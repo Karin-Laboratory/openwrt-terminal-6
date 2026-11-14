@@ -73,3 +73,5 @@
 
 - [09 修正版の再監査](09-reaudit-20261114.ja.md): 修正版 head 28b0f479 を再監査。判定は NOT READY のまま（S02 まで到達、最初の BLOCKED は S03）
 - [11 修正版の再監査（第2回）](11-reaudit2-20261114.ja.md): head 153b04f3。判定は NOT READY のまま（S02 まで到達、最初の BLOCKED は S03）
+
+- [12 第3回再監査の是正](12-reaudit3-remediation.ja.md): CI checkout固定、バックアップGPT境界、証跡の型・必須条件を修正
