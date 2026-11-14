@@ -69,7 +69,7 @@ assert "agent-entry.json" in (ROOT / "AGENT-START.ja.md").read_text(encoding="ut
 import runpy
 inspector = runpy.run_path(str(ROOT / "tools/qa/p43_unsplit_offline.py"))["inspect"]
 fixture = {
-    "disk_sectors": 9000000, "logical_sector_bytes": 512,
+    "disk_sectors": 9000000, "logical_sector_bytes": 512, "last_usable_lba": 8999966,
     "gpt_primary_valid": True, "gpt_backup_valid": True,
     "p43": {"start_lba": 1500000, "end_lba": 7600000,
             "ext4_block_bytes": 4096, "ext4_total_blocks": 750000,
@@ -84,6 +84,15 @@ assert inspector(fixture)["device_success"] is False
 import copy
 bad = copy.deepcopy(fixture); bad["p43"]["candidate_target_mib"] = 100
 assert "BLOCKED_P43_CAPACITY" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); del bad["ssh_state_on_p43"]
+assert inspector(bad)["status"] == "BLOCKED_STORAGE_EVIDENCE"
+assert "MISSING_SSH_STATE_ON_P43" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); del bad["last_usable_lba"]
+assert inspector(bad)["status"] == "BLOCKED_STORAGE_EVIDENCE"
+bad = copy.deepcopy(fixture); bad["last_usable_lba"] = bad["p43"]["end_lba"] - 1
+assert "P43_OUTSIDE_GPT_USABLE_RANGE" in inspector(bad)["reasons"]
+bad = copy.deepcopy(fixture); bad["ssh_state_on_p43"] = None
+assert inspector(bad)["status"] == "BLOCKED_STORAGE_EVIDENCE"
 bad = copy.deepcopy(fixture); bad["p43_mounted"] = True
 assert "BLOCKED_STORAGE" in inspector(bad)["reasons"]
 bad = copy.deepcopy(fixture); bad["journal_clean"] = False
