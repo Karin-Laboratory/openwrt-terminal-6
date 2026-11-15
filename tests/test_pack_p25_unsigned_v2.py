@@ -219,6 +219,15 @@ class TestP25BootV2(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "DTB_MAGIC"):
             self.build()
 
+    def test_rejects_duplicate_json_config_keys(self):
+        # JSON parsers normally keep the last value, making review ambiguous.
+        original = self.cfg.read_text()
+        self.cfg.write_text(original[:-1] + ', "page_size": 4096}')
+        with self.assertRaisesRegex(ValueError, "DUPLICATE_CONFIG_KEY"):
+            self.build()
+        self.assertFalse(self.output.exists())
+        self.assertFalse(self.output.with_name(self.output.name + ".json").exists())
+
     def test_rejects_unconfigured_hardware_values(self):
         self.cfg.write_text("{}")
         with self.assertRaisesRegex(ValueError, "CONFIG_KEYS"):
