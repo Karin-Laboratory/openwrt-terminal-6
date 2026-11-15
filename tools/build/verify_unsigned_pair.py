@@ -151,7 +151,8 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # Do not overwrite stale pair evidence.
     created = False
     try:
-        with out.open("x", encoding="utf-8") as stream:
+        with os.fdopen(os.open(out, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600),
+                       "w", encoding="utf-8") as stream:
             created = True
             json.dump(receipt, stream, indent=2, sort_keys=True)
             stream.write("\n")
