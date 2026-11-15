@@ -145,11 +145,13 @@
       ],
       "required_evidence": [
         "LK prompt and version/context logged without secrets",
-        "console distinguished from Linux"
+        "console distinguished from Linux",
+        "If LK ] prompt appears, capture whether console remains interactive; external-owner example: x then Enter enabled interaction, but not a universal instruction"
       ],
       "stop_conditions": [
         "Unexpected console",
-        "inability to identify LK"
+        "inability to identify LK",
+        "LK prompt timed out before identification; do not assume x is universally safe without identifying LK context"
       ],
       "when_unresolved": "collect safe observations, explain uncertainty, propose tested plan; never claim PASS",
       "states": [
@@ -174,12 +176,14 @@
         "uname -m aarch64 observed",
         "cmdline indicates slot b",
         "PID 1 sh and init=/bin/sh confirmed",
-        "no ambiguity with OpenWrt"
+        "no ambiguity with OpenWrt",
+        "In init=/bin/sh Emergency Linux, if /proc/cmdline is absent inspect /proc mount; mount procfs only after shell identification, then verify bootslot and PID1"
       ],
       "stop_conditions": [
         "Slot not b",
         "wrong PID1",
-        "unknown kernel boot path"
+        "unknown kernel boot path",
+        "Emergency Shell reached but bootslot B not independently verified (external report confirmed root shell but normal boot was slot A)"
       ],
       "when_unresolved": "collect safe observations, explain uncertainty, propose tested plan; never claim PASS",
       "states": [
@@ -385,5 +389,20 @@
       "raw unsanitized UART logs",
       "disk GUIDs tied to individuals"
     ]
-  }
+  },
+  "field_reports": [
+    {
+      "id": "external-lk-procfs-20261115",
+      "source": "docs/STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md",
+      "evidence_level": "KNOWN_HISTORICAL",
+      "observed": "External owner reported LK ] -> x Enter preserved interaction, then temporary root shell on Linux 5.4.238; /proc/cmdline initially absent.",
+      "status": "S02/S03_PARTIAL_ONLY",
+      "limitations": [
+        "No independent confirmation of bootslot B in Emergency Shell",
+        "An ordinary boot log showed bootslot=a and PID1=procd",
+        "No stock SSH persistence or P43/P44 mutation demonstrated"
+      ],
+      "do_not_generalize": true
+    }
+  ]
 }
