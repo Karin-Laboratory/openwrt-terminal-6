@@ -205,19 +205,28 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
             os.fsync(directory_fd)
         finally:
             os.close(directory_fd)
-    except BaseException:
-        if receipt_created:
-            receipt_path.unlink(missing_ok=True)
-        if image_created:
-            output.unlink(missing_ok=True)
-        # Persist the removal of both failed outputs as well as their creation.
-        # Without this sync, a crash can resurrect an incomplete image/receipt.
+    except BaseException as original_error:
+        # Cleanup is best-effort: a rollback failure must never hide the
+        # manufacture failure that caused us to enter this handler.
+        cleanup_errors = []
+        for created, path in ((receipt_created, receipt_path),
+                              (image_created, output)):
+            if created:
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError as exc:
+                    cleanup_errors.append(exc)
         if image_created or receipt_created:
-            cleanup_fd = os.open(output.parent, os.O_RDONLY | os.O_DIRECTORY)
             try:
-                os.fsync(cleanup_fd)
-            finally:
-                os.close(cleanup_fd)
+                cleanup_fd = os.open(output.parent, os.O_RDONLY | os.O_DIRECTORY)
+                try:
+                    os.fsync(cleanup_fd)
+                finally:
+                    os.close(cleanup_fd)
+            except OSError as exc:
+                cleanup_errors.append(exc)
+        for exc in cleanup_errors:
+            original_error.add_note("P25 rollback cleanup failed: " + repr(exc))
         raise
     return receipt
 
