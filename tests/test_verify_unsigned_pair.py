@@ -130,6 +130,25 @@ class PairTests(unittest.TestCase):
                 self.run_pair()
         self.assertFalse(self.out.exists())
 
+    def test_producer_path_swap_does_not_change_validated_receipt_hash(self):
+        # The producer file is replaced after parsing, but the independent
+        # receipt must be checked against the originally validated bytes.
+        original_bytes = self.producer.read_bytes()
+        original_read = pair.read_receipt
+
+        def swap_after_read(path):
+            result = original_read(path)
+            if path == self.producer:
+                self.producer.write_bytes(b'{"replacement": true}')
+            return result
+
+        with patch.object(pair, "read_receipt", side_effect=swap_after_read):
+            evidence = self.run_pair()
+        self.assertEqual(evidence["p26_sha256"], pair.digest(self.p26))
+        self.assertEqual(json.loads(self.out.read_text())["p26_sha256"],
+                         pair.digest(self.p26))
+        self.assertNotEqual(self.producer.read_bytes(), original_bytes)
+
     def test_mismatched_initramfs_p26_hash_rejected(self):
         self.cpio.write_bytes(b"newc" + b"0" * 64 + b"  /dev/mmcblk0p26")
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
