@@ -95,6 +95,22 @@ class TestP25BootV2(unittest.TestCase):
         self.assertFalse(self.output.exists())
         self.assertEqual(receipt_path.read_text(), "existing evidence")
 
+    def test_concurrent_receipt_creation_is_preserved(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        real_open = p25.os.open
+        marker = "concurrent producer evidence"
+
+        def competing_receipt(path, flags, *args, **kwargs):
+            if str(path) == str(receipt_path):
+                receipt_path.write_text(marker)
+            return real_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(p25.os, "open", side_effect=competing_receipt):
+            with self.assertRaises(FileExistsError):
+                self.build()
+        self.assertFalse(self.output.exists())
+        self.assertEqual(receipt_path.read_text(), marker)
+
     def test_image_sync_failure_removes_partial_image(self):
         receipt_path = self.output.with_name(self.output.name + ".json")
         with mock.patch.object(p25.os, "fsync",
