@@ -79,6 +79,19 @@ class IndependentP26Tests(unittest.TestCase):
                        self.raw, verified_sha)
         self.assertFalse((self.base / "verified.json").exists())
 
+    def test_attestation_rejects_changed_squashfs_since_readback(self):
+        receipt = self._producer_receipt()
+        checked = mod.sha(self.p26)
+        # Preserve partition bytes but mutate the independent SquashFS input.
+        self.raw.write_bytes(b"changed" + self.raw.read_bytes()[7:])
+        doc = json.loads(receipt.read_text())
+        doc["squashfs_sha256"] = mod.sha(self.raw)
+        receipt.write_text(json.dumps(doc))
+        output = self.base / "verified.json"
+        with self.assertRaisesRegex(ValueError, "ATTEST_SQUASHFS_CHANGED_AFTER_VERIFY"):
+            mod.attest(receipt, output, self.p26, self.raw, checked)
+        self.assertFalse(output.exists())
+
     def test_attestation_rejects_producer_hash_mismatch(self):
         receipt = self._producer_receipt()
         doc = json.loads(receipt.read_text())
