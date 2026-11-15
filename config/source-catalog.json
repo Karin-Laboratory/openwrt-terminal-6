@@ -458,7 +458,7 @@
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "d5124d270859670274123e617f212e3277ac55ec",
+      "git_blob_sha1": "a1d6380990bb660ac9d44a38ae4ea6f8b0121c92",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -719,7 +719,7 @@
       "component": "ab-recovery",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "6283575212c0741e0f7c9565a66a908358acceaa",
+      "git_blob_sha1": "818699e3049147ceabf1d81e2705f61e92cc6317",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
