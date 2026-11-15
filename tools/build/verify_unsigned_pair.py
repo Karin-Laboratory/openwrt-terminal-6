@@ -119,10 +119,13 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # early boot code ran on hardware.
     bound = (p26_hash + "  /dev/mmcblk0p26").encode("ascii")
     require(cpio.read_bytes().count(bound) == 1, "P26_INITRAMFS_SHA_BINDING")
-    require(original.get("squashfs_sha256") ==
+    require(type(original.get("squashfs_bytes")) is int and
+            type(approved.get("squashfs_bytes")) is int and
+            0 < original["squashfs_bytes"] < P26_BYTES and
+            original.get("squashfs_sha256") ==
             approved.get("squashfs_sha256") and
-            original.get("squashfs_bytes") ==
-            approved.get("squashfs_bytes"), "P26_SQUASHFS_IDENTITY")
+            original["squashfs_bytes"] ==
+            approved["squashfs_bytes"], "P26_SQUASHFS_IDENTITY")
     receipt = {
         "schema": 1, "status": "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED",
         "p25_sha256": p25_result["p25_sha256"],
