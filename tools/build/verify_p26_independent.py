@@ -36,7 +36,13 @@ def inventory(root):
     result["."] = ("dir", "", stat.S_IMODE(root_stat.st_mode),
                    root_stat.st_uid, root_stat.st_gid, root_attrs)
     hardlink_groups = {}
-    for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
+    # os.walk silently skips unreadable subtrees unless onerror is supplied.
+    # An incomplete inventory must never be accepted as a verified rootfs.
+    def fail_walk(error):
+        raise ValueError("TREE_WALK_FAILED") from error
+
+    for base, dirs, files in os.walk(root, topdown=True, followlinks=False,
+                                     onerror=fail_walk):
         for name in dirs + files:
             p = Path(base) / name
             rel = p.relative_to(root).as_posix()
