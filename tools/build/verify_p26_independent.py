@@ -140,6 +140,11 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
             or type(record.get("public_binary")) is not bool
             or any(record.get(k) != v for k, v in required.items())):
         raise ValueError("ATTEST_PRODUCER_SCOPE")
+    # verify() required a nonempty SquashFS smaller than the partition.
+    # Recheck here: the input may have been truncated or grown since verify().
+    raw_size = raw.stat().st_size
+    if not 0 < raw_size < SIZE:
+        raise ValueError("ATTEST_SQUASHFS_SIZE_CHANGED_AFTER_VERIFY")
     # The SquashFS input can change after verify() and before this receipt.
     # Recheck its complete byte identity against the already verified partition.
     with raw.open("rb") as source, p26.open("rb") as partition:
