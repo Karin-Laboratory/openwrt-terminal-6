@@ -286,6 +286,19 @@ class PairTests(unittest.TestCase):
         self.producer.write_text(original)
         self.update_independent()
 
+    def test_malformed_p25_verifier_result_rejected(self):
+        for result in (None, [], True, {}, {"partition_bytes": 64},
+                       {"partition_bytes": True, "p25_sha256": pair.digest(self.p25)}):
+            with self.subTest(result=result):
+                with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
+                    pair.verify_pair(
+                        self.p25, *self.parts, self.p26, self.producer,
+                        self.independent, self.cpio, self.initramfs_object,
+                        self.vmlinux, self.image, self.out,
+                        p25_verify=lambda *args: result,
+                        initramfs_verify=self.fake_initramfs)
+                self.assertFalse(self.out.exists())
+
     def test_p25_identity_rejected(self):
         with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
             pair.verify_pair(self.p25, *self.parts, self.p26, self.producer,
