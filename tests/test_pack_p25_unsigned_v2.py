@@ -229,6 +229,19 @@ class TestP25BootV2(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_REQUIRED"):
             self.build()
 
+    def test_rejects_gzip_expansion_beyond_limit(self):
+        image = bytearray(128 * 1024 * 1024 + 1)
+        image[56:60] = b"ARM\\x64"
+        self.kernel.write_bytes(gzip.compress(bytes(image), compresslevel=9, mtime=0))
+        with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_TOO_LARGE_OR_INCOMPLETE"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
+    def test_rejects_trailing_gzip_data(self):
+        self.kernel.write_bytes(self.kernel.read_bytes() + b"trailing")
+        with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_TRAILING_DATA"):
+            self.build()
+
     def test_rejects_malformed_dtb(self):
         self.dtb.write_bytes(b"not a device tree")
         with self.assertRaisesRegex(ValueError, "DTB_MAGIC"):
