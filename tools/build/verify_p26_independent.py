@@ -120,7 +120,15 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     # modification cannot inherit an obsolete verified_sha from the caller.
     if p26.stat().st_size != SIZE or sha(p26) != verified_sha:
         raise ValueError("ATTEST_P26_CHANGED_AFTER_VERIFY")
-    record = json.loads(producer_receipt.read_text())
+    def reject_duplicate_keys(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("ATTEST_PRODUCER_DUPLICATE_JSON_KEY")
+            result[key] = value
+        return result
+
+    record = json.loads(producer_receipt.read_text(), object_pairs_hook=reject_duplicate_keys)
     required = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
                 "partition_bytes": SIZE, "signed": False,
                 "hardware": "NONE", "public_binary": False}
