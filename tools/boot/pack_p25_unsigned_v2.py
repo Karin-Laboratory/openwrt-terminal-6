@@ -210,6 +210,14 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
             receipt_path.unlink(missing_ok=True)
         if image_created:
             output.unlink(missing_ok=True)
+        # Persist the removal of both failed outputs as well as their creation.
+        # Without this sync, a crash can resurrect an incomplete image/receipt.
+        if image_created or receipt_created:
+            cleanup_fd = os.open(output.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(cleanup_fd)
+            finally:
+                os.close(cleanup_fd)
         raise
     return receipt
 
