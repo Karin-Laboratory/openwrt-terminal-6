@@ -93,6 +93,14 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     init_check = initramfs_verify or initramfs_verifier().verify
     initramfs_result = init_check(initramfs_object, vmlinux, image, kernel,
                                   cpio, "xz")
+    require(isinstance(initramfs_result, dict) and
+            initramfs_result.get("status") ==
+            "ARM64_KERNEL_INITRAMFS_OBJECT_AND_IMAGE_VERIFIED" and
+            initramfs_result.get("compression") == "xz" and
+            initramfs_result.get("cpio_sha256") == digest(cpio) and
+            initramfs_result.get("kernel_image_sha256") == digest(image) and
+            initramfs_result.get("kernel_gzip_sha256") == digest(kernel),
+            "INITRAMFS_ATTESTATION_IDENTITY")
     original, producer_hash = read_receipt(producer)
     approved, independent_hash = read_receipt(independent)
     require(isinstance(original, dict), "P26_PRODUCER_NOT_OBJECT")
