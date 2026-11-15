@@ -3,6 +3,7 @@ import gzip
 import hashlib
 import importlib.util
 import json
+from unittest import mock
 from pathlib import Path
 import struct
 import tempfile
@@ -83,6 +84,30 @@ class TestP25BootV2(unittest.TestCase):
             self.build()
         self.assertFalse(self.output.exists())
         self.assertEqual(receipt_path.read_text(), "existing evidence")
+
+    def test_receipt_sync_failure_removes_both_outputs(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        original_fsync = p25.os.fsync
+        calls = 0
+
+        def fail_second_sync(fd):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError("synthetic receipt sync failure")
+            return original_fsync(fd)
+
+        with mock.patch.object(p25.os, "fsync", side_effect=fail_second_sync):
+            with self.assertRaisesRegex(OSError, "synthetic receipt sync failure"):
+                self.build()
+        self.assertEqual(calls, 2)
+        self.assertFalse(self.output.exists())
+        self.assertFalse(receipt_path.exists())
+        self.assertEqual(self.verify_after_failure_paths(), (False, False))
+
+    def verify_after_failure_paths(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        return self.output.exists(), receipt_path.exists()
 
     def test_independent_full_readback_rejects_nonzero_tail(self):
         self.build()
