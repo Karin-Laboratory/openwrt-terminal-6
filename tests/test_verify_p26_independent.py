@@ -304,6 +304,14 @@ class IndependentP26Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
                 mod.verify(self.root, self.p26, self.raw)
 
+    def test_hardlink_outside_staging_tree_rejected(self):
+        # An external inode alias is not part of the staged filesystem and
+        # cannot be faithfully represented by the SquashFS image.
+        outside = self.base / "outside"
+        outside.hardlink_to(self.root / "etc" / "test")
+        with self.assertRaisesRegex(ValueError, "HARDLINK_OUTSIDE_TREE"):
+            mod.inventory(self.root)
+
     def test_hardlink_relationship_mismatch_rejected(self):
         # Same bytes and permissions are insufficient when the image silently
         # turns two hardlinked files into independent regular files.
