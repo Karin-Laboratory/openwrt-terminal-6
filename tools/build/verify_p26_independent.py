@@ -120,7 +120,15 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     # modification cannot inherit an obsolete verified_sha from the caller.
     if p26.stat().st_size != SIZE or sha(p26) != verified_sha:
         raise ValueError("ATTEST_P26_CHANGED_AFTER_VERIFY")
-    record = json.loads(producer_receipt.read_text())
+    def reject_duplicate_keys(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("ATTEST_PRODUCER_DUPLICATE_JSON_KEY")
+            result[key] = value
+        return result
+
+    record = json.loads(producer_receipt.read_text(), object_pairs_hook=reject_duplicate_keys)
     required = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
                 "partition_bytes": SIZE, "signed": False,
                 "hardware": "NONE", "public_binary": False}
@@ -128,8 +136,16 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
             or type(record.get("schema")) is not int
             or type(record.get("partition_bytes")) is not int
             or type(record.get("squashfs_bytes")) is not int
+            or type(record.get("signed")) is not bool
+            or type(record.get("public_binary")) is not bool
             or any(record.get(k) != v for k, v in required.items())):
         raise ValueError("ATTEST_PRODUCER_SCOPE")
+    # The SquashFS input can change after verify() and before this receipt.
+    # Recheck its complete byte identity against the already verified partition.
+    with raw.open("rb") as source, p26.open("rb") as partition:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            if partition.read(len(block)) != block:
+                raise ValueError("ATTEST_SQUASHFS_CHANGED_AFTER_VERIFY")
     if (record.get("p26_sha256") != verified_sha
             or record.get("squashfs_sha256") != sha(raw)
             or record.get("squashfs_bytes") != raw.stat().st_size
@@ -150,8 +166,10 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     }
     # Exclusive creation prevents a stale or previously attested result from
     # silently surviving a later changed p26 producer run.
+    created = False
     try:
         with attestation.open("x", encoding="utf-8") as f:
+            created = True
             json.dump(evidence, f, sort_keys=True, indent=2)
             f.write("\n")
             f.flush()
@@ -167,7 +185,16 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
         # A failed write must never leave a truncated file looking like an
         # independent attestation. Do not mask the original failure.
         try:
+            if not created:
+                raise
             attestation.unlink(missing_ok=True)
+            # Make rollback durable too: a crash must not resurrect a
+            # partially written attestation directory entry.
+            rollback_fd = os.open(attestation.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(rollback_fd)
+            finally:
+                os.close(rollback_fd)
         except OSError:
             pass
         raise

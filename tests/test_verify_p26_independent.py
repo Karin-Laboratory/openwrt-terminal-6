@@ -79,6 +79,19 @@ class IndependentP26Tests(unittest.TestCase):
                        self.raw, verified_sha)
         self.assertFalse((self.base / "verified.json").exists())
 
+    def test_attestation_rejects_changed_squashfs_since_readback(self):
+        receipt = self._producer_receipt()
+        checked = mod.sha(self.p26)
+        # Preserve partition bytes but mutate the independent SquashFS input.
+        self.raw.write_bytes(b"changed" + self.raw.read_bytes()[7:])
+        doc = json.loads(receipt.read_text())
+        doc["squashfs_sha256"] = mod.sha(self.raw)
+        receipt.write_text(json.dumps(doc))
+        output = self.base / "verified.json"
+        with self.assertRaisesRegex(ValueError, "ATTEST_SQUASHFS_CHANGED_AFTER_VERIFY"):
+            mod.attest(receipt, output, self.p26, self.raw, checked)
+        self.assertFalse(output.exists())
+
     def test_attestation_rejects_producer_hash_mismatch(self):
         receipt = self._producer_receipt()
         doc = json.loads(receipt.read_text())
@@ -109,6 +122,47 @@ class IndependentP26Tests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_SCOPE"):
                     mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
                 self.assertFalse(output.exists())
+
+    def test_attestation_rejects_duplicate_producer_json_keys(self):
+        receipt = self._producer_receipt()
+        original = receipt.read_text()
+        receipt.write_text(original.replace('"schema": 1', '"schema": 1, "schema": 1', 1))
+        output = self.base / "verified.json"
+        with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_DUPLICATE_JSON_KEY"):
+            mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertFalse(output.exists())
+
+    def test_attestation_rejects_integer_boolean_scope_fields(self):
+        # JSON integer zero compares equal to False in Python, but is not a
+        # valid boolean assertion about signing or public distribution.
+        for field in ("signed", "public_binary"):
+            with self.subTest(field=field):
+                receipt = self._producer_receipt()
+                doc = json.loads(receipt.read_text())
+                doc[field] = 0
+                receipt.write_text(json.dumps(doc))
+                output = self.base / "verified.json"
+                with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_SCOPE"):
+                    mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+                self.assertFalse(output.exists())
+
+    def test_exclusive_creation_race_preserves_existing_receipt(self):
+        # Another writer can create the output after the initial existence
+        # check. A failed exclusive open must never delete its file.
+        receipt = self._producer_receipt()
+        output = self.base / "verified.json"
+        original_open = Path.open
+
+        def raced_open(path, *args, **kwargs):
+            if path == output and args and args[0] == "x":
+                output.write_bytes(b"another-writer")
+                raise FileExistsError("exclusive creation lost race")
+            return original_open(path, *args, **kwargs)
+
+        with patch.object(Path, "open", autospec=True, side_effect=raced_open):
+            with self.assertRaises(FileExistsError):
+                mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertEqual(output.read_bytes(), b"another-writer")
 
     def test_attestation_write_failure_removes_partial_receipt(self):
         receipt = self._producer_receipt()
@@ -144,6 +198,9 @@ class IndependentP26Tests(unittest.TestCase):
             with self.assertRaisesRegex(OSError, "directory fsync failure"):
                 mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
         self.assertFalse(output.exists())
+        # Two syncs for the successful attempt, then file sync,
+        # failed directory sync and rollback directory sync.
+        self.assertEqual(len(calls), 5)
 
     def test_partition_size_rejected(self):
         self.p26.write_bytes(b"short")
