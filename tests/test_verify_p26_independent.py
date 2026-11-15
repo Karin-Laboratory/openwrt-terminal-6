@@ -92,6 +92,38 @@ class IndependentP26Tests(unittest.TestCase):
             mod.attest(receipt, output, self.p26, self.raw, checked)
         self.assertFalse(output.exists())
 
+    def test_attestation_rejects_empty_or_oversized_squashfs_after_verify(self):
+        for data in (b"", b"x" * 128):
+            with self.subTest(size=len(data)):
+                self.raw.write_bytes(b"hsqs" + b"synthetic")
+                receipt = self._producer_receipt()
+                checked = mod.sha(self.p26)
+                self.raw.write_bytes(data)
+                output = self.base / "verified.json"
+                with self.assertRaisesRegex(ValueError, "ATTEST_SQUASHFS_SIZE_CHANGED_AFTER_VERIFY"):
+                    mod.attest(receipt, output, self.p26, self.raw, checked)
+                self.assertFalse(output.exists())
+
+    def test_attestation_binds_original_receipt_if_replaced_after_parse(self):
+        import hashlib
+        receipt = self._producer_receipt()
+        original = receipt.read_bytes()
+        checked = mod.sha(self.p26)
+        output = self.base / "verified.json"
+        real_loads = mod.json.loads
+
+        def replace_after_parse(data, **kwargs):
+            parsed = real_loads(data, **kwargs)
+            receipt.write_text('{"status":"REPLACED_AFTER_PARSE"}')
+            return parsed
+
+        with patch.object(mod.json, "loads", side_effect=replace_after_parse):
+            evidence = mod.attest(receipt, output, self.p26, self.raw, checked)
+        self.assertEqual(evidence["producer_receipt_sha256"],
+                         hashlib.sha256(original).hexdigest())
+        self.assertEqual(real_loads(output.read_text())["producer_receipt_sha256"],
+                         hashlib.sha256(original).hexdigest())
+
     def test_attestation_rejects_producer_hash_mismatch(self):
         receipt = self._producer_receipt()
         doc = json.loads(receipt.read_text())
@@ -202,6 +234,19 @@ class IndependentP26Tests(unittest.TestCase):
         # failed directory sync and rollback directory sync.
         self.assertEqual(len(calls), 5)
 
+    def test_directory_walk_error_fails_closed(self):
+        # os.walk normally swallows scandir errors, silently omitting files.
+        # Force the error callback without depending on root permissions.
+        real_walk = mod.os.walk
+
+        def failed_walk(root, **kwargs):
+            kwargs["onerror"](PermissionError("synthetic unreadable subtree"))
+            yield from ()
+
+        with patch.object(mod.os, "walk", side_effect=failed_walk):
+            with self.assertRaisesRegex(ValueError, "TREE_WALK_FAILED"):
+                mod.inventory(self.root)
+
     def test_partition_size_rejected(self):
         self.p26.write_bytes(b"short")
         with self.assertRaisesRegex(ValueError, "PARTITION_SIZE"):
@@ -258,6 +303,14 @@ class IndependentP26Tests(unittest.TestCase):
         with patch.object(mod.subprocess, "run", side_effect=changed_mode):
             with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
                 mod.verify(self.root, self.p26, self.raw)
+
+    def test_hardlink_outside_staging_tree_rejected(self):
+        # An external inode alias is not part of the staged filesystem and
+        # cannot be faithfully represented by the SquashFS image.
+        outside = self.base / "outside"
+        outside.hardlink_to(self.root / "etc" / "test")
+        with self.assertRaisesRegex(ValueError, "HARDLINK_OUTSIDE_TREE"):
+            mod.inventory(self.root)
 
     def test_hardlink_relationship_mismatch_rejected(self):
         # Same bytes and permissions are insufficient when the image silently

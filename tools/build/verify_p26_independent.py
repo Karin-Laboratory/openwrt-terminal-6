@@ -36,7 +36,13 @@ def inventory(root):
     result["."] = ("dir", "", stat.S_IMODE(root_stat.st_mode),
                    root_stat.st_uid, root_stat.st_gid, root_attrs)
     hardlink_groups = {}
-    for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
+    # os.walk silently skips unreadable subtrees unless onerror is supplied.
+    # An incomplete inventory must never be accepted as a verified rootfs.
+    def fail_walk(error):
+        raise ValueError("TREE_WALK_FAILED") from error
+
+    for base, dirs, files in os.walk(root, topdown=True, followlinks=False,
+                                     onerror=fail_walk):
         for name in dirs + files:
             p = Path(base) / name
             rel = p.relative_to(root).as_posix()
@@ -62,7 +68,12 @@ def inventory(root):
                 dirs.remove(name)
     # Compare hardlink equivalence classes, never raw inode numbers (which
     # differ between staging and a separately extracted SquashFS image).
-    for paths in hardlink_groups.values():
+    for inode, paths in hardlink_groups.items():
+        # A link outside the staging tree cannot be represented by the image.
+        # Refuse an incomplete hardlink class instead of silently accepting it.
+        first = root / paths[0]
+        if first.lstat().st_nlink != len(paths):
+            raise ValueError("HARDLINK_OUTSIDE_TREE: " + paths[0])
         if len(paths) > 1:
             group = tuple(sorted(paths))
             for rel in group:
@@ -128,7 +139,9 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
             result[key] = value
         return result
 
-    record = json.loads(producer_receipt.read_text(), object_pairs_hook=reject_duplicate_keys)
+    # Bind to exactly the receipt bytes parsed, not a later replacement.
+    receipt_bytes = producer_receipt.read_bytes()
+    record = json.loads(receipt_bytes, object_pairs_hook=reject_duplicate_keys)
     required = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
                 "partition_bytes": SIZE, "signed": False,
                 "hardware": "NONE", "public_binary": False}
@@ -140,6 +153,11 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
             or type(record.get("public_binary")) is not bool
             or any(record.get(k) != v for k, v in required.items())):
         raise ValueError("ATTEST_PRODUCER_SCOPE")
+    # verify() required a nonempty SquashFS smaller than the partition.
+    # Recheck here: the input may have been truncated or grown since verify().
+    raw_size = raw.stat().st_size
+    if not 0 < raw_size < SIZE:
+        raise ValueError("ATTEST_SQUASHFS_SIZE_CHANGED_AFTER_VERIFY")
     # The SquashFS input can change after verify() and before this receipt.
     # Recheck its complete byte identity against the already verified partition.
     with raw.open("rb") as source, p26.open("rb") as partition:
@@ -154,7 +172,7 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     evidence = {
         "schema": 1, "status": "P26_INDEPENDENT_FS_READBACK_VERIFIED",
         "p26_sha256": verified_sha,
-        "producer_receipt_sha256": sha(producer_receipt),
+        "producer_receipt_sha256": hashlib.sha256(receipt_bytes).hexdigest(),
         "partition_bytes": SIZE,
         "squashfs_sha256": record["squashfs_sha256"],
         "squashfs_bytes": record["squashfs_bytes"],
