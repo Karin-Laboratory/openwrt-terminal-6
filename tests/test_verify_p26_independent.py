@@ -92,6 +92,18 @@ class IndependentP26Tests(unittest.TestCase):
             mod.attest(receipt, output, self.p26, self.raw, checked)
         self.assertFalse(output.exists())
 
+    def test_attestation_rejects_empty_or_oversized_squashfs_after_verify(self):
+        for data in (b"", b"x" * 128):
+            with self.subTest(size=len(data)):
+                self.raw.write_bytes(b"hsqs" + b"synthetic")
+                receipt = self._producer_receipt()
+                checked = mod.sha(self.p26)
+                self.raw.write_bytes(data)
+                output = self.base / "verified.json"
+                with self.assertRaisesRegex(ValueError, "ATTEST_SQUASHFS_SIZE_CHANGED_AFTER_VERIFY"):
+                    mod.attest(receipt, output, self.p26, self.raw, checked)
+                self.assertFalse(output.exists())
+
     def test_attestation_rejects_producer_hash_mismatch(self):
         receipt = self._producer_receipt()
         doc = json.loads(receipt.read_text())
