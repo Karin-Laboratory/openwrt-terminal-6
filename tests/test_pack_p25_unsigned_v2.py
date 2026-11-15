@@ -77,6 +77,16 @@ class TestP25BootV2(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             self.build()
 
+    def test_receipt_is_private_and_matches_image(self):
+        receipt = self.build()
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        self.assertEqual(receipt_path.stat().st_mode & 0o777, 0o600)
+        on_disk = json.loads(receipt_path.read_text())
+        self.assertEqual(on_disk, receipt)
+        self.assertEqual(on_disk["p25_sha256"],
+                         hashlib.sha256(self.output.read_bytes()).hexdigest())
+        self.assertEqual(self.verify()["partition_bytes"], 33554432)
+
     def test_stale_receipt_blocks_image_creation(self):
         receipt_path = self.output.with_name(self.output.name + ".json")
         receipt_path.write_text("existing evidence")
