@@ -250,6 +250,21 @@ class PairTests(unittest.TestCase):
         self.producer.write_text(original)
         self.update_independent()
 
+    def test_malformed_squashfs_digest_rejected(self):
+        original = self.producer.read_text()
+        for digest in ("", "f" * 63, "f" * 65, "g" * 64,
+                       "F" * 64, 123, True, None):
+            with self.subTest(digest=digest):
+                data = json.loads(original)
+                data["squashfs_sha256"] = digest
+                self.producer.write_text(json.dumps(data))
+                self.update_independent()
+                with self.assertRaisesRegex(ValueError, "P26_SQUASHFS_IDENTITY"):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+        self.producer.write_text(original)
+        self.update_independent()
+
     def test_p25_identity_rejected(self):
         with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
             pair.verify_pair(self.p25, *self.parts, self.p26, self.producer,
