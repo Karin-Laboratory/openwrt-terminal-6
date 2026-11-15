@@ -114,6 +114,20 @@ class PairTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "P26_NOT_INDEPENDENTLY_VERIFIED"):
             self.run_pair()
 
+    def test_non_object_receipts_fail_closed(self):
+        cases = ((self.parts[3], "P25_CONFIG_NOT_OBJECT"),
+                 (self.producer, "P26_PRODUCER_NOT_OBJECT"),
+                 (self.independent, "P26_ATTESTATION_NOT_OBJECT"))
+        for path, marker in cases:
+            original = path.read_text()
+            for value in ("[]", "null", "true", "42", '"string"'):
+                with self.subTest(path=path.name, value=value):
+                    path.write_text(value)
+                    with self.assertRaisesRegex(ValueError, marker):
+                        self.run_pair()
+                    self.assertFalse(self.out.exists())
+            path.write_text(original)
+
     def test_p25_identity_rejected(self):
         with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
             pair.verify_pair(self.p25, *self.parts, self.p26, self.producer,
