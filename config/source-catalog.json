@@ -409,6 +409,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_make_p25_dtb_table.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "a9bbbb12d6cfa82974b2cb21e9b9252ac561731b",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_minimal_arm64_initramfs.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -693,6 +702,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "444f3cb660f3ab2268c7aa6da0dc8db2c39c611e",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/boot/make_p25_dtb_table.py",
+      "component": "ab-recovery",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "3055fecde68f3e06f5524467a5da6b3c8c4cc29c",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
