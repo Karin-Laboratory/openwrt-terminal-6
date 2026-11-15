@@ -124,6 +124,24 @@ class IndependentP26Tests(unittest.TestCase):
                     mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
                 self.assertFalse(output.exists())
 
+    def test_exclusive_creation_race_preserves_existing_receipt(self):
+        # Another writer can create the output after the initial existence
+        # check. A failed exclusive open must never delete its file.
+        receipt = self._producer_receipt()
+        output = self.base / "verified.json"
+        original_open = Path.open
+
+        def raced_open(path, *args, **kwargs):
+            if path == output and args and args[0] == "x":
+                output.write_bytes(b"another-writer")
+                raise FileExistsError("exclusive creation lost race")
+            return original_open(path, *args, **kwargs)
+
+        with patch.object(Path, "open", autospec=True, side_effect=raced_open):
+            with self.assertRaises(FileExistsError):
+                mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertEqual(output.read_bytes(), b"another-writer")
+
     def test_attestation_write_failure_removes_partial_receipt(self):
         receipt = self._producer_receipt()
         output = self.base / "verified.json"
