@@ -12,6 +12,7 @@ import argparse
 import gzip
 import hashlib
 import json
+import os
 from pathlib import Path
 import struct
 
@@ -157,7 +158,16 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
         payload.extend(align(section, page))
     require(len(payload) <= PARTITION, "PARTITION_OVERFLOW")
     data = bytes(payload) + bytes(PARTITION - len(payload))
-    output.write_bytes(data)
+    # Exclusive creation prevents a concurrent producer from overwriting an image.
+    # A stale receipt must also block manufacturing before any image is written.
+    receipt_path = output.with_name(output.name + ".json")
+    require(not receipt_path.exists() and not receipt_path.is_symlink(),
+            "RECEIPT_EXISTS")
+    fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
     receipt = {
         "scope": "UNSIGNED_P25_PRE_SIGNING_ONLY",
         "profile": "MTK_LK_BOOT_V2" if config["ramdisk_mode"] == "kernel_embedded"
@@ -178,8 +188,9 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
                         "proprietary signing acceptance", "kernel runtime",
                         "rights clearance", "signed firmware"],
     }
-    output.with_name(output.name + ".json").write_text(
-        json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    # Never silently replace another build\'s acceptance record.
+    with receipt_path.open("x", encoding="utf-8") as stream:
+        stream.write(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     return receipt
 
 
