@@ -84,8 +84,9 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # Independently recheck the p25 including all boot-sensitive config bytes.
     check = p25_verify or p25_verifier().verify
     p25_result = check(p25, kernel, ramdisk, dtb, config, dtb_prefix)
-    require(strict_int(p25_result["partition_bytes"], P25_BYTES) and
-            p25_result["p25_sha256"] == digest(p25), "P25_IDENTITY")
+    require(isinstance(p25_result, dict) and
+            strict_int(p25_result.get("partition_bytes"), P25_BYTES) and
+            p25_result.get("p25_sha256") == digest(p25), "P25_IDENTITY")
     cfg, config_hash = read_receipt(config)
     require(isinstance(cfg, dict), "P25_CONFIG_NOT_OBJECT")
     require(cfg.get("ramdisk_mode") == "kernel_embedded",
