@@ -105,6 +105,25 @@ class PairTests(unittest.TestCase):
         self.assertFalse(self.out.exists())
         self.assertGreaterEqual(len(calls), 2)
 
+    def test_directory_sync_failure_removes_receipt(self):
+        # File data may be durable while the directory entry is not.
+        # The failed parent sync must roll back the newly created receipt.
+        import os
+        real_fsync = os.fsync
+        calls = []
+
+        def fail_directory_sync(fd):
+            calls.append(fd)
+            if len(calls) == 2:
+                raise OSError("synthetic directory sync failure")
+            return real_fsync(fd)
+
+        with patch.object(pair.os, "fsync", side_effect=fail_directory_sync):
+            with self.assertRaisesRegex(OSError, "synthetic directory sync failure"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+        self.assertGreaterEqual(len(calls), 3)
+
     def test_receipt_json_failure_removes_partial_evidence(self):
         with patch.object(pair.json, "dump", side_effect=OSError("synthetic short write")):
             with self.assertRaisesRegex(OSError, "synthetic short write"):
