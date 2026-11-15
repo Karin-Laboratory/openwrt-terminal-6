@@ -33,7 +33,10 @@ def no_duplicate_keys(pairs):
 
 
 def read_receipt(path):
-    return json.loads(path.read_text(), object_pairs_hook=no_duplicate_keys)
+    # Bind validation and receipt identity to the same bytes, even if the
+    # pathname is replaced between validation and attestation.
+    raw = path.read_bytes()
+    return json.loads(raw, object_pairs_hook=no_duplicate_keys), hashlib.sha256(raw).hexdigest()
 
 
 def strict_int(value, expected):
@@ -83,15 +86,15 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     p25_result = check(p25, kernel, ramdisk, dtb, config, dtb_prefix)
     require(strict_int(p25_result["partition_bytes"], P25_BYTES) and
             p25_result["p25_sha256"] == digest(p25), "P25_IDENTITY")
-    cfg = read_receipt(config)
+    cfg, config_hash = read_receipt(config)
     require(isinstance(cfg, dict), "P25_CONFIG_NOT_OBJECT")
     require(cfg.get("ramdisk_mode") == "kernel_embedded",
             "RC14_PROFILE_REQUIRES_KERNEL_EMBEDDED_INITRAMFS")
     init_check = initramfs_verify or initramfs_verifier().verify
     initramfs_result = init_check(initramfs_object, vmlinux, image, kernel,
                                   cpio, "xz")
-    original = read_receipt(producer)
-    approved = read_receipt(independent)
+    original, producer_hash = read_receipt(producer)
+    approved, independent_hash = read_receipt(independent)
     require(isinstance(original, dict), "P26_PRODUCER_NOT_OBJECT")
     require(isinstance(approved, dict), "P26_ATTESTATION_NOT_OBJECT")
     require(strict_int(original.get("schema"), 1) and
@@ -112,7 +115,7 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     p26_hash = digest(p26)
     require(p26_hash == original.get("p26_sha256") ==
             approved.get("p26_sha256"), "P26_IMAGE_IDENTITY")
-    require(approved.get("producer_receipt_sha256") == digest(producer),
+    require(approved.get("producer_receipt_sha256") == producer_hash,
             "P26_RECEIPT_IDENTITY")
     # The CPIO is verified against both Kbuild's linked initramfs section and
     # the exact ARM64 Image.gz; its P26 hash is a build binding, not proof the
@@ -130,8 +133,8 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         "schema": 1, "status": "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED",
         "p25_sha256": p25_result["p25_sha256"],
         "p26_sha256": p26_hash,
-        "p26_independent_receipt_sha256": digest(independent),
-        "p25_config_sha256": digest(config),
+        "p26_independent_receipt_sha256": independent_hash,
+        "p25_config_sha256": config_hash,
         "bound_initramfs_sha256": digest(cpio),
         "initramfs_object_sha256": digest(initramfs_object),
         "kernel_image_sha256": initramfs_result["kernel_image_sha256"],
