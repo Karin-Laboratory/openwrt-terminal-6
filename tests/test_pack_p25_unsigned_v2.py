@@ -131,6 +131,30 @@ class TestP25BootV2(unittest.TestCase):
         self.assertFalse(self.output.exists())
         self.assertFalse(receipt_path.exists())
 
+    def test_rollback_sync_failure_preserves_original_error(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        original_fsync = p25.os.fsync
+        calls = 0
+
+        def fail_receipt_and_cleanup_sync(fd):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError("original receipt failure")
+            if calls == 3:
+                raise OSError("rollback sync failure")
+            return original_fsync(fd)
+
+        with mock.patch.object(p25.os, "fsync",
+                               side_effect=fail_receipt_and_cleanup_sync):
+            with self.assertRaisesRegex(OSError, "original receipt failure") as caught:
+                self.build()
+        self.assertEqual(calls, 3)
+        self.assertTrue(any("rollback sync failure" in note
+                            for note in caught.exception.__notes__))
+        self.assertFalse(self.output.exists())
+        self.assertFalse(receipt_path.exists())
+
     def test_independent_full_readback_rejects_nonzero_tail(self):
         self.build()
         damaged = bytearray(self.output.read_bytes())
