@@ -128,6 +128,36 @@ class PairTests(unittest.TestCase):
                     self.assertFalse(self.out.exists())
             path.write_text(original)
 
+    def test_duplicate_receipt_keys_fail_closed(self):
+        for path in (self.parts[3], self.producer, self.independent):
+            with self.subTest(path=path.name):
+                original = path.read_text()
+                path.write_text(original.replace("{", '{"schema": 1,', 1))
+                with self.assertRaisesRegex(ValueError, "DUPLICATE_JSON_KEY"):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+                path.write_text(original)
+
+    def test_boolean_integer_fields_fail_closed(self):
+        for path, field, marker in (
+            (self.producer, "schema", "P26_PRODUCER_STATUS"),
+            (self.independent, "schema", "P26_NOT_INDEPENDENTLY_VERIFIED"),
+            (self.producer, "partition_bytes", "P26_SIZE"),
+            (self.independent, "partition_bytes", "P26_SIZE"),
+        ):
+            with self.subTest(path=path.name, field=field):
+                original = path.read_text()
+                data = json.loads(original)
+                data[field] = True if field == "schema" else False
+                path.write_text(json.dumps(data))
+                if path == self.producer:
+                    self.update_independent()
+                with self.assertRaisesRegex(ValueError, marker):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+                path.write_text(original)
+                self.update_independent()
+
     def test_p25_identity_rejected(self):
         with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
             pair.verify_pair(self.p25, *self.parts, self.p26, self.producer,
