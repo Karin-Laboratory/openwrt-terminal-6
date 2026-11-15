@@ -122,6 +122,12 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # early boot code ran on hardware.
     bound = (p26_hash + "  /dev/mmcblk0p26").encode("ascii")
     require(cpio.read_bytes().count(bound) == 1, "P26_INITRAMFS_SHA_BINDING")
+    # A pair receipt must not accept arbitrary equal strings as a digest.
+    # The separate independent verifier establishes the filesystem identity.
+    squashfs_hash = original.get("squashfs_sha256")
+    require(type(squashfs_hash) is str and len(squashfs_hash) == 64 and
+            all(ch in "0123456789abcdef" for ch in squashfs_hash),
+            "P26_SQUASHFS_IDENTITY")
     require(type(original.get("squashfs_bytes")) is int and
             type(approved.get("squashfs_bytes")) is int and
             0 < original["squashfs_bytes"] < P26_BYTES and
