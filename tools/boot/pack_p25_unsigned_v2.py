@@ -12,6 +12,7 @@ import argparse
 import gzip
 import hashlib
 import json
+import os
 from pathlib import Path
 import struct
 
@@ -157,7 +158,11 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
         payload.extend(align(section, page))
     require(len(payload) <= PARTITION, "PARTITION_OVERFLOW")
     data = bytes(payload) + bytes(PARTITION - len(payload))
-    output.write_bytes(data)
+    # Exclusive creation prevents a concurrent producer from overwriting an image.
+    # A stale receipt must also block manufacturing before any image is written.
+    receipt_path = output.with_name(output.name + ".json")
+    require(not receipt_path.exists() and not receipt_path.is_symlink(),
+            "RECEIPT_EXISTS")
     receipt = {
         "scope": "UNSIGNED_P25_PRE_SIGNING_ONLY",
         "profile": "MTK_LK_BOOT_V2" if config["ramdisk_mode"] == "kernel_embedded"
@@ -178,8 +183,34 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
                         "proprietary signing acceptance", "kernel runtime",
                         "rights clearance", "signed firmware"],
     }
-    output.with_name(output.name + ".json").write_text(
-        json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    # If either write fails, do not leave a partial image or an acceptance receipt.
+    # Never delete a pre-existing receipt created by another producer.
+    image_created = False
+    receipt_created = False
+    try:
+        fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        image_created = True
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        fd = os.open(receipt_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        receipt_created = True
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        directory_fd = os.open(output.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    except BaseException:
+        if receipt_created:
+            receipt_path.unlink(missing_ok=True)
+        if image_created:
+            output.unlink(missing_ok=True)
+        raise
     return receipt
 
 

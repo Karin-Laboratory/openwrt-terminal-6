@@ -84,8 +84,9 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # Independently recheck the p25 including all boot-sensitive config bytes.
     check = p25_verify or p25_verifier().verify
     p25_result = check(p25, kernel, ramdisk, dtb, config, dtb_prefix)
-    require(strict_int(p25_result["partition_bytes"], P25_BYTES) and
-            p25_result["p25_sha256"] == digest(p25), "P25_IDENTITY")
+    require(isinstance(p25_result, dict) and
+            strict_int(p25_result.get("partition_bytes"), P25_BYTES) and
+            p25_result.get("p25_sha256") == digest(p25), "P25_IDENTITY")
     cfg, config_hash = read_receipt(config)
     require(isinstance(cfg, dict), "P25_CONFIG_NOT_OBJECT")
     require(cfg.get("ramdisk_mode") == "kernel_embedded",
@@ -93,6 +94,14 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     init_check = initramfs_verify or initramfs_verifier().verify
     initramfs_result = init_check(initramfs_object, vmlinux, image, kernel,
                                   cpio, "xz")
+    require(isinstance(initramfs_result, dict) and
+            initramfs_result.get("status") ==
+            "ARM64_KERNEL_INITRAMFS_OBJECT_AND_IMAGE_VERIFIED" and
+            initramfs_result.get("compression") == "xz" and
+            initramfs_result.get("cpio_sha256") == digest(cpio) and
+            initramfs_result.get("kernel_image_sha256") == digest(image) and
+            initramfs_result.get("kernel_gzip_sha256") == digest(kernel),
+            "INITRAMFS_ATTESTATION_IDENTITY")
     original, producer_hash = read_receipt(producer)
     approved, independent_hash = read_receipt(independent)
     require(isinstance(original, dict), "P26_PRODUCER_NOT_OBJECT")
@@ -122,6 +131,12 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # early boot code ran on hardware.
     bound = (p26_hash + "  /dev/mmcblk0p26").encode("ascii")
     require(cpio.read_bytes().count(bound) == 1, "P26_INITRAMFS_SHA_BINDING")
+    # A pair receipt must not accept arbitrary equal strings as a digest.
+    # The separate independent verifier establishes the filesystem identity.
+    squashfs_hash = original.get("squashfs_sha256")
+    require(type(squashfs_hash) is str and len(squashfs_hash) == 64 and
+            all(ch in "0123456789abcdef" for ch in squashfs_hash),
+            "P26_SQUASHFS_IDENTITY")
     require(type(original.get("squashfs_bytes")) is int and
             type(approved.get("squashfs_bytes")) is int and
             0 < original["squashfs_bytes"] < P26_BYTES and
@@ -145,7 +160,8 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # Do not overwrite stale pair evidence.
     created = False
     try:
-        with out.open("x", encoding="utf-8") as stream:
+        with os.fdopen(os.open(out, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600),
+                       "w", encoding="utf-8") as stream:
             created = True
             json.dump(receipt, stream, indent=2, sort_keys=True)
             stream.write("\n")

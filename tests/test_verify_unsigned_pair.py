@@ -3,6 +3,7 @@
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -68,7 +69,10 @@ class PairTests(unittest.TestCase):
         return {"partition_bytes": 64, "p25_sha256": pair.digest(self.p25)}
 
     def fake_initramfs(self, *args):
-        return {"kernel_image_sha256": "a" * 64}
+        return {"status": "ARM64_KERNEL_INITRAMFS_OBJECT_AND_IMAGE_VERIFIED",
+                "compression": "xz", "cpio_sha256": pair.digest(self.cpio),
+                "kernel_image_sha256": pair.digest(self.image),
+                "kernel_gzip_sha256": pair.digest(self.parts[0])}
 
     def run_pair(self):
         return pair.verify_pair(self.p25, *self.parts, self.p26,
@@ -83,6 +87,7 @@ class PairTests(unittest.TestCase):
         self.assertEqual(evidence["status"], "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED")
         self.assertEqual(json.loads(self.out.read_text())["p26_sha256"],
                          pair.digest(self.p26))
+        self.assertEqual(self.out.stat().st_mode & 0o777, 0o600)
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             self.run_pair()
 
@@ -148,6 +153,22 @@ class PairTests(unittest.TestCase):
         self.assertEqual(json.loads(self.out.read_text())["p26_sha256"],
                          pair.digest(self.p26))
         self.assertNotEqual(self.producer.read_bytes(), original_bytes)
+
+    def test_initramfs_attestation_must_match_exact_inputs(self):
+        valid = self.fake_initramfs()
+        for field in ("cpio_sha256", "kernel_image_sha256",
+                      "kernel_gzip_sha256", "status", "compression"):
+            with self.subTest(field=field):
+                invalid = dict(valid)
+                invalid[field] = "0" * 64
+                with self.assertRaisesRegex(ValueError, "INITRAMFS_ATTESTATION_IDENTITY"):
+                    pair.verify_pair(self.p25, *self.parts, self.p26,
+                                     self.producer, self.independent, self.cpio,
+                                     self.initramfs_object, self.vmlinux,
+                                     self.image, self.out,
+                                     p25_verify=self.fake_p25,
+                                     initramfs_verify=lambda *args: invalid)
+                self.assertFalse(self.out.exists())
 
     def test_mismatched_initramfs_p26_hash_rejected(self):
         self.cpio.write_bytes(b"newc" + b"0" * 64 + b"  /dev/mmcblk0p26")
@@ -249,6 +270,34 @@ class PairTests(unittest.TestCase):
                 self.assertFalse(self.out.exists())
         self.producer.write_text(original)
         self.update_independent()
+
+    def test_malformed_squashfs_digest_rejected(self):
+        original = self.producer.read_text()
+        for digest in ("", "f" * 63, "f" * 65, "g" * 64,
+                       "F" * 64, 123, True, None):
+            with self.subTest(digest=digest):
+                data = json.loads(original)
+                data["squashfs_sha256"] = digest
+                self.producer.write_text(json.dumps(data))
+                self.update_independent()
+                with self.assertRaisesRegex(ValueError, "P26_SQUASHFS_IDENTITY"):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+        self.producer.write_text(original)
+        self.update_independent()
+
+    def test_malformed_p25_verifier_result_rejected(self):
+        for result in (None, [], True, {}, {"partition_bytes": 64},
+                       {"partition_bytes": True, "p25_sha256": pair.digest(self.p25)}):
+            with self.subTest(result=result):
+                with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
+                    pair.verify_pair(
+                        self.p25, *self.parts, self.p26, self.producer,
+                        self.independent, self.cpio, self.initramfs_object,
+                        self.vmlinux, self.image, self.out,
+                        p25_verify=lambda *args: result,
+                        initramfs_verify=self.fake_initramfs)
+                self.assertFalse(self.out.exists())
 
     def test_p25_identity_rejected(self):
         with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):

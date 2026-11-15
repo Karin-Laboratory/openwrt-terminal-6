@@ -3,6 +3,7 @@ import gzip
 import hashlib
 import importlib.util
 import json
+from unittest import mock
 from pathlib import Path
 import struct
 import tempfile
@@ -60,6 +61,7 @@ class TestP25BootV2(unittest.TestCase):
         receipt = self.build()
         content = self.output.read_bytes()
         self.assertEqual(len(content), 33554432)
+        self.assertEqual(self.output.stat().st_mode & 0o777, 0o600)
         self.assertEqual(content[:8], b"ANDROID!")
         self.assertEqual(struct.unpack_from("<I", content, 36)[0], 2048)
         self.assertEqual(struct.unpack_from("<I", content, 40)[0], 2)
@@ -75,6 +77,41 @@ class TestP25BootV2(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             self.build()
 
+    def test_stale_receipt_blocks_image_creation(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        receipt_path.write_text("existing evidence")
+        with self.assertRaisesRegex(ValueError, "RECEIPT_EXISTS"):
+            self.build()
+        self.assertFalse(self.output.exists())
+        self.assertEqual(receipt_path.read_text(), "existing evidence")
+
+    def test_image_sync_failure_removes_partial_image(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        with mock.patch.object(p25.os, "fsync",
+                               side_effect=OSError("synthetic image sync failure")):
+            with self.assertRaisesRegex(OSError, "synthetic image sync failure"):
+                self.build()
+        self.assertFalse(self.output.exists())
+        self.assertFalse(receipt_path.exists())
+
+    def test_receipt_sync_failure_removes_both_outputs(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        original_fsync = p25.os.fsync
+        calls = 0
+
+        def fail_second_sync(fd):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError("synthetic receipt sync failure")
+            return original_fsync(fd)
+
+        with mock.patch.object(p25.os, "fsync", side_effect=fail_second_sync):
+            with self.assertRaisesRegex(OSError, "synthetic receipt sync failure"):
+                self.build()
+        self.assertEqual(calls, 2)
+        self.assertFalse(self.output.exists())
+        self.assertFalse(receipt_path.exists())
     def test_independent_full_readback_rejects_nonzero_tail(self):
         self.build()
         damaged = bytearray(self.output.read_bytes())
