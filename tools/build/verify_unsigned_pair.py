@@ -23,6 +23,22 @@ def digest(path):
     return hasher.hexdigest()
 
 
+def no_duplicate_keys(pairs):
+    result = {}
+    for key, value in pairs:
+        require(key not in result, "DUPLICATE_JSON_KEY")
+        result[key] = value
+    return result
+
+
+def read_receipt(path):
+    return json.loads(path.read_text(), object_pairs_hook=no_duplicate_keys)
+
+
+def strict_int(value, expected):
+    return type(value) is int and value == expected
+
+
 def require(ok, reason):
     if not ok:
         raise ValueError("UNSIGNED_PAIR_BLOCKED_" + reason)
@@ -64,24 +80,24 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # Independently recheck the p25 including all boot-sensitive config bytes.
     check = p25_verify or p25_verifier().verify
     p25_result = check(p25, kernel, ramdisk, dtb, config, dtb_prefix)
-    require(p25_result["partition_bytes"] == P25_BYTES and
+    require(strict_int(p25_result["partition_bytes"], P25_BYTES) and
             p25_result["p25_sha256"] == digest(p25), "P25_IDENTITY")
-    cfg = json.loads(config.read_text())
+    cfg = read_receipt(config)
     require(isinstance(cfg, dict), "P25_CONFIG_NOT_OBJECT")
     require(cfg.get("ramdisk_mode") == "kernel_embedded",
             "RC14_PROFILE_REQUIRES_KERNEL_EMBEDDED_INITRAMFS")
     init_check = initramfs_verify or initramfs_verifier().verify
     initramfs_result = init_check(initramfs_object, vmlinux, image, kernel,
                                   cpio, "xz")
-    original = json.loads(producer.read_text())
-    approved = json.loads(independent.read_text())
+    original = read_receipt(producer)
+    approved = read_receipt(independent)
     require(isinstance(original, dict), "P26_PRODUCER_NOT_OBJECT")
     require(isinstance(approved, dict), "P26_ATTESTATION_NOT_OBJECT")
-    require(original.get("schema") == 1 and
+    require(strict_int(original.get("schema"), 1) and
             original.get("status") == "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK"
             and original.get("signed") is False and
             original.get("hardware") == "NONE", "P26_PRODUCER_STATUS")
-    require(approved.get("schema") == 1 and
+    require(strict_int(approved.get("schema"), 1) and
             approved.get("status") == "P26_INDEPENDENT_FS_READBACK_VERIFIED" and
             approved.get("signed") is False and
             approved.get("hardware") == "NONE" and
@@ -89,8 +105,8 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
             "INDEPENDENT_FULL_PARTITION_AND_EXTRACTED_METADATA",
             "P26_NOT_INDEPENDENTLY_VERIFIED")
     require(p26.stat().st_size == P26_BYTES and
-            original.get("partition_bytes") == P26_BYTES and
-            approved.get("partition_bytes") == P26_BYTES,
+            strict_int(original.get("partition_bytes"), P26_BYTES) and
+            strict_int(approved.get("partition_bytes"), P26_BYTES),
             "P26_SIZE")
     p26_hash = digest(p26)
     require(p26_hash == original.get("p26_sha256") ==
