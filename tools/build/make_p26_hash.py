@@ -64,7 +64,7 @@ def create(p26, producer, independent, output):
     if (not isinstance(squash_hash, str) or re.fullmatch(r'[0-9a-f]{64}', squash_hash) is None
             or type(squash_size) is not int or not 0 < squash_size <= P26_BYTES):
         raise ValueError('invalid SquashFS identity metadata')
-    payload = (digest + '  ' + DEVICE + '\n').encode('ascii')
+    # Validate the independent receipt's metadata types separately. In Python,\n    # True == 1, so equality between receipts alone is not sufficient.\n    if (type(approved.get('squashfs_bytes')) is not int\n            or not isinstance(approved.get('squashfs_sha256'), str)\n            or re.fullmatch(r'[0-9a-f]{64}', approved['squashfs_sha256']) is None):\n        raise ValueError('invalid independent SquashFS identity metadata')\n    payload = (digest + '  ' + DEVICE + '\n').encode('ascii')
     # An exclusive create prevents replacing evidence from an earlier build.
     # A short write or an I/O failure must never leave a plausible hash input.
     created = False
