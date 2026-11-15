@@ -9,6 +9,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 P25_BYTES = 33_554_432
@@ -136,9 +137,32 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
                        "hardware cold boot", "LAN/SSH", "publication rights"],
     }
     # Do not overwrite stale pair evidence.
-    with out.open("x", encoding="utf-8") as stream:
-        json.dump(receipt, stream, indent=2, sort_keys=True)
-        stream.write("\n")
+    created = False
+    try:
+        with out.open("x", encoding="utf-8") as stream:
+            created = True
+            json.dump(receipt, stream, indent=2, sort_keys=True)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Persist the new directory entry, not only the receipt contents.
+        directory_fd = os.open(out.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    except BaseException:
+        if created:
+            try:
+                out.unlink(missing_ok=True)
+                directory_fd = os.open(out.parent, os.O_RDONLY | os.O_DIRECTORY)
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
+            except OSError:
+                pass  # Preserve the original write/sync failure.
+        raise
     return receipt
 
 
