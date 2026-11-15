@@ -132,7 +132,8 @@ class PairTests(unittest.TestCase):
         for path in (self.parts[3], self.producer, self.independent):
             with self.subTest(path=path.name):
                 original = path.read_text()
-                path.write_text(original.replace("{", '{"schema": 1,', 1))
+                duplicate = '"ramdisk_mode": "kernel_embedded",' if path == self.parts[3] else '"schema": 1,'
+                path.write_text(original.replace("{", "{" + duplicate, 1))
                 with self.assertRaisesRegex(ValueError, "DUPLICATE_JSON_KEY"):
                     self.run_pair()
                 self.assertFalse(self.out.exists())
