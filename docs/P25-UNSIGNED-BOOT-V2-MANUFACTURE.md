@@ -25,9 +25,25 @@ The private RC14 manufacturing record describes a built-in initramfs in the Linu
 
 The sanitized RC14 header observation is: Android magic, header version 2, page size 2048, OS version field `0x00020000`, board name `mt6990`, external ramdisk size 0, second-stage size 0, header size 1660, DTB section size 148829, and cmdline `bootopt=64S3,32N2,64N2 init_debug=4`. Observed address fields were kernel=0, tags=0, ramdisk=`0x01000000`, second=`0x00f00000`, and DTB=`0x01f00000`. Treat these as observed bytes from that RC14 image; they do not by themselves establish runtime physical placement or applicability to a different kernel/DTB.
 
-The private image has a 64-byte opaque prefix before the FDT in its DTB section. Its semantics and lawful redistribution status are not established. No prefix bytes or hash from the private image are included here. A public manufacture invocation must provide an independently approved, locally held prefix and its SHA-256 in the explicit configuration. Without that exact input, the public P25 gate stops.
+The private image has a 64-byte AOSP single-entry DT table before the FDT. Its structure is verified and reproducible from public specifications; rights for any redistributed firmware remain a separate matter. No prefix bytes or hash from the private image are included here. A public manufacture invocation must provide an independently approved, locally held prefix and its SHA-256 in the explicit configuration. Without that exact input, the public P25 gate stops.
 
 AOSP's generic v2 specification describes nonempty kernel, ramdisk, and DTB sections and page-aligned section layout ([boot image header](https://source.android.com/docs/core/architecture/bootloader/boot-image-header), [AOSP header definition](https://android.googlesource.com/platform/system/tools/mkbootimg/+/refs/heads/master/include/bootimg/bootimg.h)). The observed RC14 zero external ramdisk is therefore a vendor/LK-specific profile, not a generic AOSP-conformant profile. This repository labels it `kernel_embedded` and requires the empty external ramdisk explicitly; it does not imply that an arbitrary LK accepts that profile.
+
+## Evidence-based decisions and the limits of proving non-use (2026-11-15)
+
+The device-exact LK may **not inspect every field** of the 64-byte AOSP DT table. This is a plausible hypothesis, **not** a verified negative fact. An authentic LK trace reads a big-endian size at FDT-pointer offset +4 in the FDT handling area, and actual boot logs report 148,765-byte and 177,286-byte FDTs, both passing through `DT overlay ok`. Those facts support practical FDT handling, but do not establish whether every `dt_table_header` or `dt_table_entry` field is consulted earlier.
+
+**Absence of a located reference is not proof of absence of a reference.** Static searching may miss indirect reads, computed pointers, shared parser functions, or alternate execution paths. Requiring proof that no possible LK path ever reads a field is a universal negative over unproven execution paths and must not become an open-ended blocker for a **standards-derived, byte-exact 64-byte producer**.
+
+Use independently checkable positive evidence for this scoped engineering decision: (1) document the public AOSP serializer and its endianness; (2) validate the complete original 64 bytes against a separately built, size-correct header; (3) independently check layout, full-file SHA and source provenance; (4) keep actual device acceptance and rights review as **separate explicit gates**, never fabricate an LK consumer callsite or claim an untested P25 boots. Finding a verified *positive* contradiction (e.g. a device-specific mandatory field or an LK rejection) must reopen the implementation review.
+
+This is **permission to evaluate and integrate the independently authored source under ordinary repository review**, not a declaration that every distribution/rights/CI gate has passed. A newly generated table should populate the actual FDT lengths even if the current LK happens not to enforce them.
+
+**User's methodological note (quoted verbatim, 2026-11-15):**
+
+> ＡＩにできないこと、悪魔の証明を解くこと。人間にできること、悪魔の証明に異議を申し立てること。
+
+Interpret this as a critique of an unjustified proof obligation, not as a mathematical theorem that no AI or human could ever prove a particular negative statement.
 
 ## Owner-private RC14 provenance and reference-profile gate
 
@@ -77,8 +93,8 @@ The native unsigned P25 build now requires all **three** explicit inputs
 reason and creates no P25. No reference P25, prefix, or owner receipt is
 ever added to this repository or uploaded as a CI artifact.
 
-**Separate unresolved authorizations:** a lawful/independently created
-prefix or documented permission to use the old one, independent validation
+**Separate unresolved gates:** independently validating the new, source-generated
+prefix in the intended build (the standard-form generator is already available), independent validation
 that the observed load addresses and DTB suit the new public kernel, actual
 LK acceptance and device boot, and rights clearance for any distribution.
 A successful metadata audit must *not* be labeled a flashable pair.
@@ -181,9 +197,9 @@ The pair verifier checks the full 32 MiB P25 and 128 MiB P26 identities, produce
 ## Remaining gates
 
 - The sanitized RC14 header observations do not validate addresses/cmdline against the separately built public kernel and DTB.
-- The opaque DTB-section prefix must be sourced/authorized and independently validated by the image owner; it is not present in this repository.
+- The 64-byte format is resolved: a public-source AOSP DT table generator is present. The output must be generated for the new FDT and independently checked; no proprietary original prefix need be copied.
 - Public board DTB compatibility, LK parsing/inflate acceptance, real memory placement and first-stage execution remain unproven.
-- No public P25 candidate or P25/P26 pair can be manufactured until the validated configuration and prefix inputs are supplied to an owner-controlled run.
+- No source-built P25/P26 pair can be accepted as independently verified until the validated boot-v2 configuration, size-correct generated prefix, and paired P25/P26 receipts are supplied to an owner-controlled run.
 - No signing, physical boot, distribution-rights approval or device installation is performed here.
 
 A P26 source build/readback, a P25 byte-layout check, and an actual Air Terminal 6 boot are separate claims and must be reported separately.
