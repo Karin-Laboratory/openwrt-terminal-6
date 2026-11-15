@@ -112,6 +112,25 @@ class TestP25BootV2(unittest.TestCase):
         self.assertEqual(calls, 2)
         self.assertFalse(self.output.exists())
         self.assertFalse(receipt_path.exists())
+    def test_directory_sync_failure_rolls_back_and_syncs_removal(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        original_fsync = p25.os.fsync
+        calls = 0
+
+        def fail_initial_directory_sync(fd):
+            nonlocal calls
+            calls += 1
+            if calls == 3:
+                raise OSError("synthetic directory sync failure")
+            return original_fsync(fd)
+
+        with mock.patch.object(p25.os, "fsync", side_effect=fail_initial_directory_sync):
+            with self.assertRaisesRegex(OSError, "synthetic directory sync failure"):
+                self.build()
+        self.assertEqual(calls, 4)  # rollback directory sync is mandatory
+        self.assertFalse(self.output.exists())
+        self.assertFalse(receipt_path.exists())
+
     def test_independent_full_readback_rejects_nonzero_tail(self):
         self.build()
         damaged = bytearray(self.output.read_bytes())
