@@ -86,6 +86,14 @@ def validate_config(config):
     return addresses, page, os_version, prefix_bytes, prefix_sha
 
 
+def reject_duplicate_config_keys(pairs):
+    config = {}
+    for key, value in pairs:
+        require(key not in config, "DUPLICATE_CONFIG_KEY")
+        config[key] = value
+    return config
+
+
 def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
           dtb_prefix_path=None):
     require(not output.exists() and not output.is_symlink(), "OUTPUT_EXISTS")
@@ -93,7 +101,8 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
     kernel = read_regular(kernel_path)
     ramdisk = read_regular(ramdisk_path)
     dtb = read_regular(dtb_path)
-    config = json.loads(read_regular(cfg_path))
+    config = json.loads(read_regular(cfg_path),
+                        object_pairs_hook=reject_duplicate_config_keys)
     addresses, page, os_version, prefix_bytes, prefix_sha = validate_config(config)
 
     require(len(kernel) < PARTITION and kernel.startswith(b"\x1f\x8b"),
