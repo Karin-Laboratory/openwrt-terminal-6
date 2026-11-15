@@ -165,6 +165,21 @@ class TestP25BootV2(unittest.TestCase):
         self.assertFalse(self.output.exists())
         self.assertFalse(receipt_path.exists())
 
+    def test_receipt_open_failure_rolls_back_created_image(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        real_open = p25.os.open
+
+        def fail_receipt_open(path, flags, *args, **kwargs):
+            if str(path) == str(receipt_path):
+                raise OSError("synthetic receipt creation failure")
+            return real_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(p25.os, "open", side_effect=fail_receipt_open):
+            with self.assertRaisesRegex(OSError, "synthetic receipt creation failure"):
+                self.build()
+        self.assertFalse(self.output.exists())
+        self.assertFalse(receipt_path.exists())
+
     def test_independent_full_readback_rejects_nonzero_tail(self):
         self.build()
         damaged = bytearray(self.output.read_bytes())
