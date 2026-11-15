@@ -152,8 +152,10 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     }
     # Exclusive creation prevents a stale or previously attested result from
     # silently surviving a later changed p26 producer run.
+    created = False
     try:
         with attestation.open("x", encoding="utf-8") as f:
+            created = True
             json.dump(evidence, f, sort_keys=True, indent=2)
             f.write("\n")
             f.flush()
@@ -169,6 +171,8 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
         # A failed write must never leave a truncated file looking like an
         # independent attestation. Do not mask the original failure.
         try:
+            if not created:
+                raise
             attestation.unlink(missing_ok=True)
             # Make rollback durable too: a crash must not resurrect a
             # partially written attestation directory entry.
