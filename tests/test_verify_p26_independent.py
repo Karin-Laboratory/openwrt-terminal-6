@@ -110,6 +110,15 @@ class IndependentP26Tests(unittest.TestCase):
                     mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
                 self.assertFalse(output.exists())
 
+    def test_attestation_rejects_duplicate_producer_json_keys(self):
+        receipt = self._producer_receipt()
+        original = receipt.read_text()
+        receipt.write_text(original.replace('"schema": 1', '"schema": 1, "schema": 1', 1))
+        output = self.base / "verified.json"
+        with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_DUPLICATE_JSON_KEY"):
+            mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertFalse(output.exists())
+
     def test_attestation_rejects_integer_boolean_scope_fields(self):
         # JSON integer zero compares equal to False in Python, but is not a
         # valid boolean assertion about signing or public distribution.
