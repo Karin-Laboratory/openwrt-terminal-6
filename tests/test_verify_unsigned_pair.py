@@ -179,6 +179,20 @@ class PairTests(unittest.TestCase):
             self.run_pair()
         self.assertFalse(self.out.exists())
 
+    def test_p26_binding_spans_stream_chunk_boundary(self):
+        marker = pair.digest(self.p26).encode("ascii") + b"  /dev/mmcblk0p26"
+        # The marker crosses the 1 MiB streaming read boundary.
+        self.cpio.write_bytes(b"x" * (1024 * 1024 - 20) + marker)
+        self.assertEqual(self.run_pair()["status"],
+                         "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED")
+
+    def test_duplicate_p26_binding_across_chunks_rejected(self):
+        marker = pair.digest(self.p26).encode("ascii") + b"  /dev/mmcblk0p26"
+        self.cpio.write_bytes(marker + b"x" * (1024 * 1024) + marker)
+        with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
+            self.run_pair()
+        self.assertFalse(self.out.exists())
+
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
         image[-1] = 1
