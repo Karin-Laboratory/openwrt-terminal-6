@@ -133,7 +133,16 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # the exact ARM64 Image.gz; its P26 hash is a build binding, not proof the
     # early boot code ran on hardware.
     bound = (p26_hash + "  /dev/mmcblk0p26").encode("ascii")
-    require(cpio.read_bytes().count(bound) == 1, "P26_INITRAMFS_SHA_BINDING")
+    # Scan with overlap so a marker spanning two chunks is still counted.
+    # A real initramfs may be large; do not load its entire contents into RAM.
+    matches = 0
+    tail = b""
+    with cpio.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            data = tail + chunk
+            matches += data.count(bound)
+            tail = data[-(len(bound) - 1):]
+    require(matches == 1, "P26_INITRAMFS_SHA_BINDING")
     # A pair receipt must not accept arbitrary equal strings as a digest.
     # The separate independent verifier establishes the filesystem identity.
     squashfs_hash = original.get("squashfs_sha256")
