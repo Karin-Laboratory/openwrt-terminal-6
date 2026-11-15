@@ -128,7 +128,9 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
             result[key] = value
         return result
 
-    record = json.loads(producer_receipt.read_text(), object_pairs_hook=reject_duplicate_keys)
+    # Bind to exactly the receipt bytes parsed, not a later replacement.
+    receipt_bytes = producer_receipt.read_bytes()
+    record = json.loads(receipt_bytes, object_pairs_hook=reject_duplicate_keys)
     required = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
                 "partition_bytes": SIZE, "signed": False,
                 "hardware": "NONE", "public_binary": False}
@@ -159,7 +161,7 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
     evidence = {
         "schema": 1, "status": "P26_INDEPENDENT_FS_READBACK_VERIFIED",
         "p26_sha256": verified_sha,
-        "producer_receipt_sha256": sha(producer_receipt),
+        "producer_receipt_sha256": hashlib.sha256(receipt_bytes).hexdigest(),
         "partition_bytes": SIZE,
         "squashfs_sha256": record["squashfs_sha256"],
         "squashfs_bytes": record["squashfs_bytes"],
