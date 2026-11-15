@@ -86,6 +86,69 @@ class PairTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             self.run_pair()
 
+    def test_receipt_sync_failure_removes_partial_evidence(self):
+        # The first fsync targets the receipt file; rollback must sync its
+        # parent directory after unlinking the incomplete receipt.
+        import os
+        real_fsync = os.fsync
+        calls = []
+
+        def fail_first_fsync(fd):
+            calls.append(fd)
+            if len(calls) == 1:
+                raise OSError("synthetic receipt sync failure")
+            return real_fsync(fd)
+
+        with patch.object(pair.os, "fsync", side_effect=fail_first_fsync):
+            with self.assertRaisesRegex(OSError, "synthetic receipt sync failure"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+        self.assertGreaterEqual(len(calls), 2)
+
+    def test_directory_sync_failure_removes_receipt(self):
+        # File data may be durable while the directory entry is not.
+        # The failed parent sync must roll back the newly created receipt.
+        import os
+        real_fsync = os.fsync
+        calls = []
+
+        def fail_directory_sync(fd):
+            calls.append(fd)
+            if len(calls) == 2:
+                raise OSError("synthetic directory sync failure")
+            return real_fsync(fd)
+
+        with patch.object(pair.os, "fsync", side_effect=fail_directory_sync):
+            with self.assertRaisesRegex(OSError, "synthetic directory sync failure"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+        self.assertGreaterEqual(len(calls), 3)
+
+    def test_receipt_json_failure_removes_partial_evidence(self):
+        with patch.object(pair.json, "dump", side_effect=OSError("synthetic short write")):
+            with self.assertRaisesRegex(OSError, "synthetic short write"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+
+    def test_producer_path_swap_does_not_change_validated_receipt_hash(self):
+        # The producer file is replaced after parsing, but the independent
+        # receipt must be checked against the originally validated bytes.
+        original_bytes = self.producer.read_bytes()
+        original_read = pair.read_receipt
+
+        def swap_after_read(path):
+            result = original_read(path)
+            if path == self.producer:
+                self.producer.write_bytes(b'{"replacement": true}')
+            return result
+
+        with patch.object(pair, "read_receipt", side_effect=swap_after_read):
+            evidence = self.run_pair()
+        self.assertEqual(evidence["p26_sha256"], pair.digest(self.p26))
+        self.assertEqual(json.loads(self.out.read_text())["p26_sha256"],
+                         pair.digest(self.p26))
+        self.assertNotEqual(self.producer.read_bytes(), original_bytes)
+
     def test_mismatched_initramfs_p26_hash_rejected(self):
         self.cpio.write_bytes(b"newc" + b"0" * 64 + b"  /dev/mmcblk0p26")
         with self.assertRaisesRegex(ValueError, "P26_INITRAMFS_SHA_BINDING"):
@@ -158,6 +221,34 @@ class PairTests(unittest.TestCase):
                 self.assertFalse(self.out.exists())
                 path.write_text(original)
                 self.update_independent()
+
+    def test_squashfs_boolean_size_rejected(self):
+        for value in (True, False, 0, 128):
+            with self.subTest(value=value):
+                original = json.loads(self.producer.read_text())
+                original["squashfs_bytes"] = value
+                self.producer.write_text(json.dumps(original))
+                self.update_independent()
+                with self.assertRaisesRegex(ValueError, "P26_SQUASHFS_IDENTITY"):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+                original["squashfs_bytes"] = 9
+                self.producer.write_text(json.dumps(original))
+                self.update_independent()
+
+    def test_invalid_squashfs_size_types_fail_closed(self):
+        original = self.producer.read_text()
+        for value in (True, False, 0, -1, 128, 129, "9", 9.0):
+            with self.subTest(value=value):
+                data = json.loads(original)
+                data["squashfs_bytes"] = value
+                self.producer.write_text(json.dumps(data))
+                self.update_independent()
+                with self.assertRaisesRegex(ValueError, "P26_SQUASHFS_IDENTITY"):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+        self.producer.write_text(original)
+        self.update_independent()
 
     def test_p25_identity_rejected(self):
         with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
