@@ -67,6 +67,7 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     require(p25_result["partition_bytes"] == P25_BYTES and
             p25_result["p25_sha256"] == digest(p25), "P25_IDENTITY")
     cfg = json.loads(config.read_text())
+    require(isinstance(cfg, dict), "P25_CONFIG_NOT_OBJECT")
     require(cfg.get("ramdisk_mode") == "kernel_embedded",
             "RC14_PROFILE_REQUIRES_KERNEL_EMBEDDED_INITRAMFS")
     init_check = initramfs_verify or initramfs_verifier().verify
@@ -74,6 +75,8 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
                                   cpio, "xz")
     original = json.loads(producer.read_text())
     approved = json.loads(independent.read_text())
+    require(isinstance(original, dict), "P26_PRODUCER_NOT_OBJECT")
+    require(isinstance(approved, dict), "P26_ATTESTATION_NOT_OBJECT")
     require(original.get("schema") == 1 and
             original.get("status") == "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK"
             and original.get("signed") is False and
