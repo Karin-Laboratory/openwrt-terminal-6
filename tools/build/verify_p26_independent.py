@@ -140,6 +140,12 @@ def attest(producer_receipt, attestation, p26, raw, verified_sha):
             or type(record.get("public_binary")) is not bool
             or any(record.get(k) != v for k, v in required.items())):
         raise ValueError("ATTEST_PRODUCER_SCOPE")
+    # The SquashFS input can change after verify() and before this receipt.
+    # Recheck its complete byte identity against the already verified partition.
+    with raw.open("rb") as source, p26.open("rb") as partition:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            if partition.read(len(block)) != block:
+                raise ValueError("ATTEST_SQUASHFS_CHANGED_AFTER_VERIFY")
     if (record.get("p26_sha256") != verified_sha
             or record.get("squashfs_sha256") != sha(raw)
             or record.get("squashfs_bytes") != raw.stat().st_size
