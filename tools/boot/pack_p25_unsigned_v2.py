@@ -107,9 +107,17 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
 
     require(len(kernel) < PARTITION and kernel.startswith(b"\x1f\x8b"),
             "KERNEL_GZIP_REQUIRED")
+    # Reject decompression bombs before allocating an unbounded kernel buffer.
+    # A compressed input smaller than P25 can otherwise expand without limit.
+    import zlib
+    max_image_bytes = 128 * 1024 * 1024
     try:
-        uncompressed = gzip.decompress(kernel)
-    except (OSError, EOFError) as exc:
+        inflater = zlib.decompressobj(wbits=16 + zlib.MAX_WBITS)
+        uncompressed = inflater.decompress(kernel, max_image_bytes + 1)
+        require(len(uncompressed) <= max_image_bytes and inflater.eof,
+                "KERNEL_GZIP_TOO_LARGE_OR_INCOMPLETE")
+        require(not inflater.unused_data, "KERNEL_GZIP_TRAILING_DATA")
+    except zlib.error as exc:
         raise ValueError("P25_BLOCKED_KERNEL_GZIP_INVALID") from exc
     require(len(uncompressed) >= 64 and uncompressed[56:60] == b"ARM\x64",
             "KERNEL_NOT_ARM64_IMAGE")
