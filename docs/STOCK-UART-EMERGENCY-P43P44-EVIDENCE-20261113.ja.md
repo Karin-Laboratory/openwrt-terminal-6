@@ -47,6 +47,31 @@ ls /sys/class/block
 
 この資料は、非公開の認証情報、署名鍵、未公開の侵入経路や任意コード実行の詳細を転載するものではない。
 
+### 2.1 外部所有者の再現例：LK `]` の直後に無効入力（2026-11-15、匿名化）
+
+**OBSERVED_ON_EXTERNAL_UNIT（一個体での報告）:** 所有者はUARTで起動直後からCtrl+Cを繰り返してもLKに留まれず、`SBA6D login:` まで起動していた。表示された `]` の直後に `x` とEnterを送ったところ、LKの対話状態に入れたと報告した。**これが全ファームウェアでタイムアウトを止める仕様だとは確認していない。** 反応がない場合はPC→基板のTX/RX配線・端末送信方向・115200 8N1を再確認する。
+
+**安全な観測順序：** 3.3V UARTを所有者が確認 → 電源投入時の出力を記録 → `]` とLK起動ログを確認 → 必要に応じてLKで未定義の文字 `x` とEnterを送信し、対話可能か確かめる。`x` の挙動もファームウェア依存であり、未知の端末では読み取り専用・無害と証明できない入力を無条件に送らない。**ブート設定やeMMCへの書込みコマンドは実行しない。**
+
+**報告された次段階（所有者からの対話記録、他個体への自動適用を禁止）:** LKで `help`、`kcmdline append init=/bin/sh`、`kcmdline print`、`repeat 1 60000 help` を使って純正Linux Emergency Shellに入った。これは**一時的な起動引数変更を伴う操作**で、`kcmdline finalized` は実行しないこと。LKのコマンド実装と安全性が未確認の個体に一括実行させず、対象のslot/FWと所有者承認を確認する。
+
+得られた表示は `BusyBox v1.33.2`、`uid=0(root)`、Linux `5.4.238` / `aarch64`。この時点の `cat /proc/cmdline` は「No such file or directory」となった。**Emergency Shellの`/proc`は未マウントの可能性**があるため、これだけで起動失敗と断定しない。Linuxシェルと確認したうえで、以下の状態を調べる。
+
+```sh
+uname -m
+uname -r
+cat /proc/mounts
+# /proc が未マウントの場合に限り、所有者の了解を得て仮想FSを用意
+mkdir -p /proc
+mount -t proc proc /proc
+cat /proc/cmdline
+cat /proc/1/comm
+```
+
+`mount -t proc` はカーネルの仮想ファイルシステムをマウントする操作で、eMMCのパーティション変更ではない。すでにマウント済みの場合は再マウント不要。環境によってはコマンドやマウント先の状態確認が必要。
+
+**重要な限界:** 同じ所有者が別途提示した通常起動ログでは `bootslot=a`、PID1=`procd`、P43=`/data`（ext4マウント）、P44なしだった。Emergency Shellでのslotを**独立に確認できた記録はまだない**。LK接続・一時rootシェル到達は確認されたが、正規工程S03の「純正slot B Emergency Shell」完了とは異なる。**S03は未完了扱い**、S04のSSHやS05の永続化、S07の分割も未立証。
+
 ## 3. 純正Linuxの実測環境
 
 - **CONFIRMED_ON_UNIT**: 純正slot Bで Linux **5.4.238** / **AArch64** が観測された。
