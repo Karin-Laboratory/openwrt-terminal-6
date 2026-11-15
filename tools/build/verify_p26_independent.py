@@ -68,7 +68,12 @@ def inventory(root):
                 dirs.remove(name)
     # Compare hardlink equivalence classes, never raw inode numbers (which
     # differ between staging and a separately extracted SquashFS image).
-    for paths in hardlink_groups.values():
+    for inode, paths in hardlink_groups.items():
+        # A link outside the staging tree cannot be represented by the image.
+        # Refuse an incomplete hardlink class instead of silently accepting it.
+        first = root / paths[0]
+        if first.lstat().st_nlink != len(paths):
+            raise ValueError("HARDLINK_OUTSIDE_TREE: " + paths[0])
         if len(paths) > 1:
             group = tuple(sorted(paths))
             for rel in group:
