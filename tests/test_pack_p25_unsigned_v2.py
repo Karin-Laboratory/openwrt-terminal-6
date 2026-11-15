@@ -60,6 +60,7 @@ class TestP25BootV2(unittest.TestCase):
         receipt = self.build()
         content = self.output.read_bytes()
         self.assertEqual(len(content), 33554432)
+        self.assertEqual(self.output.stat().st_mode & 0o777, 0o600)
         self.assertEqual(content[:8], b"ANDROID!")
         self.assertEqual(struct.unpack_from("<I", content, 36)[0], 2048)
         self.assertEqual(struct.unpack_from("<I", content, 40)[0], 2)
@@ -74,6 +75,14 @@ class TestP25BootV2(unittest.TestCase):
         self.assertEqual(self.verify()["partition_bytes"], len(content))
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             self.build()
+
+    def test_stale_receipt_blocks_image_creation(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        receipt_path.write_text("existing evidence")
+        with self.assertRaisesRegex(ValueError, "RECEIPT_EXISTS"):
+            self.build()
+        self.assertFalse(self.output.exists())
+        self.assertEqual(receipt_path.read_text(), "existing evidence")
 
     def test_independent_full_readback_rejects_nonzero_tail(self):
         self.build()
