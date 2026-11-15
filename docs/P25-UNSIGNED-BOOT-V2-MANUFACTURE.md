@@ -69,7 +69,7 @@ A successful metadata audit must *not* be labeled a flashable pair.
 ## RC11/RC14 64-byte DTB prefix format discrimination
 
 An independently authored **read-only** classifier is now available:
-`tools/boot/classify_p25_dtb_prefix.py`. It checks an explicitly
+`tools/boot/classify_p25_dtb_prefix.py`. Its AOSP DT table parser now matches the big-endian `>8I` layout emitted by [AOSP mkdtboimg.py](https://android.googlesource.com/platform/system/libufdt/+/refs/heads/master/utils/src/mkdtboimg.py); the outer boot-v2 header remains little-endian. It checks an explicitly
 SHA-pinned 32 MiB owner-private reference P25, calculates the DTB section
 offset using the Android-v2 outer header and page alignment, then examines
 the 64 bytes before the existing FDT. It never prints or exports the prefix
@@ -85,7 +85,7 @@ python3 tools/boot/classify_p25_dtb_prefix.py \
 
 Classifications are **strict**, not based on the first magic alone:
 
-- `AOSP_SINGLE_ENTRY_DT_TABLE_STRUCTURALLY_VALID` requires a little-endian
+- `AOSP_SINGLE_ENTRY_DT_TABLE_STRUCTURALLY_VALID` requires a big-endian
   32-byte Android DT table header followed by one 32-byte entry, count=1,
   entry offset 32, DTB offset 64, total size equal to the actual DTB section,
   entry size equal to the actual FDT total size and page-size consistency.

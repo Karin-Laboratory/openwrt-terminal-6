@@ -64,8 +64,8 @@ class PrefixClassificationTests(unittest.TestCase):
         return hashlib.sha256(self.p25.read_bytes()).hexdigest()
 
     def dt_table(self, total=104, dt_size=40):
-        header = struct.pack("<8I", 0xd7b7ab1e, total, 32, 32, 1, 32, 2048, 0)
-        entry = struct.pack("<8I", dt_size, 64, 0, 0, 0, 0, 0, 0)
+        header = struct.pack(">8I", 0xd7b7ab1e, total, 32, 32, 1, 32, 2048, 0)
+        entry = struct.pack(">8I", dt_size, 64, 0, 0, 0, 0, 0, 0)
         return header + entry
 
     def uimage(self, payload=None):
@@ -87,6 +87,16 @@ class PrefixClassificationTests(unittest.TestCase):
         self.assertTrue(result["android_dt_table"][
             "single_entry_32_plus_32_valid"])
         self.assertFalse(result["redistribution_approved"])
+
+    def test_aosp_table_rejects_little_endian_decoy(self):
+        # AOSP mkdtboimg uses >8I, not little-endian words.
+        header = struct.pack("<8I", 0xd7b7ab1e, 104, 32, 32, 1, 32, 2048, 0)
+        entry = struct.pack("<8I", 40, 64, 0, 0, 0, 0, 0, 0)
+        digest = self.make(header + entry)
+        result = classifier.inspect(self.p25, digest)
+        self.assertEqual(result["prefix_format"],
+                         "UNCLASSIFIED_PREFIX_NO_FORMAT_PROVEN")
+        self.assertFalse(result["android_dt_table"]["magic_matches"])
 
     def test_uimage_requires_both_crcs_and_size(self):
         digest = self.make(self.uimage())

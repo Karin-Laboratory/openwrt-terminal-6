@@ -38,7 +38,8 @@ def align(value, page):
 
 def dt_table_check(prefix, section, fdt_length, page):
     """Strict single-entry table only, so 64 bytes unambiguously cover it."""
-    fields = struct.unpack_from("<8I", prefix)
+    # AOSP mkdtboimg.py writes DT table words in big-endian order.
+    fields = struct.unpack_from(">8I", prefix)
     magic, total, header, entry_size, count, entry_off, table_page, version = fields
     if magic != DT_TABLE_MAGIC:
         return False
@@ -46,7 +47,7 @@ def dt_table_check(prefix, section, fdt_length, page):
             and count == 1 and entry_off == 32 and
             table_page == page and version in (0, 1)):
         return False
-    dt_size, dt_off, _id, _rev, *_custom = struct.unpack_from("<8I", prefix, 32)
+    dt_size, dt_off, _id, _rev, *_custom = struct.unpack_from(">8I", prefix, 32)
     return (dt_size == fdt_length and dt_off == 64
             and dt_off + dt_size == total)
 
@@ -94,7 +95,7 @@ def inspect(reference, expected_sha):
     require(fdt[:4] == FDT_MAGIC, "FDT_AFTER_PREFIX_MAGIC")
     fdt_bytes = struct.unpack_from(">I", fdt, 4)[0]
     require(40 <= fdt_bytes == len(fdt), "FDT_TOTALSIZE")
-    dt_magic = struct.unpack_from("<I", prefix)[0] == DT_TABLE_MAGIC
+    dt_magic = struct.unpack_from(">I", prefix)[0] == DT_TABLE_MAGIC
     u_magic = struct.unpack_from(">I", prefix)[0] == UIMAGE_MAGIC
     table_ok = dt_table_check(prefix, section, len(fdt), page)
     u_header_crc, u_data_crc, u_size = uimage_check(prefix, section)
