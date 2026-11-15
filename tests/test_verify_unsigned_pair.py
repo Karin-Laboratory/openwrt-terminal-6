@@ -217,6 +217,20 @@ class PairTests(unittest.TestCase):
                 self.producer.write_text(json.dumps(original))
                 self.update_independent()
 
+    def test_invalid_squashfs_size_types_fail_closed(self):
+        original = self.producer.read_text()
+        for value in (True, False, 0, -1, 128, 129, "9", 9.0):
+            with self.subTest(value=value):
+                data = json.loads(original)
+                data["squashfs_bytes"] = value
+                self.producer.write_text(json.dumps(data))
+                self.update_independent()
+                with self.assertRaisesRegex(ValueError, "P26_SQUASHFS_IDENTITY"):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+        self.producer.write_text(original)
+        self.update_independent()
+
     def test_p25_identity_rejected(self):
         with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
             pair.verify_pair(self.p25, *self.parts, self.p26, self.producer,
