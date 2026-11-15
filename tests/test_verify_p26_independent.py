@@ -234,6 +234,19 @@ class IndependentP26Tests(unittest.TestCase):
         # failed directory sync and rollback directory sync.
         self.assertEqual(len(calls), 5)
 
+    def test_directory_walk_error_fails_closed(self):
+        # os.walk normally swallows scandir errors, silently omitting files.
+        # Force the error callback without depending on root permissions.
+        real_walk = mod.os.walk
+
+        def failed_walk(root, **kwargs):
+            kwargs["onerror"](PermissionError("synthetic unreadable subtree"))
+            yield from ()
+
+        with patch.object(mod.os, "walk", side_effect=failed_walk):
+            with self.assertRaisesRegex(ValueError, "TREE_WALK_FAILED"):
+                mod.inventory(self.root)
+
     def test_partition_size_rejected(self):
         self.p26.write_bytes(b"short")
         with self.assertRaisesRegex(ValueError, "PARTITION_SIZE"):
