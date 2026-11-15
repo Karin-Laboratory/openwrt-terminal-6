@@ -247,7 +247,7 @@ class TestP25BootV2(unittest.TestCase):
 
     def test_rejects_gzip_expansion_beyond_limit(self):
         image = bytearray(128 * 1024 * 1024 + 1)
-        image[56:60] = b"ARM\\x64"
+        image[56:60] = b"ARM\x64"
         self.kernel.write_bytes(gzip.compress(bytes(image), compresslevel=9, mtime=0))
         with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_TOO_LARGE_OR_INCOMPLETE"):
             self.build()
@@ -257,6 +257,18 @@ class TestP25BootV2(unittest.TestCase):
         self.kernel.write_bytes(self.kernel.read_bytes() + b"trailing")
         with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_TRAILING_DATA"):
             self.build()
+
+    def test_rejects_truncated_gzip_stream(self):
+        self.kernel.write_bytes(self.kernel.read_bytes()[:-4])
+        with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_TOO_LARGE_OR_INCOMPLETE"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
+    def test_rejects_concatenated_gzip_members(self):
+        self.kernel.write_bytes(self.kernel.read_bytes() + gzip.compress(b"extra member", mtime=0))
+        with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_TRAILING_DATA"):
+            self.build()
+        self.assertFalse(self.output.exists())
 
     def test_rejects_malformed_dtb(self):
         self.dtb.write_bytes(b"not a device tree")
