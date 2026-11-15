@@ -255,7 +255,7 @@ class HashInputTests(unittest.TestCase):
                     self.run_create()
                 self.assertFalse(self.out.exists())
 
-    def test_reject_changed_producer(self):
+    def test_reject_boolean_independent_squashfs_size(self):\n        # Producer 1 and independent true compare equal in Python.\n        producer = json.loads(self.producer.read_text())\n        producer['squashfs_bytes'] = 1\n        self.producer.write_text(json.dumps(producer))\n        independent = json.loads(self.independent.read_text())\n        independent['squashfs_bytes'] = True\n        independent['producer_receipt_sha256'] = mod.sha256(self.producer)\n        self.independent.write_text(json.dumps(independent))\n        with self.assertRaisesRegex(ValueError, 'invalid independent SquashFS identity metadata'):\n            self.run_create()\n        self.assertFalse(self.out.exists())\n\n    def test_reject_changed_producer(self):
         data = json.loads(self.producer.read_text())
         data['squashfs_bytes'] = 5
         self.producer.write_text(json.dumps(data))
