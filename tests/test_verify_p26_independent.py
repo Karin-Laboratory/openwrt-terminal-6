@@ -104,6 +104,26 @@ class IndependentP26Tests(unittest.TestCase):
                     mod.attest(receipt, output, self.p26, self.raw, checked)
                 self.assertFalse(output.exists())
 
+    def test_attestation_binds_original_receipt_if_replaced_after_parse(self):
+        import hashlib
+        receipt = self._producer_receipt()
+        original = receipt.read_bytes()
+        checked = mod.sha(self.p26)
+        output = self.base / "verified.json"
+        real_loads = mod.json.loads
+
+        def replace_after_parse(data, **kwargs):
+            parsed = real_loads(data, **kwargs)
+            receipt.write_text('{"status":"REPLACED_AFTER_PARSE"}')
+            return parsed
+
+        with patch.object(mod.json, "loads", side_effect=replace_after_parse):
+            evidence = mod.attest(receipt, output, self.p26, self.raw, checked)
+        self.assertEqual(evidence["producer_receipt_sha256"],
+                         hashlib.sha256(original).hexdigest())
+        self.assertEqual(real_loads(output.read_text())["producer_receipt_sha256"],
+                         hashlib.sha256(original).hexdigest())
+
     def test_attestation_rejects_producer_hash_mismatch(self):
         receipt = self._producer_receipt()
         doc = json.loads(receipt.read_text())
