@@ -103,12 +103,6 @@ class TestP25BootV2(unittest.TestCase):
         self.assertEqual(calls, 2)
         self.assertFalse(self.output.exists())
         self.assertFalse(receipt_path.exists())
-        self.assertEqual(self.verify_after_failure_paths(), (False, False))
-
-    def verify_after_failure_paths(self):
-        receipt_path = self.output.with_name(self.output.name + ".json")
-        return self.output.exists(), receipt_path.exists()
-
     def test_independent_full_readback_rejects_nonzero_tail(self):
         self.build()
         damaged = bytearray(self.output.read_bytes())
