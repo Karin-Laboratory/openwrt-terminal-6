@@ -109,7 +109,7 @@ class TestP25BootV2(unittest.TestCase):
         with mock.patch.object(p25.os, "fsync", side_effect=fail_second_sync):
             with self.assertRaisesRegex(OSError, "synthetic receipt sync failure"):
                 self.build()
-        self.assertEqual(calls, 2)
+        self.assertEqual(calls, 3)  # includes rollback directory fsync
         self.assertFalse(self.output.exists())
         self.assertFalse(receipt_path.exists())
     def test_directory_sync_failure_rolls_back_and_syncs_removal(self):
