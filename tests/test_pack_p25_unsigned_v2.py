@@ -85,6 +85,15 @@ class TestP25BootV2(unittest.TestCase):
         self.assertFalse(self.output.exists())
         self.assertEqual(receipt_path.read_text(), "existing evidence")
 
+    def test_image_sync_failure_removes_partial_image(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        with mock.patch.object(p25.os, "fsync",
+                               side_effect=OSError("synthetic image sync failure")):
+            with self.assertRaisesRegex(OSError, "synthetic image sync failure"):
+                self.build()
+        self.assertFalse(self.output.exists())
+        self.assertFalse(receipt_path.exists())
+
     def test_receipt_sync_failure_removes_both_outputs(self):
         receipt_path = self.output.with_name(self.output.name + ".json")
         original_fsync = p25.os.fsync
