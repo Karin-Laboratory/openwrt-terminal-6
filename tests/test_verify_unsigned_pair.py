@@ -66,7 +66,10 @@ class PairTests(unittest.TestCase):
         }))
 
     def fake_p25(self, *args):
-        return {"partition_bytes": 64, "p25_sha256": pair.digest(self.p25)}
+        return {"partition_bytes": 64, "header_version": 2,
+                "scope": "UNSIGNED_V2_BYTE_LAYOUT_ONLY",
+                "ramdisk_mode": "kernel_embedded",
+                "p25_sha256": pair.digest(self.p25)}
 
     def fake_initramfs(self, *args):
         return {"status": "ARM64_KERNEL_INITRAMFS_OBJECT_AND_IMAGE_VERIFIED",
@@ -288,7 +291,10 @@ class PairTests(unittest.TestCase):
 
     def test_malformed_p25_verifier_result_rejected(self):
         for result in (None, [], True, {}, {"partition_bytes": 64},
-                       {"partition_bytes": True, "p25_sha256": pair.digest(self.p25)}):
+                       {**self.fake_p25(), "header_version": 1},
+                       {**self.fake_p25(), "scope": "UNVERIFIED"},
+                       {**self.fake_p25(), "ramdisk_mode": "external"},
+                       {**self.fake_p25(), "partition_bytes": True}):
             with self.subTest(result=result):
                 with self.assertRaisesRegex(ValueError, "P25_IDENTITY"):
                     pair.verify_pair(
@@ -305,7 +311,7 @@ class PairTests(unittest.TestCase):
                              self.independent, self.cpio,
                              self.initramfs_object, self.vmlinux, self.image,
                              self.out,
-                             p25_verify=lambda *args: {"partition_bytes": 64,
+                             p25_verify=lambda *args: {**self.fake_p25(),
                                                        "p25_sha256": "0" * 64},
                              initramfs_verify=self.fake_initramfs)
 
