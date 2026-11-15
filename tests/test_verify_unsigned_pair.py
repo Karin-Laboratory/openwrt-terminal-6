@@ -3,6 +3,7 @@
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -83,6 +84,7 @@ class PairTests(unittest.TestCase):
         self.assertEqual(evidence["status"], "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED")
         self.assertEqual(json.loads(self.out.read_text())["p26_sha256"],
                          pair.digest(self.p26))
+        self.assertEqual(self.out.stat().st_mode & 0o777, 0o600)
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             self.run_pair()
 
