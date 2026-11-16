@@ -867,6 +867,10 @@ jobs:
                 exit 1
               fi
             done
+            # tools/install does not guarantee dtc is selected by the native
+            # package dependency closure. Build the pinned OpenWrt host dtc
+            # explicitly before the public Debian DTB staging step.
+            make -C "$work/openwrt" -j2 tools/dtc/install
             host_dtc="$work/openwrt/staging_dir/host/bin/dtc"
             if ! test -x "$host_dtc"; then
               echo "PUBLIC_PAIR_BLOCKED_HOST_DTC_UNAVAILABLE: $host_dtc" >&2
