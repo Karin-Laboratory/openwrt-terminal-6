@@ -244,12 +244,6 @@ class PairTests(unittest.TestCase):
                         writer.write(b"changed")
                 return data
 
-        def open_with_mutation(path, mode="r", *args, **kwargs):
-            stream = original_open(path, mode, *args, **kwargs)
-            if path == target and mode == "rb":
-                return MutatingStream(stream)
-            return stream
-
         # Only the final streaming pass is patched, not initial attestation.
         original_digest = pair.digest
         cpio_reads = 0
@@ -261,8 +255,7 @@ class PairTests(unittest.TestCase):
                 cpio_reads += 1
             return result
 
-        # The second CPIO digest occurs in the pair's identity gate.
-        # Arm the stream mutation only after both attestations finish.
+        # Arm mutation after the initial verifier and identity digest.
         def guarded_open(path, mode="r", *args, **kwargs):
             if path == target and mode == "rb" and cpio_reads >= 2:
                 return MutatingStream(original_open(path, mode, *args, **kwargs))
