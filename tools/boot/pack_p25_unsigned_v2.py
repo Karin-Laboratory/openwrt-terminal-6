@@ -33,23 +33,33 @@ def require(condition, name):
         raise ValueError("P25_BLOCKED_" + name)
 
 
-def read_regular(path):
-    require(path.is_file() and not path.is_symlink(), "NONREGULAR_INPUT")
-    # No individual section can exceed the entire 32 MiB partition.
-    # Bound reads before allocating an attacker-controlled input file.
-    with path.open("rb") as stream:
-        data = stream.read(PARTITION + 1)
-    require(len(data) <= PARTITION, "INPUT_TOO_LARGE")
+def read_bounded_input(path, limit, label):
+    """Open a regular input without following a replaced final symlink.
+
+    Validate the opened descriptor, not a prior path stat: a concurrent rename
+    must not redirect a checked input to a symlink, directory, or device.
+    """
+    import stat
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    try:
+        fd = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError("P25_BLOCKED_NONREGULAR_INPUT") from exc
+    with os.fdopen(fd, "rb") as stream:
+        require(stat.S_ISREG(os.fstat(stream.fileno()).st_mode),
+                "NONREGULAR_INPUT")
+        data = stream.read(limit + 1)
+    require(len(data) <= limit, label)
     return data
+
+
+def read_regular(path):
+    return read_bounded_input(path, PARTITION, "INPUT_TOO_LARGE")
 
 
 def read_bounded_config(path):
     """Reject oversized config metadata before loading or parsing it."""
-    require(path.is_file() and not path.is_symlink(), "NONREGULAR_INPUT")
-    with path.open("rb") as stream:
-        data = stream.read(1024 * 1024 + 1)
-    require(len(data) <= 1024 * 1024, "CONFIG_TOO_LARGE")
-    return data
+    return read_bounded_input(path, 1024 * 1024, "CONFIG_TOO_LARGE")
 
 
 def parse_addr(value, bits, label):
