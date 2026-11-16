@@ -785,6 +785,10 @@ jobs:
           sha256sum "$work/air6-first-stage-initramfs.cpio" \
             "$kernel/arch/arm64/boot/Image"
           echo 'PUBLIC_AIR6_FIRST_STAGE_KERNEL_IMAGE_SOURCE_BUILT_PASS'
+          # Preserve the failing command/line when the next P25 stage exits
+          # before it can print its own blocker marker. No binary disclosure.
+          trap 'rc=$?; echo "PUBLIC_PAIR_POST_KERNEL_FAILURE line=$LINENO status=$rc command=$BASH_COMMAND" >&2' ERR
+          echo 'PUBLIC_PAIR_POST_KERNEL_STAGE_ENTER'
           # Unsigned P25 only when the caller supplies both a validated exact
           # boot-v2 configuration and the separately hash-pinned DTB prefix.
           # Neither private config nor vendor prefix is stored in this repo.
