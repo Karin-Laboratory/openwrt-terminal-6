@@ -17,9 +17,12 @@ for p in "$cpio" "$p26" "$producer" "$independent"; do
 done
 [[ $(stat -c %s "$p26") == 134217728 ]] ||
   { echo 'PUBLIC_PAIR_BLOCKED_REAL_P26_SIZE' >&2; exit 1; }
-for bin in git python3 make dtc cpp sha256sum gzip aarch64-linux-gnu-gcc; do
+for bin in git python3 make dtc cpp sha256sum gzip; do
   command -v "$bin" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_TOOL_$bin" >&2; exit 2; }
 done
+[[ -n ${AIR6_CROSS_COMPILE:-} ]] || { echo "PUBLIC_PAIR_BLOCKED_MATCHING_OPENWRT_CROSS_PREFIX_REQUIRED" >&2; exit 2; }
+command -v "${AIR6_CROSS_COMPILE}gcc" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER" >&2; exit 2; }
+command -v "${AIR6_CROSS_COMPILE}ld" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_CROSS_LINKER" >&2; exit 2; }
 mkdir -m 0700 "$out"
 # Pin the PUBLIC Debian PR14 source, then let its independent 17-blob source
 # manifest verify every MT6990 donor input. No private source import.
@@ -57,7 +60,7 @@ export PUBLIC_MT6990_SCOPE=network
 export WORKDIR="$out/linux-6.18.63"
 export INITRAMFS_ARCHIVE="$cpio"
 export DTB_PATH="$out/dtb/board/terminal6-debian-ethernet-experimental.dtb"
-export CROSS_COMPILE=aarch64-linux-gnu-
+export CROSS_COMPILE="$AIR6_CROSS_COMPILE"
 export JOBS=4
 bash "$deb/scripts/build-openwrt-pair-local.sh"
 kernel="$out/linux-6.18.63"

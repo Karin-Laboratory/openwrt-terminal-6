@@ -849,17 +849,18 @@ jobs:
             # in this SAME workspace, with this run's P26-bound first-stage.
             # Existing OpenWrt packer, readback and pair verifier remain the
             # source of acceptance; no private reference/prefix is consumed.
-            export DEBIAN_FRONTEND=noninteractive
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends \
-              gcc-aarch64-linux-gnu g++-aarch64-linux-gnu bc bison flex \
-              libssl-dev libelf-dev device-tree-compiler cpio curl
+            # Reuse this job’s source-built matching OpenWrt toolchain.
+            # Public security policy forbids privileged shell in this workflow.
+            command -v "$compiler" >/dev/null
+            test -x "${cross}gcc" && test -x "${cross}ld"
+            test -x "$work/openwrt/staging_dir/host/bin/dtc"
             bash -n "$GITHUB_WORKSPACE/scripts/manufacture-public-openwrt-p25-from-debian14.sh"
             echo 'REBUILD_SCOPE=E 6.18.63 real public kernel plus same-run source-built P26'
             echo 'REUSE_PROOF=only same-job verified P26 bytes and first-stage CPIO'
             echo 'CACHE_DECISION=no firmware/outputs cached or uploaded'
             start_epoch="$(date +%s)"
-            timeout --signal=TERM --kill-after=15s 7200 \
+            AIR6_CROSS_COMPILE="$cross" PATH="$work/openwrt/staging_dir/host/bin:$(dirname "$compiler"):$PATH" \
+              timeout --signal=TERM --kill-after=15s 7200 \
               bash "$GITHUB_WORKSPACE/scripts/manufacture-public-openwrt-p25-from-debian14.sh" \
                 "$work/public-source-61863-p25" \
                 "$work/air6-first-stage-initramfs.cpio" \
