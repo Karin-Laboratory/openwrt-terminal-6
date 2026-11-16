@@ -131,7 +131,12 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
     require(total_dtb == len(dtb), "DTB_TOTALSIZE")
     if prefix_bytes:
         require(dtb_prefix_path is not None, "DTB_SECTION_PREFIX_MISSING")
-        prefix = read_regular(dtb_prefix_path)
+        require(dtb_prefix_path.is_file() and not dtb_prefix_path.is_symlink(),
+                "NONREGULAR_INPUT")
+        # Read at most one byte past the declared prefix length. A malformed
+        # external prefix must not cause an unbounded read before validation.
+        with dtb_prefix_path.open("rb") as stream:
+            prefix = stream.read(prefix_bytes + 1)
         require(len(prefix) == prefix_bytes, "DTB_SECTION_PREFIX_SIZE")
         require(hashlib.sha256(prefix).hexdigest() == prefix_sha,
                 "DTB_SECTION_PREFIX_SHA256")
