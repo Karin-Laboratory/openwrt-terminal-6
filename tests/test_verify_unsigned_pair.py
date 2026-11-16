@@ -193,6 +193,27 @@ class PairTests(unittest.TestCase):
             self.run_pair()
         self.assertFalse(self.out.exists())
 
+    def test_cpio_replaced_after_initial_attestation_is_rejected(self):
+        # The initial digest agrees with the independent initramfs verifier.
+        # Replacing the CPIO before the marker scan must not yield a receipt.
+        original_digest = pair.digest
+        swapped = False
+
+        def replace_after_digest(path):
+            nonlocal swapped
+            value = original_digest(path)
+            if path == self.cpio and not swapped:
+                swapped = True
+                # Preserve the marker, but change bytes elsewhere.
+                self.cpio.write_bytes(self.cpio.read_bytes() + b"changed")
+            return value
+
+        with patch.object(pair, "digest", side_effect=replace_after_digest):
+            with self.assertRaisesRegex(ValueError, "CPIO_CHANGED_DURING_VERIFICATION"):
+                self.run_pair()
+        self.assertTrue(swapped)
+        self.assertFalse(self.out.exists())
+
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
         image[-1] = 1
