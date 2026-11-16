@@ -35,7 +35,11 @@ def no_duplicate_keys(pairs):
 def read_receipt(path):
     # Bind validation and receipt identity to the same bytes, even if the
     # pathname is replaced between validation and attestation.
-    raw = path.read_bytes()
+    # Receipts are small JSON metadata, never firmware payloads. Bound reads
+    # even when an untrusted path names an unexpectedly large regular file.
+    with path.open("rb") as stream:
+        raw = stream.read(1024 * 1024 + 1)
+    require(len(raw) <= 1024 * 1024, "RECEIPT_TOO_LARGE")
     return json.loads(raw, object_pairs_hook=no_duplicate_keys), hashlib.sha256(raw).hexdigest()
 
 
