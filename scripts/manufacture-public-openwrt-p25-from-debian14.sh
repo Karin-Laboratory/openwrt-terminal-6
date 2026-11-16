@@ -48,7 +48,7 @@ if src.count(needle) != 1:
     raise SystemExit("PUBLIC_PAIR_BLOCKED_KERNEL_SCRIPT_ANCHOR")
 addition = ('scripts/config --enable SQUASHFS --enable SQUASHFS_XZ '
             '--enable OVERLAY_FS --enable CRYPTO_SHA256 '
-            '--enable INITRAMFS_COMPRESSION_XZ '
+            '--enable RD_XZ --enable INITRAMFS_COMPRESSION_XZ '
             '--disable INITRAMFS_COMPRESSION_GZIP\n')
 Path(sys.argv[2]).write_text(src.replace(needle, addition + needle))
 PY
