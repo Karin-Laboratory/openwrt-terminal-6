@@ -179,6 +179,10 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         "not_proven": ["Air6 LK accepts p25", "RC14 boot compatibility",
                        "hardware cold boot", "LAN/SSH", "publication rights"],
     }
+    # Recheck p25 after all other inputs were scanned. A concurrent replacement
+    # must not yield a receipt for bytes different from the verified boot image.
+    require(digest(p25) == p25_result["p25_sha256"],
+            "P25_CHANGED_DURING_VERIFICATION")
     # Do not overwrite stale pair evidence.
     created = False
     try:
