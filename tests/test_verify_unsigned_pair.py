@@ -303,6 +303,16 @@ class PairTests(unittest.TestCase):
                     self.assertFalse(self.out.exists())
             path.write_text(original)
 
+    def test_oversized_receipts_fail_closed(self):
+        for path in (self.parts[3], self.producer, self.independent):
+            with self.subTest(path=path.name):
+                original = path.read_bytes()
+                path.write_bytes(b" " * (pair.MAX_RECEIPT_BYTES + 1))
+                with self.assertRaisesRegex(ValueError, "RECEIPT_TOO_LARGE"):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+                path.write_bytes(original)
+
     def test_duplicate_receipt_keys_fail_closed(self):
         for path in (self.parts[3], self.producer, self.independent):
             with self.subTest(path=path.name):
