@@ -289,6 +289,16 @@ class TestP25BootV2(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "CONFIG_KEYS"):
             self.build()
 
+    def test_rejects_nonascii_header_text_without_writing(self):
+        for field in ("name", "cmdline"):
+            with self.subTest(field=field):
+                changed = dict(self.config, **{field: "日本語"})
+                self.cfg.write_text(json.dumps(changed))
+                with self.assertRaisesRegex(ValueError, "NAME_OR_CMDLINE_ASCII"):
+                    self.build()
+                self.assertFalse(self.output.exists())
+                self.assertFalse(self.output.with_name(self.output.name + ".json").exists())
+
     def test_rejects_invalid_page_size(self):
         self.config["page_size"] = 3000
         self.cfg.write_text(json.dumps(self.config))
