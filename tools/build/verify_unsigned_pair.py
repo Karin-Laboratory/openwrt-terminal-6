@@ -14,6 +14,7 @@ from pathlib import Path
 
 P25_BYTES = 33_554_432
 P26_BYTES = 134_217_728
+MAX_RECEIPT_BYTES = 1024 * 1024
 
 
 def digest(path):
@@ -35,7 +36,9 @@ def no_duplicate_keys(pairs):
 def read_receipt(path):
     # Bind validation and receipt identity to the same bytes, even if the
     # pathname is replaced between validation and attestation.
-    raw = path.read_bytes()
+    with path.open("rb") as stream:
+        raw = stream.read(MAX_RECEIPT_BYTES + 1)
+    require(len(raw) <= MAX_RECEIPT_BYTES, "RECEIPT_TOO_LARGE")
     return json.loads(raw, object_pairs_hook=no_duplicate_keys), hashlib.sha256(raw).hexdigest()
 
 
