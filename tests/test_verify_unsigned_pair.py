@@ -193,6 +193,80 @@ class PairTests(unittest.TestCase):
             self.run_pair()
         self.assertFalse(self.out.exists())
 
+    def test_cpio_replaced_after_initial_attestation_is_rejected(self):
+        # The initial digest agrees with the independent initramfs verifier.
+        # Replacing the CPIO before the marker scan must not yield a receipt.
+        original_digest = pair.digest
+        cpio_reads = 0
+
+        def replace_after_digest(path):
+            nonlocal cpio_reads
+            value = original_digest(path)
+            if path == self.cpio:
+                cpio_reads += 1
+            if path == self.cpio and cpio_reads == 2:
+                # Preserve the marker, but change bytes elsewhere.
+                self.cpio.write_bytes(self.cpio.read_bytes() + b"changed")
+            return value
+
+        with patch.object(pair, "digest", side_effect=replace_after_digest):
+            with self.assertRaisesRegex(ValueError, "CPIO_CHANGED_DURING_VERIFICATION"):
+                self.run_pair()
+        self.assertGreaterEqual(cpio_reads, 2)
+        self.assertFalse(self.out.exists())
+
+    def test_cpio_modified_while_streaming_is_rejected(self):
+        # Simulate an in-place write after the first streaming read. The
+        # scanned bytes must no longer match the independently attested CPIO.
+        marker = pair.digest(self.p26).encode("ascii") + b"  /dev/mmcblk0p26"
+        self.cpio.write_bytes(marker + b"x" * (1024 * 1024 + 64))
+        original_open = Path.open
+        target = self.cpio
+
+        class MutatingStream:
+            def __init__(self, stream):
+                self.stream = stream
+                self.reads = 0
+
+            def __enter__(self):
+                self.stream.__enter__()
+                return self
+
+            def __exit__(self, *args):
+                return self.stream.__exit__(*args)
+
+            def read(self, size=-1):
+                data = self.stream.read(size)
+                self.reads += 1
+                if self.reads == 1:
+                    with original_open(target, "r+b") as writer:
+                        writer.seek(1024 * 1024)
+                        writer.write(b"changed")
+                return data
+
+        # Only the final streaming pass is patched, not initial attestation.
+        original_digest = pair.digest
+        cpio_reads = 0
+
+        def patch_after_attestation(path):
+            nonlocal cpio_reads
+            result = original_digest(path)
+            if path == target:
+                cpio_reads += 1
+            return result
+
+        # Arm mutation after the initial verifier and identity digest.
+        def guarded_open(path, mode="r", *args, **kwargs):
+            if path == target and mode == "rb" and cpio_reads >= 2:
+                return MutatingStream(original_open(path, mode, *args, **kwargs))
+            return original_open(path, mode, *args, **kwargs)
+
+        with patch.object(pair, "digest", side_effect=patch_after_attestation):
+            with patch.object(Path, "open", guarded_open):
+                with self.assertRaisesRegex(ValueError, "CPIO_CHANGED_DURING_VERIFICATION"):
+                    self.run_pair()
+        self.assertFalse(self.out.exists())
+
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
         image[-1] = 1
@@ -228,6 +302,16 @@ class PairTests(unittest.TestCase):
                         self.run_pair()
                     self.assertFalse(self.out.exists())
             path.write_text(original)
+
+    def test_oversized_receipts_fail_closed(self):
+        for path in (self.parts[3], self.producer, self.independent):
+            with self.subTest(path=path.name):
+                original = path.read_bytes()
+                path.write_bytes(b" " * (pair.MAX_RECEIPT_BYTES + 1))
+                with self.assertRaisesRegex(ValueError, "RECEIPT_TOO_LARGE"):
+                    self.run_pair()
+                self.assertFalse(self.out.exists())
+                path.write_bytes(original)
 
     def test_duplicate_receipt_keys_fail_closed(self):
         for path in (self.parts[3], self.producer, self.independent):
