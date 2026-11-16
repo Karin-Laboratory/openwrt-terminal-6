@@ -158,24 +158,25 @@ class PairTests(unittest.TestCase):
                 self.run_pair()
         self.assertFalse(self.out.exists())
 
-    def test_producer_path_swap_does_not_change_validated_receipt_hash(self):
-        # The producer file is replaced after parsing, but the independent
-        # receipt must be checked against the originally validated bytes.
-        original_bytes = self.producer.read_bytes()
-        original_read = pair.read_receipt
+    def test_metadata_mutation_after_parse_rejected(self):
+        for target, reason in ((self.parts[3], "P25_CONFIG_CHANGED"),
+                               (self.producer, "P26_PRODUCER_RECEIPT_CHANGED"),
+                               (self.independent, "P26_INDEPENDENT_RECEIPT_CHANGED")):
+            with self.subTest(target=target.name):
+                original = target.read_bytes()
+                original_read = pair.read_receipt
 
-        def swap_after_read(path):
-            result = original_read(path)
-            if path == self.producer:
-                self.producer.write_bytes(b'{"replacement": true}')
-            return result
+                def mutate_after_read(path):
+                    result = original_read(path)
+                    if path == target:
+                        path.write_bytes(original + b" ")
+                    return result
 
-        with patch.object(pair, "read_receipt", side_effect=swap_after_read):
-            evidence = self.run_pair()
-        self.assertEqual(evidence["p26_sha256"], pair.digest(self.p26))
-        self.assertEqual(json.loads(self.out.read_text())["p26_sha256"],
-                         pair.digest(self.p26))
-        self.assertNotEqual(self.producer.read_bytes(), original_bytes)
+                with patch.object(pair, "read_receipt", side_effect=mutate_after_read):
+                    with self.assertRaisesRegex(ValueError, reason):
+                        self.run_pair()
+                self.assertFalse(self.out.exists())
+                target.write_bytes(original)
 
     def test_initramfs_attestation_must_match_exact_inputs(self):
         valid = self.fake_initramfs()
