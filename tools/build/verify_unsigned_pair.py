@@ -183,6 +183,9 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # must not yield a receipt for bytes different from the verified boot image.
     require(digest(p25) == p25_result["p25_sha256"],
             "P25_CHANGED_DURING_VERIFICATION")
+    # Rehash p26 after CPIO and receipt checks; the initial hash alone does
+    # not protect against an in-place edit during later verification.
+    require(digest(p26) == p26_hash, "P26_CHANGED_DURING_VERIFICATION")
     # Do not overwrite stale pair evidence.
     created = False
     try:
