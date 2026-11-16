@@ -184,6 +184,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "scripts/manufacture-public-openwrt-p25-from-debian14.sh",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "f2ed2f2b7db5f451fb470eb01c8bd4bd795761eb",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "scripts/package-arm64-busybox-initramfs.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
