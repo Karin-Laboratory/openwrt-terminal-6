@@ -33,13 +33,18 @@ def no_duplicate_keys(pairs):
     return result
 
 
+def reject_nonfinite(value):
+    raise ValueError("UNSIGNED_PAIR_BLOCKED_NONFINITE_JSON_CONSTANT")
+
+
 def read_receipt(path):
     # Bind validation and receipt identity to the same bytes, even if the
     # pathname is replaced between validation and attestation.
     with path.open("rb") as stream:
         raw = stream.read(MAX_RECEIPT_BYTES + 1)
     require(len(raw) <= MAX_RECEIPT_BYTES, "RECEIPT_TOO_LARGE")
-    return json.loads(raw, object_pairs_hook=no_duplicate_keys), hashlib.sha256(raw).hexdigest()
+    return json.loads(raw, object_pairs_hook=no_duplicate_keys,
+                      parse_constant=reject_nonfinite), hashlib.sha256(raw).hexdigest()
 
 
 def strict_int(value, expected):
