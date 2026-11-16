@@ -35,7 +35,12 @@ def require(condition, name):
 
 def read_regular(path):
     require(path.is_file() and not path.is_symlink(), "NONREGULAR_INPUT")
-    return path.read_bytes()
+    # No individual section can exceed the entire 32 MiB partition.
+    # Bound reads before allocating an attacker-controlled input file.
+    with path.open("rb") as stream:
+        data = stream.read(PARTITION + 1)
+    require(len(data) <= PARTITION, "INPUT_TOO_LARGE")
+    return data
 
 
 def read_bounded_config(path):
