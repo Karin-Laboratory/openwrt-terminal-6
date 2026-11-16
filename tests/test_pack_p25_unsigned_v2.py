@@ -87,6 +87,14 @@ class TestP25BootV2(unittest.TestCase):
                          hashlib.sha256(self.output.read_bytes()).hexdigest())
         self.assertEqual(self.verify()["partition_bytes"], 33554432)
 
+    def test_oversized_dtb_prefix_is_rejected_without_outputs(self):
+        # Only prefix_bytes + 1 bytes may be read, even if the file is larger.
+        self.prefix.write_bytes(b"x" * (1024 * 1024))
+        with self.assertRaisesRegex(ValueError, "DTB_SECTION_PREFIX_SIZE"):
+            self.build()
+        self.assertFalse(self.output.exists())
+        self.assertFalse(self.output.with_name(self.output.name + ".json").exists())
+
     def test_stale_receipt_blocks_image_creation(self):
         receipt_path = self.output.with_name(self.output.name + ".json")
         receipt_path.write_text("existing evidence")
