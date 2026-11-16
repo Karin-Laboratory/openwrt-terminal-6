@@ -140,6 +140,10 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
         prefix = b""
     dtb_section = prefix + dtb
 
+    # Reject unsupported header text as a documented manufacturing error.
+    # ASCII encoding must not leak an unclassified UnicodeEncodeError.
+    require(config["name"].isascii() and config["cmdline"].isascii(),
+            "NAME_OR_CMDLINE_ASCII")
     name = config["name"].encode("ascii")
     cmdline = config["cmdline"].encode("ascii")
     require(len(name) <= 15 and len(cmdline) <= 1535 and
