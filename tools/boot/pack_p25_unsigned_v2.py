@@ -86,6 +86,14 @@ def validate_config(config):
     return addresses, page, os_version, prefix_bytes, prefix_sha
 
 
+def reject_duplicate_config_keys(pairs):
+    config = {}
+    for key, value in pairs:
+        require(key not in config, "DUPLICATE_CONFIG_KEY")
+        config[key] = value
+    return config
+
+
 def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
           dtb_prefix_path=None):
     require(not output.exists() and not output.is_symlink(), "OUTPUT_EXISTS")
@@ -93,14 +101,23 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
     kernel = read_regular(kernel_path)
     ramdisk = read_regular(ramdisk_path)
     dtb = read_regular(dtb_path)
-    config = json.loads(read_regular(cfg_path))
+    config = json.loads(read_regular(cfg_path),
+                        object_pairs_hook=reject_duplicate_config_keys)
     addresses, page, os_version, prefix_bytes, prefix_sha = validate_config(config)
 
     require(len(kernel) < PARTITION and kernel.startswith(b"\x1f\x8b"),
             "KERNEL_GZIP_REQUIRED")
+    # Reject decompression bombs before allocating an unbounded kernel buffer.
+    # A compressed input smaller than P25 can otherwise expand without limit.
+    import zlib
+    max_image_bytes = 128 * 1024 * 1024
     try:
-        uncompressed = gzip.decompress(kernel)
-    except (OSError, EOFError) as exc:
+        inflater = zlib.decompressobj(wbits=16 + zlib.MAX_WBITS)
+        uncompressed = inflater.decompress(kernel, max_image_bytes + 1)
+        require(len(uncompressed) <= max_image_bytes and inflater.eof,
+                "KERNEL_GZIP_TOO_LARGE_OR_INCOMPLETE")
+        require(not inflater.unused_data, "KERNEL_GZIP_TRAILING_DATA")
+    except zlib.error as exc:
         raise ValueError("P25_BLOCKED_KERNEL_GZIP_INVALID") from exc
     require(len(uncompressed) >= 64 and uncompressed[56:60] == b"ARM\x64",
             "KERNEL_NOT_ARM64_IMAGE")
@@ -114,7 +131,12 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
     require(total_dtb == len(dtb), "DTB_TOTALSIZE")
     if prefix_bytes:
         require(dtb_prefix_path is not None, "DTB_SECTION_PREFIX_MISSING")
-        prefix = read_regular(dtb_prefix_path)
+        require(dtb_prefix_path.is_file() and not dtb_prefix_path.is_symlink(),
+                "NONREGULAR_INPUT")
+        # Read at most one byte past the declared prefix length. A malformed
+        # external prefix must not cause an unbounded read before validation.
+        with dtb_prefix_path.open("rb") as stream:
+            prefix = stream.read(prefix_bytes + 1)
         require(len(prefix) == prefix_bytes, "DTB_SECTION_PREFIX_SIZE")
         require(hashlib.sha256(prefix).hexdigest() == prefix_sha,
                 "DTB_SECTION_PREFIX_SHA256")
@@ -123,6 +145,10 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
         prefix = b""
     dtb_section = prefix + dtb
 
+    # Reject unsupported header text as a documented manufacturing error.
+    # ASCII encoding must not leak an unclassified UnicodeEncodeError.
+    require(config["name"].isascii() and config["cmdline"].isascii(),
+            "NAME_OR_CMDLINE_ASCII")
     name = config["name"].encode("ascii")
     cmdline = config["cmdline"].encode("ascii")
     require(len(name) <= 15 and len(cmdline) <= 1535 and
@@ -205,11 +231,28 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
             os.fsync(directory_fd)
         finally:
             os.close(directory_fd)
-    except BaseException:
-        if receipt_created:
-            receipt_path.unlink(missing_ok=True)
-        if image_created:
-            output.unlink(missing_ok=True)
+    except BaseException as original_error:
+        # Cleanup is best-effort: a rollback failure must never hide the
+        # manufacture failure that caused us to enter this handler.
+        cleanup_errors = []
+        for created, path in ((receipt_created, receipt_path),
+                              (image_created, output)):
+            if created:
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError as exc:
+                    cleanup_errors.append(exc)
+        if image_created or receipt_created:
+            try:
+                cleanup_fd = os.open(output.parent, os.O_RDONLY | os.O_DIRECTORY)
+                try:
+                    os.fsync(cleanup_fd)
+                finally:
+                    os.close(cleanup_fd)
+            except OSError as exc:
+                cleanup_errors.append(exc)
+        for exc in cleanup_errors:
+            original_error.add_note("P25 rollback cleanup failed: " + repr(exc))
         raise
     return receipt
 

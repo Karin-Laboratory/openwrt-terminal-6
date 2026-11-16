@@ -86,6 +86,9 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     p25_result = check(p25, kernel, ramdisk, dtb, config, dtb_prefix)
     require(isinstance(p25_result, dict) and
             strict_int(p25_result.get("partition_bytes"), P25_BYTES) and
+            strict_int(p25_result.get("header_version"), 2) and
+            p25_result.get("scope") == "UNSIGNED_V2_BYTE_LAYOUT_ONLY" and
+            p25_result.get("ramdisk_mode") == "kernel_embedded" and
             p25_result.get("p25_sha256") == digest(p25), "P25_IDENTITY")
     cfg, config_hash = read_receipt(config)
     require(isinstance(cfg, dict), "P25_CONFIG_NOT_OBJECT")

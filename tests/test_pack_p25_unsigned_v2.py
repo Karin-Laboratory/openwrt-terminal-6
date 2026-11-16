@@ -77,6 +77,24 @@ class TestP25BootV2(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             self.build()
 
+    def test_receipt_is_private_and_matches_image(self):
+        receipt = self.build()
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        self.assertEqual(receipt_path.stat().st_mode & 0o777, 0o600)
+        on_disk = json.loads(receipt_path.read_text())
+        self.assertEqual(on_disk, receipt)
+        self.assertEqual(on_disk["p25_sha256"],
+                         hashlib.sha256(self.output.read_bytes()).hexdigest())
+        self.assertEqual(self.verify()["partition_bytes"], 33554432)
+
+    def test_oversized_dtb_prefix_is_rejected_without_outputs(self):
+        # Only prefix_bytes + 1 bytes may be read, even if the file is larger.
+        self.prefix.write_bytes(b"x" * (1024 * 1024))
+        with self.assertRaisesRegex(ValueError, "DTB_SECTION_PREFIX_SIZE"):
+            self.build()
+        self.assertFalse(self.output.exists())
+        self.assertFalse(self.output.with_name(self.output.name + ".json").exists())
+
     def test_stale_receipt_blocks_image_creation(self):
         receipt_path = self.output.with_name(self.output.name + ".json")
         receipt_path.write_text("existing evidence")
@@ -84,6 +102,22 @@ class TestP25BootV2(unittest.TestCase):
             self.build()
         self.assertFalse(self.output.exists())
         self.assertEqual(receipt_path.read_text(), "existing evidence")
+
+    def test_concurrent_receipt_creation_is_preserved(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        real_open = p25.os.open
+        marker = "concurrent producer evidence"
+
+        def competing_receipt(path, flags, *args, **kwargs):
+            if str(path) == str(receipt_path):
+                receipt_path.write_text(marker)
+            return real_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(p25.os, "open", side_effect=competing_receipt):
+            with self.assertRaises(FileExistsError):
+                self.build()
+        self.assertFalse(self.output.exists())
+        self.assertEqual(receipt_path.read_text(), marker)
 
     def test_image_sync_failure_removes_partial_image(self):
         receipt_path = self.output.with_name(self.output.name + ".json")
@@ -109,9 +143,67 @@ class TestP25BootV2(unittest.TestCase):
         with mock.patch.object(p25.os, "fsync", side_effect=fail_second_sync):
             with self.assertRaisesRegex(OSError, "synthetic receipt sync failure"):
                 self.build()
-        self.assertEqual(calls, 2)
+        self.assertEqual(calls, 3)  # includes rollback directory fsync
         self.assertFalse(self.output.exists())
         self.assertFalse(receipt_path.exists())
+    def test_directory_sync_failure_rolls_back_and_syncs_removal(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        original_fsync = p25.os.fsync
+        calls = 0
+
+        def fail_initial_directory_sync(fd):
+            nonlocal calls
+            calls += 1
+            if calls == 3:
+                raise OSError("synthetic directory sync failure")
+            return original_fsync(fd)
+
+        with mock.patch.object(p25.os, "fsync", side_effect=fail_initial_directory_sync):
+            with self.assertRaisesRegex(OSError, "synthetic directory sync failure"):
+                self.build()
+        self.assertEqual(calls, 4)  # rollback directory sync is mandatory
+        self.assertFalse(self.output.exists())
+        self.assertFalse(receipt_path.exists())
+
+    def test_rollback_sync_failure_preserves_original_error(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        original_fsync = p25.os.fsync
+        calls = 0
+
+        def fail_receipt_and_cleanup_sync(fd):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError("original receipt failure")
+            if calls == 3:
+                raise OSError("rollback sync failure")
+            return original_fsync(fd)
+
+        with mock.patch.object(p25.os, "fsync",
+                               side_effect=fail_receipt_and_cleanup_sync):
+            with self.assertRaisesRegex(OSError, "original receipt failure") as caught:
+                self.build()
+        self.assertEqual(calls, 3)
+        self.assertTrue(any("rollback sync failure" in note
+                            for note in caught.exception.__notes__))
+        self.assertFalse(self.output.exists())
+        self.assertFalse(receipt_path.exists())
+
+    def test_receipt_open_failure_rolls_back_created_image(self):
+        receipt_path = self.output.with_name(self.output.name + ".json")
+        real_open = p25.os.open
+
+        def fail_receipt_open(path, flags, *args, **kwargs):
+            if str(path) == str(receipt_path):
+                raise OSError("synthetic receipt creation failure")
+            return real_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(p25.os, "open", side_effect=fail_receipt_open):
+            with self.assertRaisesRegex(OSError, "synthetic receipt creation failure"):
+                self.build()
+        self.assertFalse(self.output.exists())
+        self.assertFalse(receipt_path.exists())
+
     def test_independent_full_readback_rejects_nonzero_tail(self):
         self.build()
         damaged = bytearray(self.output.read_bytes())
@@ -161,15 +253,59 @@ class TestP25BootV2(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_REQUIRED"):
             self.build()
 
+    def test_rejects_gzip_expansion_beyond_limit(self):
+        image = bytearray(128 * 1024 * 1024 + 1)
+        image[56:60] = b"ARM\x64"
+        self.kernel.write_bytes(gzip.compress(bytes(image), compresslevel=9, mtime=0))
+        with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_TOO_LARGE_OR_INCOMPLETE"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
+    def test_rejects_trailing_gzip_data(self):
+        self.kernel.write_bytes(self.kernel.read_bytes() + b"trailing")
+        with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_TRAILING_DATA"):
+            self.build()
+
+    def test_rejects_truncated_gzip_stream(self):
+        self.kernel.write_bytes(self.kernel.read_bytes()[:-4])
+        with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_TOO_LARGE_OR_INCOMPLETE"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
+    def test_rejects_concatenated_gzip_members(self):
+        self.kernel.write_bytes(self.kernel.read_bytes() + gzip.compress(b"extra member", mtime=0))
+        with self.assertRaisesRegex(ValueError, "KERNEL_GZIP_TRAILING_DATA"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
     def test_rejects_malformed_dtb(self):
         self.dtb.write_bytes(b"not a device tree")
         with self.assertRaisesRegex(ValueError, "DTB_MAGIC"):
             self.build()
 
+    def test_rejects_duplicate_json_config_keys(self):
+        # JSON parsers normally keep the last value, making review ambiguous.
+        original = self.cfg.read_text()
+        self.cfg.write_text(original[:-1] + ', "page_size": 4096}')
+        with self.assertRaisesRegex(ValueError, "DUPLICATE_CONFIG_KEY"):
+            self.build()
+        self.assertFalse(self.output.exists())
+        self.assertFalse(self.output.with_name(self.output.name + ".json").exists())
+
     def test_rejects_unconfigured_hardware_values(self):
         self.cfg.write_text("{}")
         with self.assertRaisesRegex(ValueError, "CONFIG_KEYS"):
             self.build()
+
+    def test_rejects_nonascii_header_text_without_writing(self):
+        for field in ("name", "cmdline"):
+            with self.subTest(field=field):
+                changed = dict(self.config, **{field: "日本語"})
+                self.cfg.write_text(json.dumps(changed))
+                with self.assertRaisesRegex(ValueError, "NAME_OR_CMDLINE_ASCII"):
+                    self.build()
+                self.assertFalse(self.output.exists())
+                self.assertFalse(self.output.with_name(self.output.name + ".json").exists())
 
     def test_rejects_invalid_page_size(self):
         self.config["page_size"] = 3000
