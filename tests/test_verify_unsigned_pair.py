@@ -242,6 +242,21 @@ class PairTests(unittest.TestCase):
                     path.write_bytes(original)
                     self.update_independent()
 
+    def test_nonfinite_json_constants_fail_closed(self):
+        for path in (self.parts[3], self.producer, self.independent):
+            with self.subTest(path=path.name):
+                original = path.read_bytes()
+                try:
+                    for token in ("NaN", "Infinity", "-Infinity"):
+                        with self.subTest(token=token):
+                            path.write_text('{"unexpected": ' + token + '}')
+                            with self.assertRaisesRegex(ValueError, "NONFINITE_JSON_CONSTANT"):
+                                self.run_pair()
+                            self.assertFalse(self.out.exists())
+                finally:
+                    path.write_bytes(original)
+                    self.update_independent()
+
     def test_duplicate_receipt_keys_fail_closed(self):
         for path in (self.parts[3], self.producer, self.independent):
             with self.subTest(path=path.name):
