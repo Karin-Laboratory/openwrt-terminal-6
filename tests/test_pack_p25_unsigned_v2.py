@@ -87,6 +87,25 @@ class TestP25BootV2(unittest.TestCase):
                          hashlib.sha256(self.output.read_bytes()).hexdigest())
         self.assertEqual(self.verify()["partition_bytes"], 33554432)
 
+    def test_input_symlinks_are_rejected_without_output(self):
+        for target in (self.kernel, self.cfg, self.dtb):
+            original = target.read_bytes()
+            target.unlink()
+            target.symlink_to(self.ramdisk)
+            with self.assertRaisesRegex(ValueError, "NONREGULAR_INPUT"):
+                self.build()
+            self.assertFalse(self.output.exists())
+            target.unlink()
+            target.write_bytes(original)
+
+    def test_opened_nonregular_descriptor_is_rejected(self):
+        # A directory must be rejected from fstat even if it can be opened.
+        self.kernel.unlink()
+        self.kernel.mkdir()
+        with self.assertRaisesRegex(ValueError, "NONREGULAR_INPUT"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
     def test_oversized_section_rejected_before_image_creation(self):
         # A sparse file avoids allocating or storing a large test fixture.
         with self.dtb.open("wb") as stream:
