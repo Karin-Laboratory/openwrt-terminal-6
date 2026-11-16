@@ -870,8 +870,12 @@ jobs:
             # tools/install does not guarantee dtc is selected by the native
             # package dependency closure. Build the pinned OpenWrt host dtc
             # explicitly before the public Debian DTB staging step.
-            make -C "$work/openwrt" -j2 tools/dtc/install
-            host_dtc="$work/openwrt/staging_dir/host/bin/dtc"
+            # The pinned OpenWrt tree does not expose tools/dtc/install as
+            # an independently callable make target. Build the host dtc from
+            # the already source-built kernel's Kbuild host tools instead.
+            PATH="$(dirname "$compiler"):$PATH" timeout 300s \
+              make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" scripts/dtc/dtc
+            host_dtc="$kernel/scripts/dtc/dtc"
             if ! test -x "$host_dtc"; then
               echo "PUBLIC_PAIR_BLOCKED_HOST_DTC_UNAVAILABLE: $host_dtc" >&2
               exit 1
@@ -882,7 +886,7 @@ jobs:
             echo 'REUSE_PROOF=only same-job verified P26 bytes and first-stage CPIO'
             echo 'CACHE_DECISION=no firmware/outputs cached or uploaded'
             start_epoch="$(date +%s)"
-            AIR6_CROSS_COMPILE="$cross" PATH="$work/openwrt/staging_dir/host/bin:$(dirname "$compiler"):$PATH" \
+            AIR6_CROSS_COMPILE="$cross" PATH="$(dirname "$host_dtc"):$(dirname "$compiler"):$PATH" \
               timeout --signal=TERM --kill-after=15s 7200 \
               bash "$GITHUB_WORKSPACE/scripts/manufacture-public-openwrt-p25-from-debian14.sh" \
                 "$work/public-source-61863-p25" \
