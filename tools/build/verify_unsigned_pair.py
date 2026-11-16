@@ -191,6 +191,10 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # Rehash p26 after CPIO and receipt checks; the initial hash alone does
     # not protect against an in-place edit during later verification.
     require(digest(p26) == p26_hash, "P26_CHANGED_DURING_VERIFICATION")
+    # The scan proves CPIO identity at scan time; reject a later in-place
+    # change before recording the bound initramfs in the final receipt.
+    require(digest(cpio) == scanned_hash.hexdigest(),
+            "CPIO_CHANGED_BEFORE_RECEIPT")
     # Do not overwrite stale pair evidence.
     created = False
     try:
