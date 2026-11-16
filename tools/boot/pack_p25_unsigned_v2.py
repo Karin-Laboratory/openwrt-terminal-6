@@ -45,9 +45,14 @@ def read_bounded_input(path, limit, label):
         fd = os.open(path, flags)
     except OSError as exc:
         raise ValueError("P25_BLOCKED_NONREGULAR_INPUT") from exc
+    # Check the raw descriptor before fdopen: Python rejects directory FDs
+    # during wrapping, which otherwise leaks IsADirectoryError to callers.
+    try:
+        require(stat.S_ISREG(os.fstat(fd).st_mode), "NONREGULAR_INPUT")
+    except BaseException:
+        os.close(fd)
+        raise
     with os.fdopen(fd, "rb") as stream:
-        require(stat.S_ISREG(os.fstat(stream.fileno()).st_mode),
-                "NONREGULAR_INPUT")
         data = stream.read(limit + 1)
     require(len(data) <= limit, label)
     return data
