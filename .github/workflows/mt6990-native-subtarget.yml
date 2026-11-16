@@ -20,6 +20,7 @@ on:
       - tests/test_verify_unsigned_pair.py
       - tests/test_build_air6_first_stage.py
       - tests/test_verify_kernel_initramfs.py
+      - scripts/manufacture-public-openwrt-p25-from-debian14.sh
       - .github/workflows/mt6990-native-subtarget.yml
 permissions:
   contents: read
@@ -843,11 +844,30 @@ jobs:
               'No candidate P25 or P25/P26 pair receipt was produced.' \
               >> "$GITHUB_STEP_SUMMARY"
           else
-            echo 'P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE'
-            printf '%s\n' '## P25 manufacture status' '' \
-              'BLOCKED: no independently validated SBAT6_P25_BOOT_V2_CONFIG was supplied.' \
-              'No P25 candidate or P25/P26 pair receipt was produced.' \
-              'P26 bytes remain ephemeral; no firmware artifact was uploaded.' \
-              >> "$GITHUB_STEP_SUMMARY"
+            # Default PUBLIC path. Debian PR #14's pinned 17-blob, Linux
+            # 6.18.63 kernel/NETSYS/PCS/MT7531 and DTB are built locally
+            # in this SAME workspace, with this run's P26-bound first-stage.
+            # Existing OpenWrt packer, readback and pair verifier remain the
+            # source of acceptance; no private reference/prefix is consumed.
+            export DEBIAN_FRONTEND=noninteractive
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends \
+              gcc-aarch64-linux-gnu g++-aarch64-linux-gnu bc bison flex \
+              libssl-dev libelf-dev device-tree-compiler cpio curl
+            bash -n "$GITHUB_WORKSPACE/scripts/manufacture-public-openwrt-p25-from-debian14.sh"
+            echo 'REBUILD_SCOPE=E 6.18.63 real public kernel plus same-run source-built P26'
+            echo 'REUSE_PROOF=only same-job verified P26 bytes and first-stage CPIO'
+            echo 'CACHE_DECISION=no firmware/outputs cached or uploaded'
+            start_epoch="$(date +%s)"
+            timeout --signal=TERM --kill-after=15s 7200 \
+              bash "$GITHUB_WORKSPACE/scripts/manufacture-public-openwrt-p25-from-debian14.sh" \
+                "$work/public-source-61863-p25" \
+                "$work/air6-first-stage-initramfs.cpio" \
+                "$work/private-p26/packed/rootfs_a.p26" \
+                "$work/private-p26/packed/p26-receipt.json" \
+                "$work/private-p26/packed/p26-independent-attestation.json"
+            echo "PUBLIC_OSS_PAIR_ELAPSED_SECONDS=$(($(date +%s) - start_epoch))"
+            echo 'PUBLIC_OPENWRT_UNSIGNED_P25_P26_SAME_WORKSPACE_REAL_BUILD_PASS'
+            echo 'LIMIT: no device LK boot, physical C/A unit, signing or distribution'
           fi
           echo 'LIMIT: Air6 bootloader acceptance and hardware cold boot NOT verified'
