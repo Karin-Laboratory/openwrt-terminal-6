@@ -195,6 +195,12 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # change before recording the bound initramfs in the final receipt.
     require(digest(cpio) == scanned_hash.hexdigest(),
             "CPIO_CHANGED_BEFORE_RECEIPT")
+    # The metadata receipts are part of the provenance chain. Reject edits
+    # after parsing instead of recording a hash for bytes no longer present.
+    require(digest(config) == config_hash, "P25_CONFIG_CHANGED")
+    require(digest(producer) == producer_hash, "P26_PRODUCER_RECEIPT_CHANGED")
+    require(digest(independent) == independent_hash,
+            "P26_INDEPENDENT_RECEIPT_CHANGED")
     # Do not overwrite stale pair evidence.
     created = False
     try:
