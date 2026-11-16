@@ -78,3 +78,4 @@
 - [13 修正版の再監査（第3回）](13-reaudit3-20261115.ja.md): head aa4097ac。判定は NOT READY のまま（S02 まで到達、最初の BLOCKED は S03）
 
 - [14 履歴スキャナ9件の要確認リストと診断改善](14-history-scanner-triage-20261115.ja.md): CIの残余9件を検査無効化せず個別レビューへ
+- [15 修正版の再監査（第4回）](15-reaudit4-20261116.ja.md): head 8cab0d57。判定は NOT READY のまま（S02 まで到達、最初の BLOCKED は S03）。main との競合あり
