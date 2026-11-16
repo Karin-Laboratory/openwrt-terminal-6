@@ -85,6 +85,26 @@ class PairTests(unittest.TestCase):
                                 p25_verify=self.fake_p25,
                                 initramfs_verify=self.fake_initramfs)
 
+    def test_cpio_changed_after_scan_rejected_before_receipt(self):
+        original_digest = pair.digest
+        calls = 0
+
+        def mutate_after_scan(path):
+            nonlocal calls
+            result = original_digest(path)
+            if path == self.p26:
+                calls += 1
+                # Second P26 digest occurs after the CPIO marker scan.
+                if calls == 2:
+                    with self.cpio.open("ab") as stream:
+                        stream.write(b"late mutation")
+            return result
+
+        with patch.object(pair, "digest", side_effect=mutate_after_scan):
+            with self.assertRaisesRegex(ValueError, "CPIO_CHANGED_BEFORE_RECEIPT"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+
     def test_pair_identity_pass_and_refuse_overwrite(self):
         evidence = self.run_pair()
         self.assertEqual(evidence["status"], "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED")
