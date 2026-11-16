@@ -87,6 +87,13 @@ class TestP25BootV2(unittest.TestCase):
                          hashlib.sha256(self.output.read_bytes()).hexdigest())
         self.assertEqual(self.verify()["partition_bytes"], 33554432)
 
+    def test_oversized_config_rejected_without_output(self):
+        self.cfg.write_bytes(b" " * (1024 * 1024 + 1))
+        with self.assertRaisesRegex(ValueError, "CONFIG_TOO_LARGE"):
+            self.build()
+        self.assertFalse(self.output.exists())
+        self.assertFalse(self.output.with_name(self.output.name + ".json").exists())
+
     def test_stale_receipt_blocks_image_creation(self):
         receipt_path = self.output.with_name(self.output.name + ".json")
         receipt_path.write_text("existing evidence")
