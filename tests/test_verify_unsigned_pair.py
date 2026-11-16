@@ -267,6 +267,27 @@ class PairTests(unittest.TestCase):
                     self.run_pair()
         self.assertFalse(self.out.exists())
 
+    def test_p25_replaced_after_verification_is_rejected(self):
+        # The boot image must still match the independently verified bytes
+        # when the final pair receipt is about to be written.
+        original_digest = pair.digest
+        target = self.p25
+        reads = 0
+
+        def swap_after_initial_checks(path):
+            nonlocal reads
+            result = original_digest(path)
+            if path == target:
+                reads += 1
+                if reads == 2:
+                    target.write_bytes(b"X" + target.read_bytes()[1:])
+            return result
+
+        with patch.object(pair, "digest", side_effect=swap_after_initial_checks):
+            with self.assertRaisesRegex(ValueError, "P25_CHANGED_DURING_VERIFICATION"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
         image[-1] = 1
