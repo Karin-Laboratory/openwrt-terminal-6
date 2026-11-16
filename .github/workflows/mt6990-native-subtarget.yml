@@ -790,10 +790,12 @@ jobs:
           # Neither private config nor vendor prefix is stored in this repo.
           : > "$work/air6-native-empty-ramdisk"
           native_dtb="$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
-          test -s "$native_dtb"
+          # The legacy owner-reference path needs the native 6.18.60 DTB.
+          # The default public path builds its own 6.18.63 DTB instead.
           if test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}" && \
              test -n "${SBAT6_P25_DTB_SECTION_PREFIX:-}" && \
              test -n "${SBAT6_P25_REFERENCE_AUDIT:-}"; then
+            test -s "$native_dtb" || { echo "P25_BLOCKED_NATIVE_REFERENCE_DTB_MISSING" >&2; exit 1; }
             test -f "$SBAT6_P25_BOOT_V2_CONFIG"
             test -f "$SBAT6_P25_DTB_SECTION_PREFIX"
             test -f "$SBAT6_P25_REFERENCE_AUDIT"
