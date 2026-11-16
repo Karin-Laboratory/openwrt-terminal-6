@@ -853,10 +853,23 @@ jobs:
             # source of acceptance; no private reference/prefix is consumed.
             # Reuse this job’s source-built matching OpenWrt toolchain.
             # Public security policy forbids privileged shell in this workflow.
-            command -v "$compiler" >/dev/null
-            test -x "${cross}gcc" && test -x "${cross}ld"
-            test -x "$work/openwrt/staging_dir/host/bin/dtc"
+            if ! command -v "$compiler" >/dev/null; then
+              echo 'PUBLIC_PAIR_BLOCKED_OPENWRT_COMPILER_UNAVAILABLE' >&2
+              exit 1
+            fi
+            for tool in "${cross}gcc" "${cross}ld"; do
+              if ! test -x "$tool"; then
+                echo "PUBLIC_PAIR_BLOCKED_CROSS_TOOL_UNAVAILABLE: $tool" >&2
+                exit 1
+              fi
+            done
+            host_dtc="$work/openwrt/staging_dir/host/bin/dtc"
+            if ! test -x "$host_dtc"; then
+              echo "PUBLIC_PAIR_BLOCKED_HOST_DTC_UNAVAILABLE: $host_dtc" >&2
+              exit 1
+            fi
             bash -n "$GITHUB_WORKSPACE/scripts/manufacture-public-openwrt-p25-from-debian14.sh"
+            echo 'PUBLIC_PAIR_PUBLIC_TOOLCHAIN_PREFLIGHT_PASS'
             echo 'REBUILD_SCOPE=E 6.18.63 real public kernel plus same-run source-built P26'
             echo 'REUSE_PROOF=only same-job verified P26 bytes and first-stage CPIO'
             echo 'CACHE_DECISION=no firmware/outputs cached or uploaded'
