@@ -137,11 +137,18 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     # A real initramfs may be large; do not load its entire contents into RAM.
     matches = 0
     tail = b""
+    scanned_hash = hashlib.sha256()
     with cpio.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            scanned_hash.update(chunk)
             data = tail + chunk
             matches += data.count(bound)
             tail = data[-(len(bound) - 1):]
+    # Bind the marker scan to the exact bytes independently attested above.
+    # Otherwise an input replaced after the first digest could be scanned
+    # successfully even though the receipt describes different CPIO bytes.
+    require(scanned_hash.hexdigest() == initramfs_result["cpio_sha256"],
+            "CPIO_CHANGED_DURING_VERIFICATION")
     require(matches == 1, "P26_INITRAMFS_SHA_BINDING")
     # A pair receipt must not accept arbitrary equal strings as a digest.
     # The separate independent verifier establishes the filesystem identity.
@@ -162,7 +169,7 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         "p26_sha256": p26_hash,
         "p26_independent_receipt_sha256": independent_hash,
         "p25_config_sha256": config_hash,
-        "bound_initramfs_sha256": digest(cpio),
+        "bound_initramfs_sha256": scanned_hash.hexdigest(),
         "initramfs_object_sha256": digest(initramfs_object),
         "kernel_image_sha256": initramfs_result["kernel_image_sha256"],
         "signed": False, "device_writes": False, "public_binary": False,
