@@ -215,6 +215,65 @@ class PairTests(unittest.TestCase):
         self.assertGreaterEqual(cpio_reads, 2)
         self.assertFalse(self.out.exists())
 
+    def test_cpio_modified_while_streaming_is_rejected(self):
+        # Simulate an in-place write after the first streaming read. The
+        # scanned bytes must no longer match the independently attested CPIO.
+        marker = pair.digest(self.p26).encode("ascii") + b"  /dev/mmcblk0p26"
+        self.cpio.write_bytes(marker + b"x" * (1024 * 1024 + 64))
+        original_open = Path.open
+        target = self.cpio
+
+        class MutatingStream:
+            def __init__(self, stream):
+                self.stream = stream
+                self.reads = 0
+
+            def __enter__(self):
+                self.stream.__enter__()
+                return self
+
+            def __exit__(self, *args):
+                return self.stream.__exit__(*args)
+
+            def read(self, size=-1):
+                data = self.stream.read(size)
+                self.reads += 1
+                if self.reads == 1:
+                    with original_open(target, "r+b") as writer:
+                        writer.seek(1024 * 1024)
+                        writer.write(b"changed")
+                return data
+
+        def open_with_mutation(path, mode="r", *args, **kwargs):
+            stream = original_open(path, mode, *args, **kwargs)
+            if path == target and mode == "rb":
+                return MutatingStream(stream)
+            return stream
+
+        # Only the final streaming pass is patched, not initial attestation.
+        original_digest = pair.digest
+        cpio_reads = 0
+
+        def patch_after_attestation(path):
+            nonlocal cpio_reads
+            result = original_digest(path)
+            if path == target:
+                cpio_reads += 1
+            return result
+
+        # The second CPIO digest occurs in the pair's identity gate.
+        # Arm the stream mutation only after both attestations finish.
+        def guarded_open(path, mode="r", *args, **kwargs):
+            if path == target and mode == "rb" and cpio_reads >= 2:
+                return MutatingStream(original_open(path, mode, *args, **kwargs))
+            return original_open(path, mode, *args, **kwargs)
+
+        with patch.object(pair, "digest", side_effect=patch_after_attestation):
+            with patch.object(Path, "open", guarded_open):
+                with self.assertRaisesRegex(ValueError, "CPIO_CHANGED_DURING_VERIFICATION"):
+                    self.run_pair()
+        self.assertFalse(self.out.exists())
+
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
         image[-1] = 1
