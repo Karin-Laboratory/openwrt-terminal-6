@@ -38,6 +38,15 @@ def read_regular(path):
     return path.read_bytes()
 
 
+def read_bounded_config(path):
+    """Reject oversized config metadata before loading or parsing it."""
+    require(path.is_file() and not path.is_symlink(), "NONREGULAR_INPUT")
+    with path.open("rb") as stream:
+        data = stream.read(1024 * 1024 + 1)
+    require(len(data) <= 1024 * 1024, "CONFIG_TOO_LARGE")
+    return data
+
+
 def parse_addr(value, bits, label):
     require(isinstance(value, str), label + "_FORMAT")
     try:
@@ -101,7 +110,7 @@ def build(kernel_path, ramdisk_path, dtb_path, cfg_path, output,
     kernel = read_regular(kernel_path)
     ramdisk = read_regular(ramdisk_path)
     dtb = read_regular(dtb_path)
-    config = json.loads(read_regular(cfg_path),
+    config = json.loads(read_bounded_config(cfg_path),
                         object_pairs_hook=reject_duplicate_config_keys)
     addresses, page, os_version, prefix_bytes, prefix_sha = validate_config(config)
 
