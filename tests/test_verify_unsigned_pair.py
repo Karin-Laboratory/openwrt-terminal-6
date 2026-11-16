@@ -288,6 +288,29 @@ class PairTests(unittest.TestCase):
                 self.run_pair()
         self.assertFalse(self.out.exists())
 
+    def test_p26_replaced_after_initial_digest_is_rejected(self):
+        # Preserve the CPIO binding while mutating P26 after the first
+        # digest, so the final receipt must reject stale image identity.
+        original_digest = pair.digest
+        target = self.p26
+        reads = 0
+
+        def mutate_after_digest(path):
+            nonlocal reads
+            result = original_digest(path)
+            if path == target:
+                reads += 1
+                if reads == 1:
+                    with target.open("r+b") as stream:
+                        stream.seek(-1, os.SEEK_END)
+                        stream.write(b"X")
+            return result
+
+        with patch.object(pair, "digest", side_effect=mutate_after_digest):
+            with self.assertRaisesRegex(ValueError, "P26_CHANGED_DURING_VERIFICATION"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
         image[-1] = 1
