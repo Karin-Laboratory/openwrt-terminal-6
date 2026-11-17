@@ -184,6 +184,14 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         "not_proven": ["Air6 LK accepts p25", "RC14 boot compatibility",
                        "hardware cold boot", "LAN/SSH", "publication rights"],
     }
+    # The linked kernel artifacts are attested earlier. Reject a later edit
+    # before recording their identities in the same-run receipt.
+    require(digest(kernel) == initramfs_result["kernel_gzip_sha256"],
+            "KERNEL_GZIP_CHANGED_BEFORE_RECEIPT")
+    require(digest(image) == initramfs_result["kernel_image_sha256"],
+            "KERNEL_IMAGE_CHANGED_BEFORE_RECEIPT")
+    require(digest(initramfs_object) == receipt["initramfs_object_sha256"],
+            "INITRAMFS_OBJECT_CHANGED_BEFORE_RECEIPT")
     # Recheck p25 after all other inputs were scanned. A concurrent replacement
     # must not yield a receipt for bytes different from the verified boot image.
     require(digest(p25) == p25_result["p25_sha256"],
