@@ -8,7 +8,7 @@ Public-source community development for the SoftBank Air Terminal 6 (SBAT6 serie
 
 ## First-time owner or AI agent
 
-**[START-HERE.ja.md](START-HERE.ja.md)** is the entry point for Windows/Linux UART, stock-shell identification, read-only device inventory, SSH and P43/P44 prerequisite assessment. The distinct [agent workflow JSON](docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json) defines evidence and explicit approval checkpoints. **Neither is an authorization to write an unverified device.**
+**[START-HERE.ja.md](START-HERE.ja.md)** is the shared OpenWrt/Debian entry point for Windows/Linux UART, stock-shell identification, read-only device inventory, SSH and P43/P44 prerequisite assessment. The [shared preparation and publication policy (Japanese)](docs/COMMON-INITIAL-PREPARATION-PUBLICATION.ja.md) defines where common documentation lives and what can be published. The distinct [agent workflow JSON](docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json) defines evidence and explicit approval checkpoints. **Neither is an authorization to write an unverified device.**
 
 ## Current mainline priority (2026-11-04)
 
