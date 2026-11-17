@@ -35,6 +35,20 @@ class ComparisonTests(unittest.TestCase):
         self.b.hardlink_to(self.a)
         with self.assertRaisesRegex(ValueError, 'RECEIPTS_NOT_INDEPENDENT_FILES'):
             mod.compare(self.a, self.b)
+    def test_first_receipt_replaced_while_second_is_read(self):
+        original_load = mod.load
+        calls = 0
+        def replacing_load(path):
+            nonlocal calls
+            calls += 1
+            result = original_load(path)
+            if calls == 2:
+                self.a.write_text(json.dumps(dict(self.receipt, p25_sha256='b'*64)))
+            return result
+        with mock.patch.object(mod, 'load', side_effect=replacing_load):
+            with self.assertRaisesRegex(ValueError, 'FIRST_RECEIPT_CHANGED_DURING_COMPARISON'):
+                mod.compare(self.a, self.b)
+
     def test_changed_p26(self):
         self.b.write_text(json.dumps(dict(self.receipt, p26_sha256='b'*64)))
         self.assertEqual(mod.compare(self.a,self.b), ['p26_sha256'])
