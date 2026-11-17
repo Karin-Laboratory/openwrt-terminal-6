@@ -60,6 +60,7 @@ class ComparisonTests(unittest.TestCase):
                                 capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('PUBLIC_PAIR_CROSS_WORKSPACE_RECEIPT_IDENTITIES_MATCH', result.stdout)
+        self.assertIn('INDEPENDENT_BUILD_PROVENANCE_NOT_VERIFIED', result.stdout)
 
     def test_cli_mismatch_returns_nonzero(self):
         self.b.write_text(json.dumps(dict(self.receipt, p25_sha256='b'*64)))
@@ -68,6 +69,8 @@ class ComparisonTests(unittest.TestCase):
                                 capture_output=True, text=True, timeout=10)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('PUBLIC_PAIR_CROSS_WORKSPACE_DIFFERENCE p25_sha256', result.stdout)
+        self.assertNotIn('PUBLIC_PAIR_CROSS_WORKSPACE_RECEIPT_IDENTITIES_MATCH', result.stdout)
+        self.assertNotIn('INDEPENDENT_BUILD_PROVENANCE_NOT_VERIFIED', result.stdout)
 
     def test_directory_rejected(self):
         self.b.unlink()
