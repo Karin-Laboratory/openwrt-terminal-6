@@ -31,8 +31,10 @@ def load(path):
             raise ValueError('RECEIPT_TOO_LARGE')
     finally:
         os.close(fd)
+    def reject_constant(value):
+        raise ValueError('INVALID_RECEIPT_JSON_CONSTANT')
     try:
-        d = json.loads(raw, object_pairs_hook=unique)
+        d = json.loads(raw, object_pairs_hook=unique, parse_constant=reject_constant)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError('INVALID_RECEIPT_JSON') from exc
     if not isinstance(d, dict) or d.get('status') != 'UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED' or d.get('signed') is not False or d.get('device_writes') is not False or d.get('public_binary') is not False:
