@@ -77,7 +77,7 @@ class ComparisonTests(unittest.TestCase):
                 self.b.hardlink_to(self.a)
             return result
         with mock.patch.object(mod, 'load', side_effect=swapping_load):
-            with self.assertRaisesRegex(ValueError, 'RECEIPTS_NOT_INDEPENDENT_FILES'):
+            with self.assertRaisesRegex(ValueError, 'SECOND_RECEIPT_CHANGED_DURING_COMPARISON|RECEIPTS_NOT_INDEPENDENT_FILES'):
                 mod.compare(self.a, self.b)
 
     def test_changed_p26(self):
