@@ -209,6 +209,21 @@ class ComparisonTests(unittest.TestCase):
                 self.b.write_text(json.dumps(self.receipt)[:-1] + ',"extra":' + value + '}')
                 with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON_CONSTANT'):
                     mod.compare(self.a, self.b)
+    def test_huge_json_integer_rejected_without_traceback(self):
+        # A numeric extension must not trigger version-dependent int parsing
+        # failures or flood CI stderr with the input's decimal digits.
+        payload = json.dumps(self.receipt)[:-1] + ',"extra":' + '9' * 5000 + '}'
+        self.b.write_text(payload)
+        with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON_INTEGER'):
+            mod.compare(self.a, self.b)
+        cli = Path(__file__).resolve().parents[1] / 'tools/build/compare_unsigned_pair_receipts.py'
+        result = subprocess.run([sys.executable, str(cli), str(self.a), str(self.b)],
+                                capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('INVALID_RECEIPT_JSON_INTEGER', result.stderr)
+        self.assertNotIn('Traceback', result.stderr)
+        self.assertNotIn('9' * 128, result.stderr)
+
     def test_excessive_json_nesting_rejected(self):
         self.b.write_text('[' * 10000 + '0' + ']' * 10000)
         with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON|INVALID_PAIR_RECEIPT'):
