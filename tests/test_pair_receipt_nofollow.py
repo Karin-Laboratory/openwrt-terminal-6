@@ -51,6 +51,15 @@ class ReceiptInputTests(unittest.TestCase):
             with self.assertRaises((OSError, ValueError)):
                 pair.read_receipt(Path(directory))
 
+    def test_fifo_receipt_rejected_without_blocking(self):
+        # A FIFO is not a receipt. O_NONBLOCK prevents hanging before fstat.
+        import os
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "receipt.json"
+            os.mkfifo(path)
+            with self.assertRaisesRegex(ValueError, "RECEIPT_NOT_REGULAR"):
+                pair.read_receipt(path)
+
     def test_duplicate_keys_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "receipt.json"
