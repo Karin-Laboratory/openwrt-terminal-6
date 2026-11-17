@@ -52,6 +52,14 @@ class ComparisonTests(unittest.TestCase):
         self.b.write_bytes(b' ' * (1024 * 1024 + 1))
         with self.assertRaisesRegex(ValueError, 'RECEIPT_TOO_LARGE'):
             mod.compare(self.a, self.b)
+    def test_malformed_json_rejected(self):
+        self.b.write_bytes(b'{broken')
+        with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON'):
+            mod.compare(self.a, self.b)
+    def test_invalid_utf8_rejected(self):
+        self.b.write_bytes(b'\\xff')
+        with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON'):
+            mod.compare(self.a, self.b)
     def test_false_status(self):
         self.b.write_text(json.dumps(dict(self.receipt, signed=True)))
         with self.assertRaisesRegex(ValueError,'INVALID_PAIR_RECEIPT'):
