@@ -117,7 +117,13 @@ class PairTests(unittest.TestCase):
                 def mutate_on_p26_final_digest(path):
                     nonlocal triggered
                     result = original_digest(path)
-                    if path == self.p26 and not triggered:
+                    # The object baseline is captured while constructing the
+                    # receipt, after the initial P26 hash. Mutate immediately
+                    # after that baseline; other artifacts are already attested.
+                    mutation_point = (self.initramfs_object
+                                      if target == self.initramfs_object
+                                      else self.p26)
+                    if path == mutation_point and not triggered:
                         triggered = True
                         target.write_bytes(original + b"changed")
                     return result
