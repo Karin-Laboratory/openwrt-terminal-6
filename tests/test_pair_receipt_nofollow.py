@@ -62,6 +62,23 @@ class ReceiptInputTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "RECEIPT_SYMLINK_OR_INVALID_PATH"):
                 pair.read_receipt(alias / "receipt.json")
 
+    def test_nested_real_directories_are_accepted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            nested = Path(directory) / "one" / "two"
+            nested.mkdir(parents=True)
+            receipt = nested / "receipt.json"
+            receipt.write_text('{"schema": 1}', encoding="utf-8")
+            self.assertEqual(pair.read_receipt(receipt)[0], {"schema": 1})
+
+    def test_parent_traversal_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "real").mkdir()
+            receipt = root / "real" / ".." / "receipt.json"
+            (root / "receipt.json").write_text('{"schema": 1}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "RECEIPT_SYMLINK_OR_INVALID_PATH"):
+                pair.read_receipt(receipt)
+
     def test_nested_duplicate_keys_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "receipt.json"
