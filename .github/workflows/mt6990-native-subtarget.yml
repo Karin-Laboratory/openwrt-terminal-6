@@ -37,6 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests -p 'test_mt6990_native_subtarget.py' -v
+          python3 -m unittest discover -s tests -p 'test_pair_receipt_nofollow.py' -v
           python3 tools/build/verify_source_catalog.py
       - name: Pin clean upstream OpenWrt and register noninstallable target
         shell: bash
