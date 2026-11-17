@@ -1,6 +1,6 @@
 # START HERE: Air Terminal 6 を初めて触る人とAIエージェントへ
 
-**更新:** 2026-11-16 / **対象:** 正当な所有・管理権限のある SoftBank Air Terminal 6 (SBA6D)。Windows 11 + Tera Term、またはLinux + picocom等で、物理UARTの接続を確保した人。
+**更新:** 2026-11-18 / **対象:** 正当な所有・管理権限のある SoftBank Air Terminal 6 (SBA6D)。Windows 11 + Tera Term、またはLinux + picocom等で、物理UARTの接続を確保した人。
 
 > **ここでの到着点はOpenWrtのインストールではありません。** 純正slot BでSSHが再起動後も使えること、既存データを保持したP43と新設のext4 P44が検証できることです。RC16イメージの導入は別工程。
 >
