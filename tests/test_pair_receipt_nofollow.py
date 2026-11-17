@@ -265,7 +265,7 @@ class ReceiptInputTests(unittest.TestCase):
         # A malformed receipt must fail rather than be silently replaced.
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "receipt.json"
-            path.write_bytes(b'{"schema": 1}' + b"\\xff")
+            path.write_bytes(b'{"schema": 1}' + bytes([0xff]))
             with self.assertRaises(UnicodeDecodeError):
                 pair.read_receipt(path)
 
