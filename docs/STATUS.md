@@ -33,7 +33,7 @@ Source attribution and evidence boundaries: [PROVENANCE.md](PROVENANCE.md).
 
 <!-- source-catalog-inventory: inputs=108; pending=108 -->
 
-The source catalog currently has **107 inputs**, all with **rights_review=pending**. The counts are checked against the machine-readable catalog by the host tests; passing those checks does **not** imply rights approval. See [rights review](RIGHTS-REVIEW-20261030.md).
+The source catalog currently has **108 inputs**, all with **rights_review=pending**. The counts are checked against the machine-readable catalog by the host tests; passing those checks does **not** imply rights approval. See [rights review](RIGHTS-REVIEW-20261030.md).
 
 | Run / PR | Observed PASS marker or step | What it establishes | Explicitly **not** proven |
 | --- | --- | --- | --- |
