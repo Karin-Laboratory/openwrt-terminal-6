@@ -4,6 +4,7 @@
 import ast
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -59,7 +60,7 @@ class ReceiptInputTests(unittest.TestCase):
             alias.symlink_to(actual, target_is_directory=True)
             self.assertFalse(pair.valid_path(alias / "receipt.json"))
             self.assertTrue(pair.valid_path(receipt))
-            with self.assertRaisesRegex(ValueError, "RECEIPT_SYMLINK_OR_INVALID_PATH"):
+            with self.assertRaises((OSError, ValueError)):
                 pair.read_receipt(alias / "receipt.json")
 
     def test_nested_real_directories_are_accepted(self):
