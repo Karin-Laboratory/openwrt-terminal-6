@@ -66,6 +66,11 @@ class ComparisonTests(unittest.TestCase):
                 self.b.write_text(json.dumps(self.receipt)[:-1] + ',"extra":' + value + '}')
                 with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON_CONSTANT'):
                     mod.compare(self.a, self.b)
+    def test_excessive_json_nesting_rejected(self):
+        self.b.write_text('[' * 2000 + '0' + ']' * 2000)
+        with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON'):
+            mod.compare(self.a, self.b)
+
     def test_false_status(self):
         self.b.write_text(json.dumps(dict(self.receipt, signed=True)))
         with self.assertRaisesRegex(ValueError,'INVALID_PAIR_RECEIPT'):
