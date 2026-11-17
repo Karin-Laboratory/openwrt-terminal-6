@@ -66,6 +66,10 @@ def compare(left, right):
     b_again, b_identity_again = load(right)
     if b_identity_again != b_identity or b_again != b:
         raise ValueError('SECOND_RECEIPT_CHANGED_DURING_COMPARISON')
+    # Recheck that the final opened files remain distinct: a path can be
+    # replaced with a hardlink to its peer after the initial identity check.
+    if identity_again == b_identity_again:
+        raise ValueError('RECEIPTS_NOT_INDEPENDENT_FILES')
     return [k for k in FIELDS if a[k] != b[k]]
 
 def main():
