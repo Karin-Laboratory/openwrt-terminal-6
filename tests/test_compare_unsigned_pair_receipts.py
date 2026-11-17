@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location('compare', Path(__file__).resolve().parents[1] / 'tools/build/compare_unsigned_pair_receipts.py')
 mod = importlib.util.module_from_spec(spec)
@@ -73,6 +74,26 @@ class ComparisonTests(unittest.TestCase):
         self.b.mkdir()
         with self.assertRaisesRegex(ValueError, 'RECEIPT_NOT_REGULAR'):
             mod.compare(self.a, self.b)
+    def test_receipt_truncated_during_read_rejected(self):
+        original = mod.os.fstat
+        calls = 0
+        def changing_stat(fd):
+            nonlocal calls
+            calls += 1
+            result = original(fd)
+            if calls == 4:
+                class Changed:
+                    st_dev = result.st_dev
+                    st_ino = result.st_ino
+                    st_size = result.st_size - 1
+                    st_mtime_ns = result.st_mtime_ns
+                    st_ctime_ns = result.st_ctime_ns
+                return Changed()
+            return result
+        with mock.patch.object(mod.os, 'fstat', side_effect=changing_stat):
+            with self.assertRaisesRegex(ValueError, 'RECEIPT_CHANGED_DURING_READ'):
+                mod.compare(self.a, self.b)
+
     def test_oversized_rejected(self):
         self.b.write_bytes(b' ' * (1024 * 1024 + 1))
         with self.assertRaisesRegex(ValueError, 'RECEIPT_TOO_LARGE'):
