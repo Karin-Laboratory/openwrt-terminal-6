@@ -261,6 +261,14 @@ class ReceiptInputTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "RECEIPT_TOO_LARGE"):
                 pair.read_receipt(path)
 
+    def test_invalid_utf8_receipt_rejected(self):
+        # A malformed receipt must fail rather than be silently replaced.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "receipt.json"
+            path.write_bytes(b'{"schema": 1}' + b"\\xff")
+            with self.assertRaises(UnicodeDecodeError):
+                pair.read_receipt(path)
+
     def test_empty_receipt_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "receipt.json"
