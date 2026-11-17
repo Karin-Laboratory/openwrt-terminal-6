@@ -130,6 +130,37 @@ class ReceiptInputTests(unittest.TestCase):
                     pair.read_receipt(receipt)
             self.assertTrue(swapped)
 
+    def test_final_regular_file_swap_after_open_reads_original_inode(self):
+        # A rename after os.open must not redirect the already opened FD
+        # to a different regular receipt at the same pathname.
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            receipt = root / "receipt.json"
+            receipt.write_text('{"origin": "original"}', encoding="utf-8")
+            replacement = root / "replacement.json"
+            replacement.write_text('{"origin": "replacement"}', encoding="utf-8")
+            real_open = os.open
+            swapped = False
+
+            def swap_after_file_open(file, flags, *args, **kwargs):
+                nonlocal swapped
+                fd = real_open(file, flags, *args, **kwargs)
+                if not swapped and file == "receipt.json" and "dir_fd" in kwargs:
+                    swapped = True
+                    receipt.rename(root / "old.json")
+                    replacement.rename(receipt)
+                return fd
+
+            with patch.object(pair.os, "open", side_effect=swap_after_file_open):
+                value, checksum = pair.read_receipt(receipt)
+            self.assertTrue(swapped)
+            self.assertEqual(value, {"origin": "original"})
+            import hashlib
+            self.assertEqual(checksum, hashlib.sha256(
+                b'{"origin": "original"}').hexdigest())
+            self.assertEqual(json.loads(receipt.read_text()), {"origin": "replacement"})
+
     def test_nested_symlink_ancestor_rejected(self):
         # An inner symlink must not bypass the descriptor-anchored walk.
         with tempfile.TemporaryDirectory() as directory:
