@@ -17,7 +17,11 @@ def load(path):
                 raise ValueError('DUPLICATE_KEY')
             d[k] = v
         return d
-    flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0)
+    # Fail closed on platforms without no-follow opens; silently dropping this
+    # flag would permit a symlink swap after any path preflight.
+    if not hasattr(os, 'O_NOFOLLOW'):
+        raise ValueError('NOFOLLOW_UNAVAILABLE')
+    flags = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, 'O_NONBLOCK', 0)
     fd = os.open(path, flags)
     try:
         info = os.fstat(fd)
