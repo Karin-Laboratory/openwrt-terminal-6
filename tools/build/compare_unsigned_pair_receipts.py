@@ -87,5 +87,9 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (OSError, ValueError) as exc:
-        raise SystemExit('PUBLIC_PAIR_CROSS_WORKSPACE_BLOCKED: ' + str(exc))
+    except OSError as exc:
+        # OSError messages may include local receipt paths. Emit only a stable
+        # errno marker so CI logs cannot disclose private workspace locations.
+        raise SystemExit('PUBLIC_PAIR_CROSS_WORKSPACE_BLOCKED: RECEIPT_IO_ERROR_' + str(exc.errno if exc.errno is not None else 'UNKNOWN')) from None
+    except ValueError as exc:
+        raise SystemExit('PUBLIC_PAIR_CROSS_WORKSPACE_BLOCKED: ' + str(exc)) from None
