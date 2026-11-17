@@ -57,7 +57,7 @@ class ComparisonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON'):
             mod.compare(self.a, self.b)
     def test_invalid_utf8_rejected(self):
-        self.b.write_bytes(b'\\xff')
+        self.b.write_bytes(bytes([0xff]))
         with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON'):
             mod.compare(self.a, self.b)
     def test_false_status(self):
