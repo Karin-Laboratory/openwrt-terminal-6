@@ -17,6 +17,8 @@
 - **関連公開実装:** [Debian13-Terminal6](https://github.com/Karin-Laboratory/Debian13-Terminal6)。純正slot Bの下準備とDebian boot成功は別の実績。
 - **現状の大きな未完成:** 初期中古機で純正SSHを永続化する普遍的レシピ、および未分割実機で動作確認済みのP43/P44分割ツール。**AIはこれらを完成済み機能と見なさない**。
 
+**作業の意味を人間の言葉で先に理解したい方は、[共通初期準備：人間向け手順概要](docs/COMMON-INITIAL-PREPARATION-HUMAN-GUIDE.ja.md)をご覧ください。** P43をどう未マウント状態にするか、バックアップ・縮小・P44新設の順序を解説しています（未検証の書込み作業は含みません）。
+
 ## 1. ユーザーがすること
 
 手元の機体とPCの間に**正しく配線した3.3V TTL UART**を準備し、WindowsはTera Term、Linuxはpicocom等で起動ログが読めるようにする。3.3VのTX/RX/GNDを現物で識別する。**VCC/5Vを安易に接続しない**。写真や配線図を見つけても基板のリビジョン差を現物で確認する。RS-232レベルを接続しない。
