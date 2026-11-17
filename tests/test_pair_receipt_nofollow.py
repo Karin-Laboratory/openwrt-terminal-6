@@ -46,6 +46,27 @@ class ReceiptInputTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 pair.read_receipt(link)
 
+    def test_symlink_parent_receipt_rejected_by_valid_path(self):
+        # A final-component O_NOFOLLOW check does not cover parent links.
+        # The caller must reject a symlinked ancestor before attestation.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            actual = root / "actual"
+            actual.mkdir()
+            receipt = actual / "receipt.json"
+            receipt.write_text('{"schema": 1}', encoding="utf-8")
+            alias = root / "alias"
+            alias.symlink_to(actual, target_is_directory=True)
+            self.assertFalse(pair.valid_path(alias / "receipt.json"))
+            self.assertTrue(pair.valid_path(receipt))
+
+    def test_nested_duplicate_keys_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "receipt.json"
+            path.write_text('{"outer": {"schema": 1, "schema": 2}}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "DUPLICATE_JSON_KEY"):
+                pair.read_receipt(path)
+
     def test_directory_receipt_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises((OSError, ValueError)):
