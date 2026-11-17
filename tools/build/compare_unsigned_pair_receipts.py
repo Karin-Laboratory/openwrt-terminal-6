@@ -3,6 +3,8 @@
 """Compare independently generated unsigned pair receipts without firmware disclosure."""
 import argparse
 import json
+import os
+import stat
 from pathlib import Path
 
 FIELDS = ('p25_sha256', 'p26_sha256', 'bound_initramfs_sha256', 'kernel_image_sha256', 'initramfs_object_sha256', 'p25_config_sha256')
@@ -15,9 +17,20 @@ def load(path):
                 raise ValueError('DUPLICATE_KEY')
             d[k] = v
         return d
-    raw = Path(path).read_bytes()
-    if len(raw) > 1024 * 1024:
-        raise ValueError('RECEIPT_TOO_LARGE')
+    flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0)
+    fd = os.open(path, flags)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError('RECEIPT_NOT_REGULAR')
+        if info.st_size > 1024 * 1024:
+            raise ValueError('RECEIPT_TOO_LARGE')
+        with os.fdopen(fd, 'rb', closefd=False) as stream:
+            raw = stream.read(1024 * 1024 + 1)
+        if len(raw) > 1024 * 1024:
+            raise ValueError('RECEIPT_TOO_LARGE')
+    finally:
+        os.close(fd)
     d = json.loads(raw, object_pairs_hook=unique)
     if not isinstance(d, dict) or d.get('status') != 'UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED' or d.get('signed') is not False or d.get('device_writes') is not False or d.get('public_binary') is not False:
         raise ValueError('INVALID_PAIR_RECEIPT')
