@@ -283,5 +283,5 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (OSError, ValueError, TypeError, KeyError) as exc:
+    except (OSError, ValueError, UnicodeError, TypeError, KeyError) as exc:
         raise SystemExit(str(exc))
