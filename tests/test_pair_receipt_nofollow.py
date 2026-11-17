@@ -190,6 +190,24 @@ class ReceiptInputTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "DUPLICATE_JSON_KEY"):
                 pair.read_receipt(path)
 
+    def test_escaped_duplicate_json_keys_rejected(self):
+        # JSON escapes must be decoded before checking for duplicate keys.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "receipt.json"
+            path.write_bytes(b'{"schema": 1, "sch\\u0065ma": 2}')
+            with self.assertRaisesRegex(ValueError, "DUPLICATE_JSON_KEY"):
+                pair.read_receipt(path)
+
+    def test_infinity_constants_rejected(self):
+        # Python's json parser accepts these non-JSON tokens by default.
+        for token in ("Infinity", "-Infinity"):
+            with self.subTest(token=token):
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / "receipt.json"
+                    path.write_text('{"value": ' + token + '}', encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "NONFINITE_JSON_CONSTANT"):
+                        pair.read_receipt(path)
+
     def test_directory_receipt_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises((OSError, ValueError)):
