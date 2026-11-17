@@ -40,8 +40,15 @@ def load(path):
         os.close(fd)
     def reject_constant(value):
         raise ValueError('INVALID_RECEIPT_JSON_CONSTANT')
+    def bounded_int(value):
+        # A receipt needs only small metadata integers. Bound parsing even on
+        # Python versions without a default decimal-integer digit limit.
+        if len(value) > 128:
+            raise ValueError('INVALID_RECEIPT_JSON_INTEGER')
+        return int(value)
     try:
-        d = json.loads(raw, object_pairs_hook=unique, parse_constant=reject_constant)
+        d = json.loads(raw, object_pairs_hook=unique, parse_constant=reject_constant,
+                       parse_int=bounded_int)
     except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
         raise ValueError('INVALID_RECEIPT_JSON') from exc
     if not isinstance(d, dict) or d.get('status') != 'UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED' or d.get('signed') is not False or d.get('device_writes') is not False or d.get('public_binary') is not False:
