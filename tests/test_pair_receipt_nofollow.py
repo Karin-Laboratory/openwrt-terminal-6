@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Host-only regression tests for pair receipt file-descriptor validation."""
+import ast
 import importlib.util
 import json
 from pathlib import Path
@@ -14,6 +15,20 @@ spec.loader.exec_module(pair)
 
 
 class ReceiptInputTests(unittest.TestCase):
+    def test_initramfs_object_hash_is_assigned(self):
+        # An escaped newline in a comment previously swallowed the assignment,
+        # leaving the pair verifier with an unbound local at receipt creation.
+        tree = ast.parse(MODULE.read_text(encoding="utf-8"))
+        verify = next(node for node in tree.body
+                      if isinstance(node, ast.FunctionDef)
+                      and node.name == "verify_pair")
+        assignments = [node for node in ast.walk(verify)
+                       if isinstance(node, ast.Assign)
+                       and any(isinstance(target, ast.Name)
+                               and target.id == "initramfs_object_hash"
+                               for target in node.targets)]
+        self.assertEqual(len(assignments), 1)
+
     def test_regular_receipt(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "receipt.json"
