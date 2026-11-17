@@ -23,6 +23,14 @@ class ComparisonTests(unittest.TestCase):
         self.b.write_text(json.dumps(self.receipt))
     def test_equal(self):
         self.assertEqual(mod.compare(self.a,self.b), [])
+    def test_same_path_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'RECEIPTS_NOT_INDEPENDENT_FILES'):
+            mod.compare(self.a, self.a)
+    def test_hardlink_rejected(self):
+        self.b.unlink()
+        self.b.hardlink_to(self.a)
+        with self.assertRaisesRegex(ValueError, 'RECEIPTS_NOT_INDEPENDENT_FILES'):
+            mod.compare(self.a, self.b)
     def test_changed_p26(self):
         self.b.write_text(json.dumps(dict(self.receipt, p26_sha256='b'*64)))
         self.assertEqual(mod.compare(self.a,self.b), ['p26_sha256'])
