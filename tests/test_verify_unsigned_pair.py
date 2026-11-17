@@ -105,6 +105,29 @@ class PairTests(unittest.TestCase):
                 self.run_pair()
         self.assertFalse(self.out.exists())
 
+    def test_kernel_artifacts_changed_after_attestation_rejected(self):
+        for target, reason in ((self.parts[0], "KERNEL_GZIP_CHANGED"),
+                               (self.image, "KERNEL_IMAGE_CHANGED"),
+                               (self.initramfs_object, "INITRAMFS_OBJECT_CHANGED")):
+            with self.subTest(target=target.name):
+                original = target.read_bytes()
+                original_digest = pair.digest
+                triggered = False
+
+                def mutate_on_p26_final_digest(path):
+                    nonlocal triggered
+                    result = original_digest(path)
+                    if path == self.p26 and not triggered:
+                        triggered = True
+                        target.write_bytes(original + b"changed")
+                    return result
+
+                with patch.object(pair, "digest", side_effect=mutate_on_p26_final_digest):
+                    with self.assertRaisesRegex(ValueError, reason):
+                        self.run_pair()
+                self.assertFalse(self.out.exists())
+                target.write_bytes(original)
+
     def test_pair_identity_pass_and_refuse_overwrite(self):
         evidence = self.run_pair()
         self.assertEqual(evidence["status"], "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED")
