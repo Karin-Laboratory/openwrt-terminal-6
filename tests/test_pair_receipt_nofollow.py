@@ -59,5 +59,27 @@ class ReceiptInputTests(unittest.TestCase):
                 pair.read_receipt(path)
 
 
+    def test_nonfinite_constant_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "receipt.json"
+            path.write_text('{"value": NaN}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "NONFINITE_JSON_CONSTANT"):
+                pair.read_receipt(path)
+
+    def test_receipt_size_limit_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "receipt.json"
+            path.write_bytes(b" " * (pair.MAX_RECEIPT_BYTES + 1))
+            with self.assertRaisesRegex(ValueError, "RECEIPT_TOO_LARGE"):
+                pair.read_receipt(path)
+
+    def test_empty_receipt_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "receipt.json"
+            path.write_bytes(b"")
+            with self.assertRaises(json.JSONDecodeError):
+                pair.read_receipt(path)
+
+
 if __name__ == "__main__":
     unittest.main()
