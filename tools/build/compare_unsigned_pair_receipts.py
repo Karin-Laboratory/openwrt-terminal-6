@@ -38,10 +38,13 @@ def load(path):
         val = d.get(key)
         if not isinstance(val, str) or len(val) != 64 or any(c not in '0123456789abcdef' for c in val):
             raise ValueError('INVALID_DIGEST_' + key)
-    return d
+    return d, (info.st_dev, info.st_ino)
 
 def compare(left, right):
-    a, b = load(left), load(right)
+    a, a_identity = load(left)
+    b, b_identity = load(right)
+    if a_identity == b_identity:
+        raise ValueError('RECEIPTS_NOT_INDEPENDENT_FILES')
     return [k for k in FIELDS if a[k] != b[k]]
 
 def main():
