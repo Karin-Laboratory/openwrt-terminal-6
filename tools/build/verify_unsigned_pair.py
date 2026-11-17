@@ -39,6 +39,9 @@ def reject_nonfinite(value):
 
 
 def read_receipt(path):
+    # Reject symlinked ancestor directories as well as the final component.
+    # O_NOFOLLOW alone only protects the final pathname component.
+    require(valid_path(Path(path)), "RECEIPT_SYMLINK_OR_INVALID_PATH")
     # Bind validation and receipt identity to the same bytes, even if the
     # pathname is replaced between validation and attestation.
     # Open the actual file without following a final-component symlink. The
