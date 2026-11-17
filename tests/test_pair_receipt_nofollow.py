@@ -101,6 +101,35 @@ class ReceiptInputTests(unittest.TestCase):
             self.assertTrue(swapped)
             self.assertEqual(value, {"origin": "original"})
 
+    def test_final_symlink_swap_after_parent_open_is_rejected(self):
+        # A receipt replaced after opening its parent must never be followed.
+        # This exercises the final-component O_NOFOLLOW at the actual open.
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            parent = root / "parent"
+            parent.mkdir()
+            receipt = parent / "receipt.json"
+            receipt.write_text('{"origin": "original"}', encoding="utf-8")
+            outside = root / "outside.json"
+            outside.write_text('{"origin": "outside"}', encoding="utf-8")
+            real_open = os.open
+            swapped = False
+
+            def swap_final_component(file, flags, *args, **kwargs):
+                nonlocal swapped
+                fd = real_open(file, flags, *args, **kwargs)
+                if not swapped and file == "parent" and "dir_fd" in kwargs:
+                    swapped = True
+                    receipt.unlink()
+                    receipt.symlink_to(outside)
+                return fd
+
+            with patch.object(pair.os, "open", side_effect=swap_final_component):
+                with self.assertRaises(OSError):
+                    pair.read_receipt(receipt)
+            self.assertTrue(swapped)
+
     def test_nested_symlink_ancestor_rejected(self):
         # An inner symlink must not bypass the descriptor-anchored walk.
         with tempfile.TemporaryDirectory() as directory:
