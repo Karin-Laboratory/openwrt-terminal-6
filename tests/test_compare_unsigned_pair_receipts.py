@@ -70,6 +70,13 @@ class ComparisonTests(unittest.TestCase):
         self.b.write_text('{"status":"UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED","signed":false,"signed":false}')
         with self.assertRaisesRegex(ValueError,'DUPLICATE_KEY'):
             mod.compare(self.a,self.b)
+    @unittest.skipUnless(hasattr(os, 'O_NOFOLLOW'), 'requires O_NOFOLLOW')
+    def test_missing_nofollow_support_fails_closed(self):
+        with mock.patch.object(mod.os, 'O_NOFOLLOW'):
+            delattr(mod.os, 'O_NOFOLLOW')
+            with self.assertRaisesRegex(ValueError, 'NOFOLLOW_UNAVAILABLE'):
+                mod.compare(self.a, self.b)
+
     def test_symlink_rejected(self):
         self.b.unlink()
         self.b.symlink_to(self.a)
