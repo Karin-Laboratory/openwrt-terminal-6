@@ -146,6 +146,16 @@ class ComparisonTests(unittest.TestCase):
         self.assertIn('PUBLIC_PAIR_CROSS_WORKSPACE_RECEIPT_IDENTITIES_MATCH', result.stdout)
         self.assertIn('INDEPENDENT_BUILD_PROVENANCE_NOT_VERIFIED', result.stdout)
 
+    def test_cli_missing_receipt_does_not_disclose_path(self):
+        cli = Path(__file__).resolve().parents[1] / 'tools/build/compare_unsigned_pair_receipts.py'
+        private_path = Path(self.temp.name) / 'private-workspace-secret.json'
+        result = subprocess.run([sys.executable, str(cli), str(private_path), str(self.b)],
+                                capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('PUBLIC_PAIR_CROSS_WORKSPACE_BLOCKED: RECEIPT_IO_ERROR_', result.stderr)
+        self.assertNotIn(str(private_path), result.stderr)
+        self.assertNotIn('private-workspace-secret', result.stderr)
+
     def test_cli_mismatch_returns_nonzero(self):
         self.b.write_text(json.dumps(dict(self.receipt, p25_sha256='b'*64)))
         cli = Path(__file__).resolve().parents[1] / 'tools/build/compare_unsigned_pair_receipts.py'
