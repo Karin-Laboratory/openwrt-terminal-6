@@ -53,7 +53,7 @@ def compare(left, right):
     b, b_identity = load(right)
     if a_identity == b_identity:
         raise ValueError('RECEIPTS_NOT_INDEPENDENT_FILES')
-    return [k for k in FIELDS if a[k] != b[k]]
+    # Detect replacement or in-place mutation of the first receipt while the\n    # second receipt is read. A matching pair must be stable across both reads.\n    a_again, identity_again = load(left)\n    if identity_again != a_identity or a_again != a:\n        raise ValueError('FIRST_RECEIPT_CHANGED_DURING_COMPARISON')\n    return [k for k in FIELDS if a[k] != b[k]]
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
