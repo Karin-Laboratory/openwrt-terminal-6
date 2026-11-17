@@ -58,6 +58,10 @@ def compare(left, right):
     a_again, identity_again = load(left)
     if identity_again != a_identity or a_again != a:
         raise ValueError('FIRST_RECEIPT_CHANGED_DURING_COMPARISON')
+    # The second receipt may also be replaced while the first is rechecked.
+    b_again, b_identity_again = load(right)
+    if b_identity_again != b_identity or b_again != b:
+        raise ValueError('SECOND_RECEIPT_CHANGED_DURING_COMPARISON')
     return [k for k in FIELDS if a[k] != b[k]]
 
 def main():
