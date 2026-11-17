@@ -111,7 +111,7 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     require(isinstance(cfg, dict), "P25_CONFIG_NOT_OBJECT")
     require(cfg.get("ramdisk_mode") == "kernel_embedded",
             "RC14_PROFILE_REQUIRES_KERNEL_EMBEDDED_INITRAMFS")
-    init_check = initramfs_verify or initramfs_verifier().verify
+    # Snapshot the linked object before attestation; a digest first taken at\n    # receipt construction cannot detect a post-attestation mutation.\n    initramfs_object_hash = digest(initramfs_object)\n    init_check = initramfs_verify or initramfs_verifier().verify
     initramfs_result = init_check(initramfs_object, vmlinux, image, kernel,
                                   cpio, "xz")
     require(isinstance(initramfs_result, dict) and
@@ -187,7 +187,7 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         "p26_independent_receipt_sha256": independent_hash,
         "p25_config_sha256": config_hash,
         "bound_initramfs_sha256": scanned_hash.hexdigest(),
-        "initramfs_object_sha256": digest(initramfs_object),
+        "initramfs_object_sha256": initramfs_object_hash,
         "kernel_image_sha256": initramfs_result["kernel_image_sha256"],
         "signed": False, "device_writes": False, "public_binary": False,
         "not_proven": ["Air6 LK accepts p25", "RC14 boot compatibility",
