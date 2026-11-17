@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: MIT
 import importlib.util
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -43,6 +46,28 @@ class ComparisonTests(unittest.TestCase):
         self.b.symlink_to(self.a)
         with self.assertRaises(OSError):
             mod.compare(self.a, self.b)
+    @unittest.skipUnless(hasattr(os, 'mkfifo'), 'requires POSIX FIFO support')
+    def test_fifo_rejected_without_blocking(self):
+        self.b.unlink()
+        os.mkfifo(self.b)
+        with self.assertRaisesRegex(ValueError, 'RECEIPT_NOT_REGULAR'):
+            mod.compare(self.a, self.b)
+
+    def test_cli_matching_receipts(self):
+        cli = Path(__file__).resolve().parents[1] / 'tools/build/compare_unsigned_pair_receipts.py'
+        result = subprocess.run([sys.executable, str(cli), str(self.a), str(self.b)],
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('PUBLIC_PAIR_CROSS_WORKSPACE_RECEIPT_IDENTITIES_MATCH', result.stdout)
+
+    def test_cli_mismatch_returns_nonzero(self):
+        self.b.write_text(json.dumps(dict(self.receipt, p25_sha256='b'*64)))
+        cli = Path(__file__).resolve().parents[1] / 'tools/build/compare_unsigned_pair_receipts.py'
+        result = subprocess.run([sys.executable, str(cli), str(self.a), str(self.b)],
+                                capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('PUBLIC_PAIR_CROSS_WORKSPACE_DIFFERENCE p25_sha256', result.stdout)
+
     def test_directory_rejected(self):
         self.b.unlink()
         self.b.mkdir()
