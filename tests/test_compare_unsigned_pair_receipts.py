@@ -63,6 +63,23 @@ class ComparisonTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'SECOND_RECEIPT_CHANGED_DURING_COMPARISON'):
                 mod.compare(self.a, self.b)
 
+    def test_receipts_converge_to_same_inode_during_recheck(self):
+        original_load = mod.load
+        calls = 0
+        def swapping_load(path):
+            nonlocal calls
+            calls += 1
+            result = original_load(path)
+            if calls == 3:
+                # The initial pair was independent, but the second path now
+                # points to the first receipt's inode with identical content.
+                self.b.unlink()
+                self.b.hardlink_to(self.a)
+            return result
+        with mock.patch.object(mod, 'load', side_effect=swapping_load):
+            with self.assertRaisesRegex(ValueError, 'RECEIPTS_NOT_INDEPENDENT_FILES'):
+                mod.compare(self.a, self.b)
+
     def test_changed_p26(self):
         self.b.write_text(json.dumps(dict(self.receipt, p26_sha256='b'*64)))
         self.assertEqual(mod.compare(self.a,self.b), ['p26_sha256'])
