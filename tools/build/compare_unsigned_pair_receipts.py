@@ -62,6 +62,7 @@ def main():
         print('PUBLIC_PAIR_CROSS_WORKSPACE_DIFFERENCE ' + ','.join(mismatches))
         raise SystemExit(1)
     print('PUBLIC_PAIR_CROSS_WORKSPACE_RECEIPT_IDENTITIES_MATCH')
+    print('INDEPENDENT_BUILD_PROVENANCE_NOT_VERIFIED')
 
 if __name__ == '__main__':
     try:
