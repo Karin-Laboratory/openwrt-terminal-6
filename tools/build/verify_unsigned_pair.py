@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import stat
 from pathlib import Path
 
 P25_BYTES = 33_554_432
@@ -40,8 +41,16 @@ def reject_nonfinite(value):
 def read_receipt(path):
     # Bind validation and receipt identity to the same bytes, even if the
     # pathname is replaced between validation and attestation.
-    with path.open("rb") as stream:
-        raw = stream.read(MAX_RECEIPT_BYTES + 1)
+    # Open the actual file without following a final-component symlink. The
+    # initial valid_path check alone cannot prevent pathname replacement.
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    fd = os.open(path, flags)
+    try:
+        require(stat.S_ISREG(os.fstat(fd).st_mode), "RECEIPT_NOT_REGULAR")
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            raw = stream.read(MAX_RECEIPT_BYTES + 1)
+    finally:
+        os.close(fd)
     require(len(raw) <= MAX_RECEIPT_BYTES, "RECEIPT_TOO_LARGE")
     return json.loads(raw, object_pairs_hook=no_duplicate_keys,
                       parse_constant=reject_nonfinite), hashlib.sha256(raw).hexdigest()
