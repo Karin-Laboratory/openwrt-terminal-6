@@ -96,6 +96,29 @@ class ComparisonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON|INVALID_PAIR_RECEIPT'):
             mod.compare(self.a, self.b)
 
+    def test_each_digest_rejects_invalid_values(self):
+        for field in mod.FIELDS:
+            for bad in ('A' * 64, 'g' * 64, 'a' * 63, 123, None):
+                with self.subTest(field=field, bad=bad):
+                    self.b.write_text(json.dumps(dict(self.receipt, **{field: bad})))
+                    with self.assertRaisesRegex(ValueError, 'INVALID_DIGEST_' + field):
+                        mod.compare(self.a, self.b)
+
+    def test_each_unsafe_flag_rejected(self):
+        for field in ('signed', 'device_writes', 'public_binary'):
+            for bad in (True, 0, None):
+                with self.subTest(field=field, bad=bad):
+                    self.b.write_text(json.dumps(dict(self.receipt, **{field: bad})))
+                    with self.assertRaisesRegex(ValueError, 'INVALID_PAIR_RECEIPT'):
+                        mod.compare(self.a, self.b)
+
+    def test_all_digest_differences_reported(self):
+        changed = dict(self.receipt)
+        for field in mod.FIELDS:
+            changed[field] = 'b' * 64
+        self.b.write_text(json.dumps(changed))
+        self.assertEqual(mod.compare(self.a, self.b), list(mod.FIELDS))
+
     def test_false_status(self):
         self.b.write_text(json.dumps(dict(self.receipt, signed=True)))
         with self.assertRaisesRegex(ValueError,'INVALID_PAIR_RECEIPT'):
