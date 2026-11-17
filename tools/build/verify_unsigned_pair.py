@@ -39,16 +39,24 @@ def reject_nonfinite(value):
 
 
 def read_receipt(path):
-    # Reject symlinked ancestor directories as well as the final component.
-    # O_NOFOLLOW alone only protects the final pathname component.
-    require(not any(p.is_symlink() for p in Path(path).parents),
-            "RECEIPT_SYMLINK_OR_INVALID_PATH")
-    # Bind validation and receipt identity to the same bytes, even if the
-    # pathname is replaced between validation and attestation.
-    # Open the actual file without following a final-component symlink. The
-    # initial valid_path check alone cannot prevent pathname replacement.
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
-    fd = os.open(path, flags)
+    # Resolve each ancestor relative to an already opened directory FD.
+    # A preflight is_symlink() check races with concurrent path replacement.
+    parts = Path(path).parts
+    require(parts and ".." not in parts, "RECEIPT_SYMLINK_OR_INVALID_PATH")
+    directory_fd = os.open("/" if Path(path).is_absolute() else ".",
+                           os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for part in parts[:-1]:
+            if part in ("/", "."):
+                continue
+            next_fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY |
+                              os.O_NOFOLLOW, dir_fd=directory_fd)
+            os.close(directory_fd)
+            directory_fd = next_fd
+        flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+        fd = os.open(parts[-1], flags, dir_fd=directory_fd)
+    finally:
+        os.close(directory_fd)
     try:
         require(stat.S_ISREG(os.fstat(fd).st_mode), "RECEIPT_NOT_REGULAR")
         with os.fdopen(fd, "rb", closefd=False) as stream:
