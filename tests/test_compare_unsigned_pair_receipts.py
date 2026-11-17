@@ -30,6 +30,20 @@ class ComparisonTests(unittest.TestCase):
         self.b.write_text('{"status":"UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED","signed":false,"signed":false}')
         with self.assertRaisesRegex(ValueError,'DUPLICATE_KEY'):
             mod.compare(self.a,self.b)
+    def test_symlink_rejected(self):
+        self.b.unlink()
+        self.b.symlink_to(self.a)
+        with self.assertRaises(OSError):
+            mod.compare(self.a, self.b)
+    def test_directory_rejected(self):
+        self.b.unlink()
+        self.b.mkdir()
+        with self.assertRaisesRegex(ValueError, 'RECEIPT_NOT_REGULAR'):
+            mod.compare(self.a, self.b)
+    def test_oversized_rejected(self):
+        self.b.write_bytes(b' ' * (1024 * 1024 + 1))
+        with self.assertRaisesRegex(ValueError, 'RECEIPT_TOO_LARGE'):
+            mod.compare(self.a, self.b)
     def test_false_status(self):
         self.b.write_text(json.dumps(dict(self.receipt, signed=True)))
         with self.assertRaisesRegex(ValueError,'INVALID_PAIR_RECEIPT'):
