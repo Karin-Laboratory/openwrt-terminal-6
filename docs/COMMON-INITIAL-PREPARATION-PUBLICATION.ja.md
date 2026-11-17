@@ -6,7 +6,7 @@
 ## 公開場所と役割
 
 - **共通初期準備の正本は [openwrt-terminal-6](../README.md) に置く。新しい独立リポジトリは作らない。**
-- 初めて触る人は [START-HERE.ja.md](../START-HERE.ja.md) から入り、Windows/LinuxでのUART接続、純正OSの現物確認、SSH、P43/P44の前提を理解する。
+- 初めて触る人は [START-HERE.ja.md](../START-HERE.ja.md) から入る。作業の流れとP43を未マウントにする理由は、[人間向け手順概要](COMMON-INITIAL-PREPARATION-HUMAN-GUIDE.ja.md)に整理する。
 - AIエージェントは [agent-entry.json](../agent-entry.json) と [共通ワークフロー](TERMINAL6-PREPARATION-AGENT-WORKFLOW.json) を参照する。JSONは実行権限でも完成インストーラでもない。
 - 個体差・検証証拠は [UART・純正環境・P43/P44の実測ガイド](STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md) と [実測JSON](STOCK-UART-P43P44-EVIDENCE-20261113.json) に集約する。
 - 再利用可能な初期準備用ソース・試験を公開する場合も、このリポジトリの既存の `tools/`・`tests/`・`docs/` を優先する。個別OSの移植・起動手順は各リポジトリに置き、Debian側から共通入口へリンクする。
