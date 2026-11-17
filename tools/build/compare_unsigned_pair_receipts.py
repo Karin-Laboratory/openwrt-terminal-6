@@ -29,6 +29,9 @@ def load(path):
             raw = stream.read(1024 * 1024 + 1)
         if len(raw) > 1024 * 1024:
             raise ValueError('RECEIPT_TOO_LARGE')
+        after = os.fstat(fd)
+        if (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns) or len(raw) != after.st_size:
+            raise ValueError('RECEIPT_CHANGED_DURING_READ')
     finally:
         os.close(fd)
     def reject_constant(value):
