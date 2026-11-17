@@ -59,6 +59,8 @@ class ReceiptInputTests(unittest.TestCase):
             alias.symlink_to(actual, target_is_directory=True)
             self.assertFalse(pair.valid_path(alias / "receipt.json"))
             self.assertTrue(pair.valid_path(receipt))
+            with self.assertRaisesRegex(ValueError, "RECEIPT_SYMLINK_OR_INVALID_PATH"):
+                pair.read_receipt(alias / "receipt.json")
 
     def test_nested_duplicate_keys_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
