@@ -71,6 +71,36 @@ class ReceiptInputTests(unittest.TestCase):
             receipt.write_text('{"schema": 1}', encoding="utf-8")
             self.assertEqual(pair.read_receipt(receipt)[0], {"schema": 1})
 
+    def test_parent_swap_after_directory_open_is_fd_anchored(self):
+        # Swap a parent path after its descriptor is opened. The reader must
+        # continue inside the original directory, never follow the replacement.
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            parent = root / "parent"
+            parent.mkdir()
+            (parent / "receipt.json").write_text('{"origin": "original"}', encoding="utf-8")
+            other = root / "other"
+            other.mkdir()
+            (other / "receipt.json").write_text('{"origin": "replacement"}', encoding="utf-8")
+            moved = root / "moved"
+            real_open = os.open
+            swapped = False
+
+            def swap_after_parent_open(file, flags, *args, **kwargs):
+                nonlocal swapped
+                fd = real_open(file, flags, *args, **kwargs)
+                if not swapped and file == "parent" and "dir_fd" in kwargs:
+                    swapped = True
+                    parent.rename(moved)
+                    parent.symlink_to(other, target_is_directory=True)
+                return fd
+
+            with patch.object(pair.os, "open", side_effect=swap_after_parent_open):
+                value, _ = pair.read_receipt(parent / "receipt.json")
+            self.assertTrue(swapped)
+            self.assertEqual(value, {"origin": "original"})
+
     def test_parent_traversal_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
