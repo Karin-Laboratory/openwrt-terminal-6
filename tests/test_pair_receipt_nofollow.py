@@ -244,6 +244,23 @@ class ReceiptInputTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "RECEIPT_TOO_LARGE"):
                 pair.read_receipt(path)
 
+    def test_receipt_size_boundary_accepts_exact_limit(self):
+        # The size cap is inclusive; valid JSON padded to exactly the limit
+        # must not be rejected while one additional byte must be rejected.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "receipt.json"
+            payload = b'{"schema": 1}' + b" " * (
+                pair.MAX_RECEIPT_BYTES - len(b'{"schema": 1}'))
+            self.assertEqual(len(payload), pair.MAX_RECEIPT_BYTES)
+            path.write_bytes(payload)
+            value, checksum = pair.read_receipt(path)
+            self.assertEqual(value, {"schema": 1})
+            import hashlib
+            self.assertEqual(checksum, hashlib.sha256(payload).hexdigest())
+            path.write_bytes(payload + b" ")
+            with self.assertRaisesRegex(ValueError, "RECEIPT_TOO_LARGE"):
+                pair.read_receipt(path)
+
     def test_empty_receipt_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "receipt.json"
