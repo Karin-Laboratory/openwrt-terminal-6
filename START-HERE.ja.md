@@ -8,6 +8,8 @@
 
 ## 0. どこまで用意されている？
 
+このページは**OpenWrtとDebian 13に共通する初期準備の正本**です。公開場所・配布対象・機密情報の境界は[共通初期準備と公開方針](docs/COMMON-INITIAL-PREPARATION-PUBLICATION.ja.md)を参照してください。Debian導入に固有の手順は[Debian13-Terminal6](https://github.com/Karin-Laboratory/Debian13-Terminal6)側で扱います。
+
 - **公開済みの実験版:** [Alpha3 RC16 pre-release](https://github.com/Karin-Laboratory/openwrt-terminal-6/releases/tag/sba6d-nora2-rc16-20261110-r1) (2026-11-11)。署名済みP25、対応P26、SHA256SUMS、資料ZIPがある。**一般用ワンクリックインストーラではない**。
 - **前提:** RC16は既存のP44 ext4を要求し、P43縮小/P44作成ツールを同梱していない。開発機で成功したLAN/SSH向けP44追加修正もP25/P26には含まれない。
 - **公開された実機知見:** [UART/LK/Stock/P43-P44観測ガイド](docs/STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md)、[実測情報JSON](docs/STOCK-UART-P43P44-EVIDENCE-20261113.json)。
