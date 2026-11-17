@@ -101,6 +101,19 @@ class ReceiptInputTests(unittest.TestCase):
             self.assertTrue(swapped)
             self.assertEqual(value, {"origin": "original"})
 
+    def test_nested_symlink_ancestor_rejected(self):
+        # An inner symlink must not bypass the descriptor-anchored walk.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "real" / "nested").mkdir(parents=True)
+            (root / "real" / "nested" / "receipt.json").write_text(
+                '{"schema": 1}', encoding="utf-8")
+            (root / "outer").mkdir()
+            (root / "outer" / "alias").symlink_to(
+                root / "real" / "nested", target_is_directory=True)
+            with self.assertRaises((OSError, ValueError)):
+                pair.read_receipt(root / "outer" / "alias" / "receipt.json")
+
     def test_parent_traversal_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
