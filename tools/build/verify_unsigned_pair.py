@@ -111,7 +111,10 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     require(isinstance(cfg, dict), "P25_CONFIG_NOT_OBJECT")
     require(cfg.get("ramdisk_mode") == "kernel_embedded",
             "RC14_PROFILE_REQUIRES_KERNEL_EMBEDDED_INITRAMFS")
-    # Snapshot the linked object before attestation; a digest first taken at\n    # receipt construction cannot detect a post-attestation mutation.\n    initramfs_object_hash = digest(initramfs_object)\n    init_check = initramfs_verify or initramfs_verifier().verify
+    # Snapshot the linked object before attestation; a digest first taken at
+    # receipt construction cannot detect a post-attestation mutation.
+    initramfs_object_hash = digest(initramfs_object)
+    init_check = initramfs_verify or initramfs_verifier().verify
     initramfs_result = init_check(initramfs_object, vmlinux, image, kernel,
                                   cpio, "xz")
     require(isinstance(initramfs_result, dict) and
