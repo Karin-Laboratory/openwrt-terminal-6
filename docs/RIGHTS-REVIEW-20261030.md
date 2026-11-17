@@ -7,7 +7,7 @@
 
 ## Verified inventory facts (catalog refreshed 2026-11-01)
 
-- `config/source-catalog.json` currently contains **107** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
+- `config/source-catalog.json` currently contains **108** Git-blob identified source/test/build entries, all carrying `rights_review=pending`. The catalog validator checks file identities, declared license/origin labels and allowed paths, **not** permission from copyright holders.
 - The clean Public repository is already visible. GitHub-hosted CI has passed the source-only tests and reachable-history scanner, but this is narrower than complete publication/right-to-redistribute and sensitive artifact reviews.
 - **Public distribution remains source-only**; unsigned p25/p26 image construction in private or ephemeral CI is the current goal. Signed/installable releases, vendor radio/EEPROM materials, signing and device operations remain outside routine public distribution.
 
@@ -25,7 +25,7 @@ The summary is a **2026-11-01 source-catalog snapshot**. Changes to catalog entr
 | independent-original / MIT | 97 | `tools/boot/slot_observation.py`; source build/tests | pending; verify actual authorship |
 | research-board-overlay / GPL-2.0-only | 1 | `board/mt6990-air-terminal-6-sgmii1-experimental.dtso` | pending; check wiring evidence |
 | independent-original / GPL-2.0-only | 4 | `board/mt6990-air-terminal-6.dts`, ethernet test DTS | pending; verify authorship |
-| **Total** | **107** | Catalog entries; additional `missing_dependencies` are not source files | **107 pending** |
+| **Total** | **108** | Catalog entries; additional `missing_dependencies` are not source files | **108 pending** |
 
 The labels are not a copyright ruling. New/modified source retains a catalog identity and **pending** status until supported by evidence, but pending does not prevent development or isolated builds. Public backports carry a short PR origin URL/revision (or self-authored observation basis), license and any unresolved concerns.
 
