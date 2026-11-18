@@ -177,12 +177,27 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     matches = 0
     tail = b""
     scanned_hash = hashlib.sha256()
-    with cpio.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            scanned_hash.update(chunk)
-            data = tail + chunk
-            matches += data.count(bound)
-            tail = data[-(len(bound) - 1):]
+    # Open exactly one regular inode without following a swapped symlink.
+    # A pathname check alone is not sufficient between attestation and scan.
+    require(hasattr(os, "O_NOFOLLOW"), "NOFOLLOW_UNAVAILABLE")
+    fd = os.open(cpio, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0))
+    try:
+        before = os.fstat(fd)
+        require(stat.S_ISREG(before.st_mode), "CPIO_NOT_REGULAR")
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                scanned_hash.update(chunk)
+                data = tail + chunk
+                matches += data.count(bound)
+                tail = data[-(len(bound) - 1):]
+        after = os.fstat(fd)
+        require((before.st_dev, before.st_ino, before.st_size,
+                 before.st_mtime_ns, before.st_ctime_ns) ==
+                (after.st_dev, after.st_ino, after.st_size,
+                 after.st_mtime_ns, after.st_ctime_ns),
+                "CPIO_CHANGED_DURING_VERIFICATION")
+    finally:
+        os.close(fd)
     # Bind the marker scan to the exact bytes independently attested above.
     # Otherwise an input replaced after the first digest could be scanned
     # successfully even though the receipt describes different CPIO bytes.
