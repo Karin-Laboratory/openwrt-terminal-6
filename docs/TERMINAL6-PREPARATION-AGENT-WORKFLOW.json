@@ -33,6 +33,12 @@
       "purpose": "machine-readable evidence, NOT an executable plan"
     },
     {
+      "repository": "Karin-Laboratory/openwrt-terminal-6",
+      "branch": "main",
+      "path": "docs/P43-P44-STOCK-SSH-OFFLINE-SHRINK-20261118.ja.md",
+      "purpose": "Nov 17 one-unit P43/P44 success with third-party unmount/write gate BLOCKED"
+    },
+    {
       "repository": "Karin-Laboratory/Debian13-Terminal6",
       "branch": "main",
       "path": "README.md",
