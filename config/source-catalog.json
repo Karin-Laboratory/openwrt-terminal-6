@@ -638,7 +638,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "2c97284a73bec249d69f11375e70f8bb1481a0af",
+      "git_blob_sha1": "3540855329b715207c1715bce67bdb0015c567f0",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -908,7 +908,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "a320a496607fb35f437fda6c94bda24ad0b7f47d",
+      "git_blob_sha1": "44e15f48d021ec7f9f6ddcdf48aa2a1a17507954",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
