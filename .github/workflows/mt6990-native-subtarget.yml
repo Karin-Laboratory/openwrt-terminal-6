@@ -85,9 +85,15 @@ jobs:
           echo 'NO_DEVICE_PROFILE_NO_FIRMWARE_NO_SIGNING_NO_HARDWARE'
 
   native-package-compile:
-    name: Compile real OpenWrt procd/netifd packages (noninstallable)
+    # Two wholly isolated hosted runners build the same PR checkout independently.
+    # Each run uses fresh OpenWrt/toolchain/kernel/P26/P25 bytes and no shared cache.
+    name: Compile independently verified unsigned P25/P26 pair (${{ matrix.reproduction }})
     needs: native-defconfig
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        reproduction: [A, B]
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -895,6 +901,47 @@ jobs:
                 "$work/private-p26/packed/p26-receipt.json" \
                 "$work/private-p26/packed/p26-independent-attestation.json"
             echo "PUBLIC_OSS_PAIR_ELAPSED_SECONDS=$(($(date +%s) - start_epoch))"
+            # Emit only non-installable metadata from this runner. Recompute
+            # full-file hashes separately here, after the producer's readbacks.
+            # The A/B jobs are independent GitHub-hosted VMs with no shared data.
+            python3 - "$work/public-source-61863-p25/unsigned-pair/same-run-p25-p26-receipt.json" \
+              "$work/public-source-61863-p25/unsigned-pair/boot_a.unsigned.p25" \
+              "$work/private-p26/packed/rootfs_a.p26" <<'PY'
+            import hashlib, json, pathlib, sys
+            receipt_path, p25, p26 = map(pathlib.Path, sys.argv[1:])
+            receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
+            fields = ('p25_sha256', 'p26_sha256', 'bound_initramfs_sha256',
+                      'kernel_image_sha256', 'initramfs_object_sha256',
+                      'p25_config_sha256')
+            assert receipt.get('schema') == 1
+            assert receipt.get('status') == 'UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED'
+            assert all(receipt.get(k) is False for k in
+                       ('signed', 'device_writes', 'public_binary'))
+            assert all(isinstance(receipt.get(k), str) and
+                       len(receipt[k]) == 64 and
+                       all(c in '0123456789abcdef' for c in receipt[k])
+                       for k in fields)
+            def digest(path):
+                h = hashlib.sha256()
+                with path.open('rb') as source:
+                    for chunk in iter(lambda: source.read(1 << 20), b''):
+                        h.update(chunk)
+                return h.hexdigest()
+            assert p25.stat().st_size == 33554432
+            assert p26.stat().st_size == 134217728
+            assert digest(p25) == receipt['p25_sha256']
+            assert digest(p26) == receipt['p26_sha256']
+            print('PUBLIC_PAIR_REPRO_METADATA=' +
+                  json.dumps({k: receipt[k] for k in fields},
+                             sort_keys=True, separators=(',', ':')))
+            print('PUBLIC_PAIR_REPRO_RECEIPT_FULL_READBACK_PASS')
+            PY
+            echo "PUBLIC_PAIR_REPRO_SOURCE_SHA=$GITHUB_SHA"
+            echo "PUBLIC_PAIR_REPRO_RUN_ID=$GITHUB_RUN_ID"
+            echo "PUBLIC_PAIR_REPRO_RUN_ATTEMPT=$GITHUB_RUN_ATTEMPT"
+            echo "PUBLIC_PAIR_REPRO_RUNNER_NAME=$RUNNER_NAME"
+            echo 'PUBLIC_PAIR_REPRO_RUNNER_SLOT=${{ matrix.reproduction }}'
+            "$compiler" --version | head -n 1
             echo 'PUBLIC_OPENWRT_UNSIGNED_P25_P26_SAME_WORKSPACE_REAL_BUILD_PASS'
             echo 'LIMIT: no device LK boot, physical C/A unit, signing or distribution'
           fi
