@@ -25,6 +25,12 @@ Observed mean ~70m56s. These timings measure the **native compile job**, not com
 
 ## Next execution order
 
-**First** inspect current PR #127 CI and its first failure/success, fix only its blocker, and get real p26 independent readback. **In parallel without file collision**, inspect existing p25 Image/DTB/boot-v2 provenance and assemble the unsigned 32 MiB p25 from licensable source. Optimization must not delay either real image and is not a new feature milestone.
+**Current priority (2026-11-18):** PR #216 has a recorded same-workspace unsigned 32 MiB P25 and 128 MiB P26 manufacture with independent readbacks ([native CI #43938848355](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/43938848355), exact accepted commit `86d875801e420ce970fdb62e5942b490dec21252`). This is **not** evidence of cross-workspace deterministic reproduction, current-HEAD acceptance, or bootability. The historical PR #127-only first step below is superseded for next-work selection, but remains useful background.
+
+**First** inspect PR #216 and #218 exact current HEAD and CI. Run the host-only receipt comparator regression tests from PR #218 and repair any failures. Then arrange two genuinely independent, pinned, clean workspaces to manufacture the same unsigned P25/P26 pair. Record for each build: full commit and inputs, toolchain/environment, 32 MiB/128 MiB sizes, six receipt SHA identities, independently verified full-file hashes, job URL and elapsed time. Compare receipts only after verifying both builds actually occurred; a copied receipt or repeated use of the same binary is not independent reproduction. If full builds cannot be executed, report BLOCKED and the concrete missing build environment rather than a synthetic PASS.
+
+**In parallel** classify the nine historical findings from `tools/security/check_publication.py --history` in CI #43938848296 without weakening the scanner or rewriting history blindly. Keep this history gate distinct from the already demonstrated same-workspace image-build acceptance.
+
+**Historical instruction (superseded):** **First** inspect current PR #127 CI and its first failure/success, fix only its blocker, and get real p26 independent readback. **In parallel without file collision**, inspect existing p25 Image/DTB/boot-v2 provenance and assemble the unsigned 32 MiB p25 from licensable source. Optimization must not delay either real image and is not a new feature milestone.
 
 The cron **schedule, trigger count, task assignment and priority** do not change. This document is read by the policy's mandatory task selection steps on each future public-mainline cycle. A policy instruction cannot force a future agent or runtime to run; compliance is auditable through the required PR receipt fields.
