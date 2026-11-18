@@ -19,11 +19,27 @@ MAX_RECEIPT_BYTES = 1024 * 1024
 
 
 def digest(path):
-    hasher = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            hasher.update(block)
-    return hasher.hexdigest()
+    """Hash one regular inode, rejecting symlink swaps and in-place edits."""
+    require(hasattr(os, "O_NOFOLLOW"), "NOFOLLOW_UNAVAILABLE")
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0))
+    try:
+        before = os.fstat(fd)
+        require(stat.S_ISREG(before.st_mode), "HASH_INPUT_NOT_REGULAR")
+        hasher = hashlib.sha256()
+        size = 0
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                hasher.update(block)
+                size += len(block)
+        after = os.fstat(fd)
+        require((before.st_dev, before.st_ino, before.st_size,
+                 before.st_mtime_ns, before.st_ctime_ns) ==
+                (after.st_dev, after.st_ino, after.st_size,
+                 after.st_mtime_ns, after.st_ctime_ns) and size == after.st_size,
+                "HASH_INPUT_CHANGED_DURING_READ")
+        return hasher.hexdigest()
+    finally:
+        os.close(fd)
 
 
 def no_duplicate_keys(pairs):
