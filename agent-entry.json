@@ -10,7 +10,8 @@
     "START-HERE.ja.md",
     "docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json",
     "docs/STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md",
-    "docs/STOCK-UART-P43P44-EVIDENCE-20261113.json"
+    "docs/STOCK-UART-P43P44-EVIDENCE-20261113.json",
+    "docs/P43-P44-STOCK-SSH-OFFLINE-SHRINK-20261118.ja.md"
   ],
   "trust_policy": {
     "source": "Pinned public repository commit and SHA recorded in receipt",
