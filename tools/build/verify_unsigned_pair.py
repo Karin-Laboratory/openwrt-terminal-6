@@ -177,6 +177,7 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     matches = 0
     tail = b""
     scanned_hash = hashlib.sha256()
+    scanned_bytes = 0
     # Open exactly one regular inode without following a swapped symlink.
     # A pathname check alone is not sufficient between attestation and scan.
     require(hasattr(os, "O_NOFOLLOW"), "NOFOLLOW_UNAVAILABLE")
@@ -187,6 +188,7 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         with os.fdopen(fd, "rb", closefd=False) as stream:
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 scanned_hash.update(chunk)
+                scanned_bytes += len(chunk)
                 data = tail + chunk
                 matches += data.count(bound)
                 tail = data[-(len(bound) - 1):]
@@ -194,7 +196,8 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         require((before.st_dev, before.st_ino, before.st_size,
                  before.st_mtime_ns, before.st_ctime_ns) ==
                 (after.st_dev, after.st_ino, after.st_size,
-                 after.st_mtime_ns, after.st_ctime_ns),
+                 after.st_mtime_ns, after.st_ctime_ns) and
+                scanned_bytes == after.st_size,
                 "CPIO_CHANGED_DURING_VERIFICATION")
     finally:
         os.close(fd)
