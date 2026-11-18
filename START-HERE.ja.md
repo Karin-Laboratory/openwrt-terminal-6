@@ -8,11 +8,13 @@
 
 ## 0. どこまで用意されている？
 
+**2026-11-17に第4号機で、純正Bを通常起動しLAN/SSHとホスト上のオフライン縮小を使う別方式でP43縮小・P44新設・再起動後の保持確認に成功しました。** [新方式の詳細実証記録と第三者の停止条件](docs/P43-P44-STOCK-SSH-OFFLINE-SHRINK-20261118.ja.md)を参照してください。1台の成功実績であり、通常umount不成立・lazy detach後のin-use警告があるため、未準備の第三者実機へそのまま書き込む手順ではありません。
+
 このページは**OpenWrtとDebian 13に共通する初期準備の正本**です。公開場所・配布対象・機密情報の境界は[共通初期準備と公開方針](docs/COMMON-INITIAL-PREPARATION-PUBLICATION.ja.md)を参照してください。Debian導入に固有の手順は[Debian13-Terminal6](https://github.com/Karin-Laboratory/Debian13-Terminal6)側で扱います。
 
 - **公開済みの実験版:** [Alpha3 RC16 pre-release](https://github.com/Karin-Laboratory/openwrt-terminal-6/releases/tag/sba6d-nora2-rc16-20261110-r1) (2026-11-11)。署名済みP25、対応P26、SHA256SUMS、資料ZIPがある。**一般用ワンクリックインストーラではない**。
 - **前提:** RC16は既存のP44 ext4を要求し、P43縮小/P44作成ツールを同梱していない。開発機で成功したLAN/SSH向けP44追加修正もP25/P26には含まれない。
-- **公開された実機知見:** [UART/LK/Stock/P43-P44観測ガイド](docs/STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md)、[実測情報JSON](docs/STOCK-UART-P43P44-EVIDENCE-20261113.json)。
+- **公開された実機知見:** [UART/LK/Stock/P43-P44観測ガイド](docs/STOCK-UART-EMERGENCY-P43P44-EVIDENCE-20261113.ja.md)、[実測情報JSON](docs/STOCK-UART-P43P44-EVIDENCE-20261113.json)、[純正B＋SSH方式の実証詳細](docs/P43-P44-STOCK-SSH-OFFLINE-SHRINK-20261118.ja.md)。
 - **AIの手順索引:** [エージェント共通ワークフローJSON](docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json)。モデル固有の命令ではなく、工程・必要証拠・停止条件・利用者承認を記述。
 - **関連公開実装:** [Debian13-Terminal6](https://github.com/Karin-Laboratory/Debian13-Terminal6)。純正slot Bの下準備とDebian boot成功は別の実績。
 - **現状の大きな未完成:** 初期中古機で純正SSHを永続化する普遍的レシピ、および未分割実機で動作確認済みのP43/P44分割ツール。**AIはこれらを完成済み機能と見なさない**。
