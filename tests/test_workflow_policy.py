@@ -30,6 +30,13 @@ class WorkflowPolicyTests(unittest.TestCase):
     def test_explicit_hosted_arm64_runner_is_allowed(self):
         self.assertEqual(gate.check(SAFE.replace("ubuntu-latest", "ubuntu-24.04-arm")), [])
 
+    def test_explicit_hosted_ubuntu_2404_runner_is_allowed(self):
+        self.assertEqual(gate.check(SAFE.replace("ubuntu-latest", "ubuntu-24.04")), [])
+
+    def test_unapproved_ubuntu_version_is_rejected(self):
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                      gate.check(SAFE.replace("ubuntu-latest", "ubuntu-22.04")))
+
     def test_block_self_hosted_and_target_event(self):
         issues = gate.check(SAFE.replace("pull_request:", "pull_request_target:").replace(
             "ubuntu-latest", "self-hosted"
