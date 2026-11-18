@@ -338,7 +338,8 @@ class PairTests(unittest.TestCase):
         def truncate_scan(fd, mode="r", *args, **kwargs):
             stream = original_fdopen(fd, mode, *args, **kwargs)
             callers = {frame.function for frame in inspect.stack()}
-            if mode == "rb" and "verify_pair" in callers and "digest" not in callers:
+            if (mode == "rb" and os.fstat(fd).st_ino == self.cpio.stat().st_ino
+                    and "verify_pair" in callers and "digest" not in callers):
                 return ShortStream(stream)
             return stream
 
