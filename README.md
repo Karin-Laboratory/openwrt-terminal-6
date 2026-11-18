@@ -8,7 +8,7 @@ Public-source community development for the SoftBank Air Terminal 6 (SBAT6 serie
 
 ## First-time owner or AI agent
 
-For a human-readable explanation of the full preparation sequence, including **why P43 should be unmounted/offline before any resizing**, read the [shared setup overview (Japanese)](docs/COMMON-INITIAL-PREPARATION-HUMAN-GUIDE.ja.md).
+For a human-readable explanation of the full preparation sequence, including **why P43 should be unmounted/offline before any resizing**, read the [shared setup overview (Japanese)](docs/COMMON-INITIAL-PREPARATION-HUMAN-GUIDE.ja.md). **New 2026-11-17 field evidence:** [stock slot B + authenticated SSH + host-side offline P43 shrinking / P44 creation (Japanese)](docs/P43-P44-STOCK-SSH-OFFLINE-SHRINK-20261118.ja.md). One research unit completed and reboot-verified P43/P44; the third-party write path is still **BLOCKED** by an unresolved normal unmount/in-use condition. This is not a general-purpose installer.
 
 **[START-HERE.ja.md](START-HERE.ja.md)** is the shared OpenWrt/Debian entry point for Windows/Linux UART, stock-shell identification, read-only device inventory, SSH and P43/P44 prerequisite assessment. The [shared preparation and publication policy (Japanese)](docs/COMMON-INITIAL-PREPARATION-PUBLICATION.ja.md) defines where common documentation lives and what can be published. The distinct [agent workflow JSON](docs/TERMINAL6-PREPARATION-AGENT-WORKFLOW.json) defines evidence and explicit approval checkpoints. **Neither is an authorization to write an unverified device.**
 
