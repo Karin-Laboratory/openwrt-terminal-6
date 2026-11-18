@@ -1,3 +1,12 @@
+## 2026-11-16: 既存P26製造から公開P25へ渡す同一ワークスペース契約
+
+[PR #206 / run #43667557039](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/43667557039)はOpenWrt実package/installから128MiB P26製造・unsquashfs/全量readback PASSを実測。ただしその実バイトは当時の一時CIディレクトリにしか存在せず、今は再使用できない。
+
+[OpenWrt PR #216](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/216)は同じビルドジョブでP26を再製造して独立SHAを取り、実P26とproducer/independent両レシートからP26-bound OpenWrt first-stage CPIOを作り、[Debian PR #14公開カーネルを用いるP25製造スクリプト](../scripts/manufacture-public-openwrt-p25-from-debian14.sh)へ渡す。32MiBの実P25は既存パッカーで製造し、[独立ペア検証器](../tools/build/verify_unsigned_pair.py)がP26の同一バイトSHAとKbuild埋込CPIOを照合する。
+
+現行実行で新しいP25 SHAとP26 SHA、実行ID、P25/P26全量独立readback証拠が揃うまで **ペア受入は未完了**。実機LK/NETSYS/SSH/P44/Wi-Fiは別ゲート、公開CIで成果バイナリは保存・配布しない。
+
+---
 # Unsigned p26 rootfs_a packing lane (draft, 2026-11-04)
 
 **Status: PACKER SOURCE ONLY. No public-source-built 128 MiB p26 has yet been manufactured or independently verified.**

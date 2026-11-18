@@ -20,6 +20,7 @@ on:
       - tests/test_verify_unsigned_pair.py
       - tests/test_build_air6_first_stage.py
       - tests/test_verify_kernel_initramfs.py
+      - scripts/manufacture-public-openwrt-p25-from-debian14.sh
       - .github/workflows/mt6990-native-subtarget.yml
 permissions:
   contents: read
@@ -86,7 +87,11 @@ jobs:
   native-package-compile:
     name: Compile real OpenWrt procd/netifd packages (noninstallable)
     needs: native-defconfig
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        independent_run: [A, B]
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -784,15 +789,21 @@ jobs:
           sha256sum "$work/air6-first-stage-initramfs.cpio" \
             "$kernel/arch/arm64/boot/Image"
           echo 'PUBLIC_AIR6_FIRST_STAGE_KERNEL_IMAGE_SOURCE_BUILT_PASS'
+          # Preserve the failing command/line when the next P25 stage exits
+          # before it can print its own blocker marker. No binary disclosure.
+          trap 'rc=$?; echo "PUBLIC_PAIR_POST_KERNEL_FAILURE line=$LINENO status=$rc command=$BASH_COMMAND" >&2' ERR
+          echo 'PUBLIC_PAIR_POST_KERNEL_STAGE_ENTER'
           # Unsigned P25 only when the caller supplies both a validated exact
           # boot-v2 configuration and the separately hash-pinned DTB prefix.
           # Neither private config nor vendor prefix is stored in this repo.
           : > "$work/air6-native-empty-ramdisk"
           native_dtb="$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
-          test -s "$native_dtb"
+          # The legacy owner-reference path needs the native 6.18.60 DTB.
+          # The default public path builds its own 6.18.63 DTB instead.
           if test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}" && \
              test -n "${SBAT6_P25_DTB_SECTION_PREFIX:-}" && \
              test -n "${SBAT6_P25_REFERENCE_AUDIT:-}"; then
+            test -s "$native_dtb" || { echo "P25_BLOCKED_NATIVE_REFERENCE_DTB_MISSING" >&2; exit 1; }
             test -f "$SBAT6_P25_BOOT_V2_CONFIG"
             test -f "$SBAT6_P25_DTB_SECTION_PREFIX"
             test -f "$SBAT6_P25_REFERENCE_AUDIT"
@@ -843,11 +854,57 @@ jobs:
               'No candidate P25 or P25/P26 pair receipt was produced.' \
               >> "$GITHUB_STEP_SUMMARY"
           else
-            echo 'P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE'
-            printf '%s\n' '## P25 manufacture status' '' \
-              'BLOCKED: no independently validated SBAT6_P25_BOOT_V2_CONFIG was supplied.' \
-              'No P25 candidate or P25/P26 pair receipt was produced.' \
-              'P26 bytes remain ephemeral; no firmware artifact was uploaded.' \
-              >> "$GITHUB_STEP_SUMMARY"
+            # Default PUBLIC path. Debian PR #14's pinned 17-blob, Linux
+            # 6.18.63 kernel/NETSYS/PCS/MT7531 and DTB are built locally
+            # in this SAME workspace, with this run's P26-bound first-stage.
+            # Existing OpenWrt packer, readback and pair verifier remain the
+            # source of acceptance; no private reference/prefix is consumed.
+            # Reuse this job’s source-built matching OpenWrt toolchain.
+            # Public security policy forbids privileged shell in this workflow.
+            if ! command -v "$compiler" >/dev/null; then
+              echo 'PUBLIC_PAIR_BLOCKED_OPENWRT_COMPILER_UNAVAILABLE' >&2
+              exit 1
+            fi
+            for tool in "${cross}gcc" "${cross}ld"; do
+              if ! test -x "$tool"; then
+                echo "PUBLIC_PAIR_BLOCKED_CROSS_TOOL_UNAVAILABLE: $tool" >&2
+                exit 1
+              fi
+            done
+            # tools/install does not guarantee dtc is selected by the native
+            # package dependency closure. Build the pinned OpenWrt host dtc
+            # explicitly before the public Debian DTB staging step.
+            # The pinned OpenWrt tree does not expose tools/dtc/install as
+            # an independently callable make target. Build the host dtc from
+            # the already source-built kernel's Kbuild host tools instead.
+            PATH="$(dirname "$compiler"):$PATH" timeout 300s \
+              make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" scripts/dtc/dtc
+            host_dtc="$kernel/scripts/dtc/dtc"
+            if ! test -x "$host_dtc"; then
+              echo "PUBLIC_PAIR_BLOCKED_HOST_DTC_UNAVAILABLE: $host_dtc" >&2
+              exit 1
+            fi
+            bash -n "$GITHUB_WORKSPACE/scripts/manufacture-public-openwrt-p25-from-debian14.sh"
+            echo 'PUBLIC_PAIR_PUBLIC_TOOLCHAIN_PREFLIGHT_PASS'
+            echo 'REBUILD_SCOPE=E 6.18.63 real public kernel plus same-run source-built P26'
+            echo 'REUSE_PROOF=only same-job verified P26 bytes and first-stage CPIO'
+            echo 'CACHE_DECISION=no firmware/outputs cached or uploaded'
+            start_epoch="$(date +%s)"
+            AIR6_CROSS_COMPILE="$cross" PATH="$(dirname "$host_dtc"):$(dirname "$compiler"):$PATH" \
+              timeout --signal=TERM --kill-after=15s 7200 \
+              bash "$GITHUB_WORKSPACE/scripts/manufacture-public-openwrt-p25-from-debian14.sh" \
+                "$work/public-source-61863-p25" \
+                "$work/air6-first-stage-initramfs.cpio" \
+                "$work/private-p26/packed/rootfs_a.p26" \
+                "$work/private-p26/packed/p26-receipt.json" \
+                "$work/private-p26/packed/p26-independent-attestation.json"
+            echo "PUBLIC_OSS_PAIR_ELAPSED_SECONDS=$(($(date +%s) - start_epoch))"
+            python3 -c 'import json,sys; r=json.load(open(sys.argv[1], encoding="utf-8")); k=("p25_sha256","p26_sha256","bound_initramfs_sha256","kernel_image_sha256","initramfs_object_sha256","p25_config_sha256"); assert_all=all(isinstance(r.get(x),str) and len(r[x])==64 for x in k); assert assert_all, "invalid pair metadata"; print("PUBLIC_PAIR_REPRO_METADATA="+json.dumps({x:r[x] for x in k},sort_keys=True,separators=(",",":")))' "$work/public-source-61863-p25/unsigned-pair/same-run-p25-p26-receipt.json"
+            echo "PUBLIC_PAIR_REPRO_SOURCE_SHA=$GITHUB_SHA"
+            echo "PUBLIC_PAIR_REPRO_RUN_ID=$GITHUB_RUN_ID"
+            echo "PUBLIC_PAIR_REPRO_RUN_ATTEMPT=$GITHUB_RUN_ATTEMPT"
+            echo "PUBLIC_PAIR_REPRO_RUNNER_NAME=$RUNNER_NAME"
+            echo 'PUBLIC_OPENWRT_UNSIGNED_P25_P26_SAME_WORKSPACE_REAL_BUILD_PASS'
+            echo 'LIMIT: no device LK boot, physical C/A unit, signing or distribution'
           fi
           echo 'LIMIT: Air6 bootloader acceptance and hardware cold boot NOT verified'

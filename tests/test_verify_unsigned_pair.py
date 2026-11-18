@@ -85,6 +85,55 @@ class PairTests(unittest.TestCase):
                                 p25_verify=self.fake_p25,
                                 initramfs_verify=self.fake_initramfs)
 
+    def test_cpio_changed_after_scan_rejected_before_receipt(self):
+        original_digest = pair.digest
+        calls = 0
+
+        def mutate_after_scan(path):
+            nonlocal calls
+            result = original_digest(path)
+            if path == self.p26:
+                calls += 1
+                # Second P26 digest occurs after the CPIO marker scan.
+                if calls == 2:
+                    with self.cpio.open("ab") as stream:
+                        stream.write(b"late mutation")
+            return result
+
+        with patch.object(pair, "digest", side_effect=mutate_after_scan):
+            with self.assertRaisesRegex(ValueError, "CPIO_CHANGED_BEFORE_RECEIPT"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+
+    def test_kernel_artifacts_changed_after_attestation_rejected(self):
+        for target, reason in ((self.parts[0], "KERNEL_GZIP_CHANGED"),
+                               (self.image, "KERNEL_IMAGE_CHANGED"),
+                               (self.initramfs_object, "INITRAMFS_OBJECT_CHANGED")):
+            with self.subTest(target=target.name):
+                original = target.read_bytes()
+                original_digest = pair.digest
+                triggered = False
+
+                def mutate_on_p26_final_digest(path):
+                    nonlocal triggered
+                    result = original_digest(path)
+                    # The object baseline is captured while constructing the
+                    # receipt, after the initial P26 hash. Mutate immediately
+                    # after that baseline; other artifacts are already attested.
+                    mutation_point = (self.initramfs_object
+                                      if target == self.initramfs_object
+                                      else self.p26)
+                    if path == mutation_point and not triggered:
+                        triggered = True
+                        target.write_bytes(original + b"changed")
+                    return result
+
+                with patch.object(pair, "digest", side_effect=mutate_on_p26_final_digest):
+                    with self.assertRaisesRegex(ValueError, reason):
+                        self.run_pair()
+                self.assertFalse(self.out.exists())
+                target.write_bytes(original)
+
     def test_pair_identity_pass_and_refuse_overwrite(self):
         evidence = self.run_pair()
         self.assertEqual(evidence["status"], "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED")
@@ -138,24 +187,25 @@ class PairTests(unittest.TestCase):
                 self.run_pair()
         self.assertFalse(self.out.exists())
 
-    def test_producer_path_swap_does_not_change_validated_receipt_hash(self):
-        # The producer file is replaced after parsing, but the independent
-        # receipt must be checked against the originally validated bytes.
-        original_bytes = self.producer.read_bytes()
-        original_read = pair.read_receipt
+    def test_metadata_mutation_after_parse_rejected(self):
+        for target, reason in ((self.parts[3], "P25_CONFIG_CHANGED"),
+                               (self.producer, "P26_PRODUCER_RECEIPT_CHANGED"),
+                               (self.independent, "P26_INDEPENDENT_RECEIPT_CHANGED")):
+            with self.subTest(target=target.name):
+                original = target.read_bytes()
+                original_read = pair.read_receipt
 
-        def swap_after_read(path):
-            result = original_read(path)
-            if path == self.producer:
-                self.producer.write_bytes(b'{"replacement": true}')
-            return result
+                def mutate_after_read(path):
+                    result = original_read(path)
+                    if path == target:
+                        path.write_bytes(original + b" ")
+                    return result
 
-        with patch.object(pair, "read_receipt", side_effect=swap_after_read):
-            evidence = self.run_pair()
-        self.assertEqual(evidence["p26_sha256"], pair.digest(self.p26))
-        self.assertEqual(json.loads(self.out.read_text())["p26_sha256"],
-                         pair.digest(self.p26))
-        self.assertNotEqual(self.producer.read_bytes(), original_bytes)
+                with patch.object(pair, "read_receipt", side_effect=mutate_after_read):
+                    with self.assertRaisesRegex(ValueError, reason):
+                        self.run_pair()
+                self.assertFalse(self.out.exists())
+                target.write_bytes(original)
 
     def test_initramfs_attestation_must_match_exact_inputs(self):
         valid = self.fake_initramfs()
@@ -267,6 +317,50 @@ class PairTests(unittest.TestCase):
                     self.run_pair()
         self.assertFalse(self.out.exists())
 
+    def test_p25_replaced_after_verification_is_rejected(self):
+        # The boot image must still match the independently verified bytes
+        # when the final pair receipt is about to be written.
+        original_digest = pair.digest
+        target = self.p25
+        reads = 0
+
+        def swap_after_initial_checks(path):
+            nonlocal reads
+            result = original_digest(path)
+            if path == target:
+                reads += 1
+                if reads == 2:
+                    target.write_bytes(b"X" + target.read_bytes()[1:])
+            return result
+
+        with patch.object(pair, "digest", side_effect=swap_after_initial_checks):
+            with self.assertRaisesRegex(ValueError, "P25_CHANGED_DURING_VERIFICATION"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+
+    def test_p26_replaced_after_initial_digest_is_rejected(self):
+        # Preserve the CPIO binding while mutating P26 after the first
+        # digest, so the final receipt must reject stale image identity.
+        original_digest = pair.digest
+        target = self.p26
+        reads = 0
+
+        def mutate_after_digest(path):
+            nonlocal reads
+            result = original_digest(path)
+            if path == target:
+                reads += 1
+                if reads == 1:
+                    with target.open("r+b") as stream:
+                        stream.seek(-1, os.SEEK_END)
+                        stream.write(b"X")
+            return result
+
+        with patch.object(pair, "digest", side_effect=mutate_after_digest):
+            with self.assertRaisesRegex(ValueError, "P26_CHANGED_DURING_VERIFICATION"):
+                self.run_pair()
+        self.assertFalse(self.out.exists())
+
     def test_changed_p26_rejected(self):
         image = bytearray(self.p26.read_bytes())
         image[-1] = 1
@@ -312,6 +406,17 @@ class PairTests(unittest.TestCase):
                     self.run_pair()
                 self.assertFalse(self.out.exists())
                 path.write_bytes(original)
+
+    def test_nonfinite_receipt_constants_fail_closed(self):
+        for path in (self.parts[3], self.producer, self.independent):
+            original = path.read_bytes()
+            for token in ("NaN", "Infinity", "-Infinity"):
+                with self.subTest(path=path.name, token=token):
+                    path.write_text('{"nonfinite": ' + token + '}')
+                    with self.assertRaisesRegex(ValueError, "NONFINITE_JSON_CONSTANT"):
+                        self.run_pair()
+                    self.assertFalse(self.out.exists())
+            path.write_bytes(original)
 
     def test_duplicate_receipt_keys_fail_closed(self):
         for path in (self.parts[3], self.producer, self.independent):
@@ -412,6 +517,43 @@ class PairTests(unittest.TestCase):
                              p25_verify=lambda *args: {**self.fake_p25(),
                                                        "p25_sha256": "0" * 64},
                              initramfs_verify=self.fake_initramfs)
+
+
+    @unittest.skipUnless(hasattr(os, "O_NOFOLLOW"), "requires O_NOFOLLOW")
+    def test_receipt_reader_rejects_symlink(self):
+        alias = self.base / "receipt-link.json"
+        alias.symlink_to(self.producer)
+        with self.assertRaises(OSError):
+            pair.read_receipt(alias)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "requires POSIX FIFO")
+    def test_receipt_reader_rejects_fifo_without_blocking(self):
+        fifo = self.base / "receipt-fifo"
+        os.mkfifo(fifo)
+        with self.assertRaisesRegex(ValueError, "RECEIPT_NOT_REGULAR"):
+            pair.read_receipt(fifo)
+
+    def test_receipt_reader_rejects_changed_metadata_during_read(self):
+        original = pair.os.fstat
+        calls = 0
+
+        def altered_stat(fd):
+            nonlocal calls
+            calls += 1
+            info = original(fd)
+            if calls == 2:
+                class Changed:
+                    st_dev = info.st_dev
+                    st_ino = info.st_ino
+                    st_size = info.st_size - 1
+                    st_mtime_ns = info.st_mtime_ns
+                    st_ctime_ns = info.st_ctime_ns
+                return Changed()
+            return info
+
+        with patch.object(pair.os, "fstat", side_effect=altered_stat):
+            with self.assertRaisesRegex(ValueError, "RECEIPT_CHANGED_DURING_READ"):
+                pair.read_receipt(self.producer)
 
 
 if __name__ == "__main__":

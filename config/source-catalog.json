@@ -184,6 +184,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "scripts/manufacture-public-openwrt-p25-from-debian14.sh",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "68522ad0eca1c34bf2fea96305ade0613fc107f6",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "scripts/package-arm64-busybox-initramfs.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -562,6 +571,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_unsigned_pair_digest_fd.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "7d97d80b76983b239860c32abf2ba8c0bac0d624",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_verify_bound_p26.py",
       "component": "ab-recovery",
       "origin": "independent-original",
@@ -620,7 +638,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "08b414e18fdfef27962882d5b8302b8c021e2c60",
+      "git_blob_sha1": "2c97284a73bec249d69f11375e70f8bb1481a0af",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -890,7 +908,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "edb2cfa1d2d31a45732cda89e3388ed3ae430cd6",
+      "git_blob_sha1": "a320a496607fb35f437fda6c94bda24ad0b7f47d",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },

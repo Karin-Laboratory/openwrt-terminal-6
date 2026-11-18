@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import stat
 from pathlib import Path
 
 P25_BYTES = 33_554_432
@@ -18,11 +19,27 @@ MAX_RECEIPT_BYTES = 1024 * 1024
 
 
 def digest(path):
-    hasher = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            hasher.update(block)
-    return hasher.hexdigest()
+    """Hash one regular inode, rejecting symlink swaps and in-place edits."""
+    require(hasattr(os, "O_NOFOLLOW"), "NOFOLLOW_UNAVAILABLE")
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0))
+    try:
+        before = os.fstat(fd)
+        require(stat.S_ISREG(before.st_mode), "HASH_INPUT_NOT_REGULAR")
+        hasher = hashlib.sha256()
+        size = 0
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                hasher.update(block)
+                size += len(block)
+        after = os.fstat(fd)
+        require((before.st_dev, before.st_ino, before.st_size,
+                 before.st_mtime_ns, before.st_ctime_ns) ==
+                (after.st_dev, after.st_ino, after.st_size,
+                 after.st_mtime_ns, after.st_ctime_ns) and size == after.st_size,
+                "HASH_INPUT_CHANGED_DURING_READ")
+        return hasher.hexdigest()
+    finally:
+        os.close(fd)
 
 
 def no_duplicate_keys(pairs):
@@ -33,13 +50,32 @@ def no_duplicate_keys(pairs):
     return result
 
 
+def reject_nonfinite(value):
+    raise ValueError("UNSIGNED_PAIR_BLOCKED_NONFINITE_JSON_CONSTANT")
+
+
 def read_receipt(path):
     # Bind validation and receipt identity to the same bytes, even if the
     # pathname is replaced between validation and attestation.
-    with path.open("rb") as stream:
-        raw = stream.read(MAX_RECEIPT_BYTES + 1)
-    require(len(raw) <= MAX_RECEIPT_BYTES, "RECEIPT_TOO_LARGE")
-    return json.loads(raw, object_pairs_hook=no_duplicate_keys), hashlib.sha256(raw).hexdigest()
+    require(hasattr(os, "O_NOFOLLOW"), "NOFOLLOW_UNAVAILABLE")
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0))
+    try:
+        before = os.fstat(fd)
+        require(stat.S_ISREG(before.st_mode), "RECEIPT_NOT_REGULAR")
+        require(before.st_size <= MAX_RECEIPT_BYTES, "RECEIPT_TOO_LARGE")
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            raw = stream.read(MAX_RECEIPT_BYTES + 1)
+        after = os.fstat(fd)
+        require(len(raw) <= MAX_RECEIPT_BYTES, "RECEIPT_TOO_LARGE")
+        require((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+                 before.st_ctime_ns) ==
+                (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns,
+                 after.st_ctime_ns) and len(raw) == after.st_size,
+                "RECEIPT_CHANGED_DURING_READ")
+    finally:
+        os.close(fd)
+    return json.loads(raw, object_pairs_hook=no_duplicate_keys,
+                      parse_constant=reject_nonfinite), hashlib.sha256(raw).hexdigest()
 
 
 def strict_int(value, expected):
@@ -179,6 +215,31 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
         "not_proven": ["Air6 LK accepts p25", "RC14 boot compatibility",
                        "hardware cold boot", "LAN/SSH", "publication rights"],
     }
+    # The linked kernel artifacts are attested earlier. Reject a later edit
+    # before recording their identities in the same-run receipt.
+    require(digest(kernel) == initramfs_result["kernel_gzip_sha256"],
+            "KERNEL_GZIP_CHANGED_BEFORE_RECEIPT")
+    require(digest(image) == initramfs_result["kernel_image_sha256"],
+            "KERNEL_IMAGE_CHANGED_BEFORE_RECEIPT")
+    require(digest(initramfs_object) == receipt["initramfs_object_sha256"],
+            "INITRAMFS_OBJECT_CHANGED_BEFORE_RECEIPT")
+    # Recheck p25 after all other inputs were scanned. A concurrent replacement
+    # must not yield a receipt for bytes different from the verified boot image.
+    require(digest(p25) == p25_result["p25_sha256"],
+            "P25_CHANGED_DURING_VERIFICATION")
+    # Rehash p26 after CPIO and receipt checks; the initial hash alone does
+    # not protect against an in-place edit during later verification.
+    require(digest(p26) == p26_hash, "P26_CHANGED_DURING_VERIFICATION")
+    # The scan proves CPIO identity at scan time; reject a later in-place
+    # change before recording the bound initramfs in the final receipt.
+    require(digest(cpio) == scanned_hash.hexdigest(),
+            "CPIO_CHANGED_BEFORE_RECEIPT")
+    # The metadata receipts are part of the provenance chain. Reject edits
+    # after parsing instead of recording a hash for bytes no longer present.
+    require(digest(config) == config_hash, "P25_CONFIG_CHANGED")
+    require(digest(producer) == producer_hash, "P26_PRODUCER_RECEIPT_CHANGED")
+    require(digest(independent) == independent_hash,
+            "P26_INDEPENDENT_RECEIPT_CHANGED")
     # Do not overwrite stale pair evidence.
     created = False
     try:

@@ -1,3 +1,19 @@
+## 2026-11-16: 公開Linux 6.18.63移植と実OpenWrt P25/P26ペア製造
+
+**現在判定: ソース経路実装、現行実製造CIは未完了。OpenWrt P25/P26ペアPASSは未宣言。**
+
+- [OpenWrt PR #216](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/216) の [公開Linux 6.18.63ペア製造スクリプト](../scripts/manufacture-public-openwrt-p25-from-debian14.sh) を既存native OpenWrt CIへ接続した。従来のowner-private 64バイト接頭部が無い場合にも、公開仕様から製造するデフォルト経路を設けた。owner-private入力の既存経路は維持する。
+- 公開移植元は [Debian PR #14](https://github.com/Karin-Laboratory/Debian13-Terminal6/pull/14) の固定コミット e05811f8d4d3ee2606f44f27218ef59132a39a5f。Linux stable v6.18.63は1cdda838e8475edf89b73ff0cc952005dd0b1fa7。MT6990関連は移植元でGit blob SHA固定の公開OSS 17入力から再生し、GPL等の出典とライセンスを保持する。非公開ソースと秘密情報は使用しない。
+- 同一ワークスペースで公開OpenWrtソースからpackage/install、SquashFS、実128MiB P26、独立全量readbackを先行させる。その実バイト列のSHA256をOpenWrt first-stage CPIOへ埋め込み、公開Linux 6.18.63 ARM64 Image/modulesと実験用eMMC/NETSYS/SGMII1/MT7531 DTBをビルドする。
+- [OpenWrt AOSP DT table製造器](../tools/boot/make_p25_dtb_table.py)で新DTBのサイズから公開仕様通り64バイトのヘッダーを生成し、既存boot-v2パッカー、P25独立検証器と[同一runペア独立検証器](../tools/build/verify_unsigned_pair.py)を使用する。boot ID、gzip/Image、Kbuildで埋め込んだXZ CPIOと実P26のSHA、全32MiB/128MiBの相互一致を個別確認する。
+- 新しいCI実行で実画像とSHA256が表示されるまで受入PASSとしない。古いCIに記録された過去のP26 SHAは、使い捨てバイナリが残っていないため再利用しない。公開CIへのfirmware Artifacts/Release/cacheアップロード、署名、パーティション書込み、slot変更、RF送信は禁止。
+- REBUILD_SCOPE=E（公開Linux 6.18.63実カーネル＋同一run P26）。REUSE_PROOF=同じジョブで独立検証したP26/first-stage CPIOのみ。CACHE_DECISION=過去run由来のバイナリ流用なし。既存OpenWrtビルド済みツールチェーンを再利用し、特権コマンドを増やさない。
+
+実行するのは [既存native workflow](../.github/workflows/mt6990-native-subtarget.yml) の同じジョブ内。手動使用時の5引数は「新規絶対作業ディレクトリ、同一runのfirst-stage CPIO、実P26、P26製造レシート、P26独立検証レシート」。成功証拠は PUBLIC_OPENWRT_61863_UNSIGNED_P25_P26_SOURCE_PAIRCHECK_PASS と PUBLIC_OPENWRT_UNSIGNED_P25_P26_SAME_WORKSPACE_REAL_BUILD_PASS、各独立全量SHA256、実CI run IDで判定する。
+
+**未証明の別ゲート**: 公開P25のLK実機受入、DRAM/SerDes/DTB互換、P44 mount/switch_root、LAN/SSH、UART、Wi-Fi PHY、冷間起動・再起動、署名とバイナリ再配布の権利。公開Linux/DTBのhost構造検証を実機機能のPASSにはしない。
+
+---
 > **2026-11-15 real P25 forensics:** The published RC16 signed P25 (full SHA-256 `4ee38fb3...fa89787`) was independently read in [private owner CI #43677446967](https://github.com/Karin-Laboratory/SBAT6A-Offline-Archive/actions/runs/43677446967). Its 64-byte prefix is exactly **AOSP big-endian single-entry DT table v0**: 32-byte header + 32-byte entry, FDT offset 64, FDT 148,765 bytes, section 148,829 bytes, 2048-byte page, zero id/rev/custom. Rebuilding those 64 bytes solely from the public AOSP specification produces the **exact original prefix SHA** `f170c43553f75b65bb0f88714f776773f79489cad8725078ddc84bf7fb2d73d2`. The independently authored `tools/boot/make_p25_dtb_table.py` now emits a fresh size-matched prefix without copying proprietary bytes. The previous 64-byte carry-forward to a 177,286-byte FDT is **not** structurally valid AOSP table metadata (size fields stale by 28,521 bytes). Actual Air6 LK parser execution for a newly synthesized FDT remains unverified; no signing/flash/distribution permission follows.
 
 # Public unsigned P25 boot-v2 manufacture
