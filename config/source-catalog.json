@@ -400,6 +400,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_compare_unsigned_pair_receipts.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "187ec20a7d0fe964a12d375d1ea36e043a33a6f5",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_feed_git_objects.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -819,6 +828,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "a3225a2d3500b3c581c53d551f4d0dabca4f52bf",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/compare_unsigned_pair_receipts.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "157573faa6cd64e999734fe19274a69d5a69b015",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
