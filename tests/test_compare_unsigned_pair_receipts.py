@@ -19,7 +19,7 @@ class ComparisonTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.a = Path(self.temp.name) / 'a.json'
         self.b = Path(self.temp.name) / 'b.json'
-        self.receipt = {'status':'UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED', 'signed':False, 'device_writes':False, 'public_binary':False}
+        self.receipt = {'schema':1, 'status':'UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED', 'signed':False, 'device_writes':False, 'public_binary':False}
         self.receipt.update({k:'a'*64 for k in mod.FIELDS})
         self.save()
     def save(self):
@@ -266,6 +266,13 @@ class ComparisonTests(unittest.TestCase):
             changed[field] = 'b' * 64
         self.b.write_text(json.dumps(changed))
         self.assertEqual(mod.compare(self.a, self.b), list(mod.FIELDS))
+
+    def test_schema_must_match_producer_contract(self):
+        for value in (None, False, True, 0, 2, '1', 1.0):
+            with self.subTest(schema=value):
+                self.b.write_text(json.dumps(dict(self.receipt, schema=value)))
+                with self.assertRaisesRegex(ValueError, 'INVALID_PAIR_RECEIPT'):
+                    mod.compare(self.a, self.b)
 
     def test_false_status(self):
         self.b.write_text(json.dumps(dict(self.receipt, signed=True)))
