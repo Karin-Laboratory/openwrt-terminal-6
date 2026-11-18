@@ -266,10 +266,9 @@ class PairTests(unittest.TestCase):
         self.assertFalse(self.out.exists())
 
     def test_cpio_modified_while_streaming_is_rejected(self):
-        # Simulate an in-place write after the first streaming read. The
-        # scanned bytes must no longer match the independently attested CPIO.
         marker = pair.digest(self.p26).encode("ascii") + b"  /dev/mmcblk0p26"
         self.cpio.write_bytes(marker + b"x" * (1024 * 1024 + 64))
+        original_fdopen = os.fdopen
         original_open = Path.open
         target = self.cpio
 
@@ -294,27 +293,50 @@ class PairTests(unittest.TestCase):
                         writer.write(b"changed")
                 return data
 
-        # Only the final streaming pass is patched, not initial attestation.
         original_digest = pair.digest
         cpio_reads = 0
 
-        def patch_after_attestation(path):
+        def track_attestation(path):
             nonlocal cpio_reads
             result = original_digest(path)
             if path == target:
                 cpio_reads += 1
             return result
 
-        # Arm mutation after the initial verifier and identity digest.
-        def guarded_open(path, mode="r", *args, **kwargs):
-            if path == target and mode == "rb" and cpio_reads >= 2:
-                return MutatingStream(original_open(path, mode, *args, **kwargs))
-            return original_open(path, mode, *args, **kwargs)
+        def mutate_scan_fdopen(fd, mode="r", *args, **kwargs):
+            stream = original_fdopen(fd, mode, *args, **kwargs)
+            if mode == "rb" and cpio_reads >= 2:
+                return MutatingStream(stream)
+            return stream
 
-        with patch.object(pair, "digest", side_effect=patch_after_attestation):
-            with patch.object(Path, "open", guarded_open):
+        with patch.object(pair, "digest", side_effect=track_attestation):
+            with patch.object(pair.os, "fdopen", side_effect=mutate_scan_fdopen):
                 with self.assertRaisesRegex(ValueError, "CPIO_CHANGED_DURING_VERIFICATION"):
                     self.run_pair()
+        self.assertFalse(self.out.exists())
+
+    @unittest.skipUnless(hasattr(os, "O_NOFOLLOW"), "requires O_NOFOLLOW")
+    def test_cpio_symlink_swap_before_scan_is_rejected(self):
+        # The verifier attests the original file, then an attacker swaps its
+        # pathname for a symlink to another file with the same marker.
+        original = pair.digest
+        target = self.cpio
+        swapped = False
+
+        def swap_after_attestation(path):
+            nonlocal swapped
+            result = original(path)
+            if path == target and not swapped:
+                swapped = True
+                replacement = self.base / "replacement.cpio"
+                replacement.write_bytes(target.read_bytes())
+                target.unlink()
+                target.symlink_to(replacement)
+            return result
+
+        with patch.object(pair, "digest", side_effect=swap_after_attestation):
+            with self.assertRaises(OSError):
+                self.run_pair()
         self.assertFalse(self.out.exists())
 
     def test_p25_replaced_after_verification_is_rejected(self):
