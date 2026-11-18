@@ -112,6 +112,23 @@ class ComparisonTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'SECOND_RECEIPT_CHANGED_DURING_COMPARISON'):
                 mod.compare(self.a, self.b)
 
+    def test_second_receipt_symlink_swap_during_final_recheck(self):
+        # An initially regular receipt must not become a symlink while
+        # the other receipt is rechecked, even if the bytes are identical.
+        original_load = mod.load
+        calls = 0
+        def swapping_load(path):
+            nonlocal calls
+            calls += 1
+            result = original_load(path)
+            if calls == 3:
+                self.b.unlink()
+                self.b.symlink_to(self.a)
+            return result
+        with mock.patch.object(mod, 'load', side_effect=swapping_load):
+            with self.assertRaises(OSError):
+                mod.compare(self.a, self.b)
+
     def test_changed_p26(self):
         self.b.write_text(json.dumps(dict(self.receipt, p26_sha256='b'*64)))
         self.assertEqual(mod.compare(self.a,self.b), ['p26_sha256'])
