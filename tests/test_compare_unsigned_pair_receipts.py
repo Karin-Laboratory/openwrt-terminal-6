@@ -203,6 +203,28 @@ class ComparisonTests(unittest.TestCase):
         self.b.write_bytes(bytes([0xff]))
         with self.assertRaisesRegex(ValueError, 'INVALID_RECEIPT_JSON'):
             mod.compare(self.a, self.b)
+    def test_escaped_duplicate_json_key_rejected(self):
+        # JSON keys are compared after unescaping, not as raw source text.
+        self.b.write_text(json.dumps(self.receipt)[:-1] + ',"sig\\u006eed":false}')
+        with self.assertRaisesRegex(ValueError, 'DUPLICATE_KEY'):
+            mod.compare(self.a, self.b)
+
+    def test_receipt_size_exact_boundary(self):
+        limit = 1024 * 1024
+        base = json.dumps(self.receipt, separators=(',', ':'))
+        # A harmless JSON string extension makes an exactly 1 MiB receipt.
+        prefix = base[:-1] + ',"padding":"'
+        suffix = '"}'
+        padding = limit - len(prefix.encode()) - len(suffix.encode())
+        self.assertGreaterEqual(padding, 0)
+        self.b.write_bytes((prefix + 'x' * padding + suffix).encode())
+        self.assertEqual(self.b.stat().st_size, limit)
+        self.assertEqual(mod.compare(self.a, self.b), [])
+        with self.b.open('ab') as stream:
+            stream.write(b' ')
+        with self.assertRaisesRegex(ValueError, 'RECEIPT_TOO_LARGE'):
+            mod.compare(self.a, self.b)
+
     def test_nonstandard_json_constants_rejected(self):
         for value in ('NaN', 'Infinity', '-Infinity'):
             with self.subTest(value=value):
