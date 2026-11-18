@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Host-only rejection tests of unsigned pair receipt identity gates."""
 import hashlib
+import inspect
 import importlib.util
 import json
 import os
@@ -313,6 +314,31 @@ class PairTests(unittest.TestCase):
             with patch.object(pair.os, "fdopen", side_effect=mutate_scan_fdopen):
                 with self.assertRaisesRegex(ValueError, "CPIO_CHANGED_DURING_VERIFICATION"):
                     self.run_pair()
+        self.assertFalse(self.out.exists())
+
+    def test_cpio_scan_rejects_short_read_even_with_stable_metadata(self):
+        # Simulate a scan that sees fewer bytes than its stable inode size.
+        # The independently attested digest alone is not a byte-count check.
+        original = pair.os.fstat
+
+        class ApparentSize:
+            def __init__(self, stat):
+                self.stat = stat
+
+            def __getattr__(self, name):
+                if name == "st_size":
+                    return self.stat.st_size + 1
+                return getattr(self.stat, name)
+
+        def scan_stat(fd):
+            info = original(fd)
+            if inspect.currentframe().f_back.f_code.co_name == "verify_pair":
+                return ApparentSize(info)
+            return info
+
+        with patch.object(pair.os, "fstat", side_effect=scan_stat):
+            with self.assertRaisesRegex(ValueError, "CPIO_CHANGED_DURING_VERIFICATION"):
+                self.run_pair()
         self.assertFalse(self.out.exists())
 
     @unittest.skipUnless(hasattr(os, "O_NOFOLLOW"), "requires O_NOFOLLOW")
