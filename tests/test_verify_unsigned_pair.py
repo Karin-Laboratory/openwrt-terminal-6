@@ -519,5 +519,42 @@ class PairTests(unittest.TestCase):
                              initramfs_verify=self.fake_initramfs)
 
 
+    @unittest.skipUnless(hasattr(os, "O_NOFOLLOW"), "requires O_NOFOLLOW")
+    def test_receipt_reader_rejects_symlink(self):
+        alias = self.base / "receipt-link.json"
+        alias.symlink_to(self.producer)
+        with self.assertRaises(OSError):
+            pair.read_receipt(alias)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "requires POSIX FIFO")
+    def test_receipt_reader_rejects_fifo_without_blocking(self):
+        fifo = self.base / "receipt-fifo"
+        os.mkfifo(fifo)
+        with self.assertRaisesRegex(ValueError, "RECEIPT_NOT_REGULAR"):
+            pair.read_receipt(fifo)
+
+    def test_receipt_reader_rejects_changed_metadata_during_read(self):
+        original = pair.os.fstat
+        calls = 0
+
+        def altered_stat(fd):
+            nonlocal calls
+            calls += 1
+            info = original(fd)
+            if calls == 2:
+                class Changed:
+                    st_dev = info.st_dev
+                    st_ino = info.st_ino
+                    st_size = info.st_size - 1
+                    st_mtime_ns = info.st_mtime_ns
+                    st_ctime_ns = info.st_ctime_ns
+                return Changed()
+            return info
+
+        with patch.object(pair.os, "fstat", side_effect=altered_stat):
+            with self.assertRaisesRegex(ValueError, "RECEIPT_CHANGED_DURING_READ"):
+                pair.read_receipt(self.producer)
+
+
 if __name__ == "__main__":
     unittest.main()
