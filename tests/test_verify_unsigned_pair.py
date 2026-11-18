@@ -317,26 +317,32 @@ class PairTests(unittest.TestCase):
         self.assertFalse(self.out.exists())
 
     def test_cpio_scan_rejects_short_read_even_with_stable_metadata(self):
-        # Simulate a scan that sees fewer bytes than its stable inode size.
-        # The independently attested digest alone is not a byte-count check.
-        original = pair.os.fstat
+        # Simulate a short read on the scan stream without changing the inode.
+        # The attestation digest must still read the complete original bytes.
+        original_fdopen = os.fdopen
 
-        class ApparentSize:
-            def __init__(self, stat):
-                self.stat = stat
+        class ShortStream:
+            def __init__(self, stream):
+                self.stream = stream
 
-            def __getattr__(self, name):
-                if name == "st_size":
-                    return self.stat.st_size + 1
-                return getattr(self.stat, name)
+            def __enter__(self):
+                self.stream.__enter__()
+                return self
 
-        def scan_stat(fd):
-            info = original(fd)
-            if inspect.currentframe().f_back.f_code.co_name == "verify_pair":
-                return ApparentSize(info)
-            return info
+            def __exit__(self, *args):
+                return self.stream.__exit__(*args)
 
-        with patch.object(pair.os, "fstat", side_effect=scan_stat):
+            def read(self, size=-1):
+                return b""
+
+        def truncate_scan(fd, mode="r", *args, **kwargs):
+            stream = original_fdopen(fd, mode, *args, **kwargs)
+            callers = {frame.function for frame in inspect.stack()}
+            if mode == "rb" and "verify_pair" in callers and "digest" not in callers:
+                return ShortStream(stream)
+            return stream
+
+        with patch.object(pair.os, "fdopen", side_effect=truncate_scan):
             with self.assertRaisesRegex(ValueError, "CPIO_CHANGED_DURING_VERIFICATION"):
                 self.run_pair()
         self.assertFalse(self.out.exists())
