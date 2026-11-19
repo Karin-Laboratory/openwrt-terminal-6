@@ -117,7 +117,7 @@ class CrossTargetPreflight(unittest.TestCase):
                     "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
                 )
 
-    def test_valid_aarch64_targets_pass_preflight_before_git_clone(self):
+    def check_valid_aarch64_preflight(self, emulation):
         # The rejection-only tests must not accidentally allow a preflight
         # that rejects every toolchain, including a valid GNU ARM64 pair.
         with tempfile.TemporaryDirectory() as td:
@@ -126,7 +126,7 @@ class CrossTargetPreflight(unittest.TestCase):
             bindir.mkdir()
             for name, body in (
                 ("fake-gcc", "echo aarch64-linux-gnu"),
-                ("fake-ld", "printf 'GNU ld 2.40\n  Supported emulations:\n   aarch64linux\n'"),
+                ("fake-ld", "printf 'GNU ld 2.40\n  Supported emulations:\n   " + emulation + "\n'"),
                 ("dtc", "exit 99"),
                 ("git", "echo PUBLIC_TEST_GIT_CLONE_STOP >&2; exit 93"),
             ):
@@ -153,6 +153,13 @@ class CrossTargetPreflight(unittest.TestCase):
             self.assertEqual(result.returncode, 93, result.stderr)
             self.assertIn("PUBLIC_TEST_GIT_CLONE_STOP", result.stderr)
             self.assertTrue((root / "fresh").is_dir())
+
+    def test_valid_aarch64_targets_pass_preflight_before_git_clone(self):
+        # Both allowed little-endian GNU ld defaults must reach the
+        # simulated clone boundary without a network checkout.
+        for emulation in ("aarch64linux", "aarch64elf"):
+            with self.subTest(emulation=emulation):
+                self.check_valid_aarch64_preflight(emulation)
 
     def test_big_endian_compiler_target_rejected(self):
         # AArch64 big-endian GCC must not pass as the little-endian pair.
