@@ -12,15 +12,15 @@ SCRIPT = ROOT / "scripts/manufacture-public-openwrt-p25-from-debian14.sh"
 
 
 class CrossTargetPreflight(unittest.TestCase):
-    def check_target(self, gcc_target, ld_banner, expected):
+    def check_target(self, gcc_target, ld_banner, expected, gcc_exit=0, ld_exit=0):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             bindir = root / "bin"
             bindir.mkdir()
             gcc = bindir / "fake-gcc"
             ld = bindir / "fake-ld"
-            gcc.write_text("#!/bin/sh\necho " + repr(gcc_target) + "\n")
-            ld.write_text("#!/bin/sh\necho " + repr(ld_banner) + "\n")
+            gcc.write_text("#!/bin/sh\necho " + repr(gcc_target) + "\nexit " + str(gcc_exit) + "\n")
+            ld.write_text("#!/bin/sh\necho " + repr(ld_banner) + "\nexit " + str(ld_exit) + "\n")
             gcc.chmod(0o755)
             ld.chmod(0o755)
             cpio = root / "first.cpio"
@@ -50,6 +50,14 @@ class CrossTargetPreflight(unittest.TestCase):
     def test_wrong_linker_architecture(self):
         self.check_target("aarch64-linux-gnu", "GNU ld (elf_x86_64)",
                           "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET")
+
+    def test_compiler_target_query_failure(self):
+        self.check_target("aarch64-linux-gnu", "GNU ld (aarch64linux)",
+                          "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET_QUERY", gcc_exit=1)
+
+    def test_linker_target_query_failure(self):
+        self.check_target("aarch64-linux-gnu", "GNU ld (aarch64linux)",
+                          "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET_QUERY", ld_exit=1)
 
 
 if __name__ == "__main__":
