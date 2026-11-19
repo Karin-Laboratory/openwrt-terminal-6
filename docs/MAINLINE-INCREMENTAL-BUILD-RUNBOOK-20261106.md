@@ -25,6 +25,12 @@ Observed mean ~70m56s. These timings measure the **native compile job**, not com
 
 ## Next execution order
 
-**First** inspect current PR #127 CI and its first failure/success, fix only its blocker, and get real p26 independent readback. **In parallel without file collision**, inspect existing p25 Image/DTB/boot-v2 provenance and assemble the unsigned 32 MiB p25 from licensable source. Optimization must not delay either real image and is not a new feature milestone.
+**First** inspect the current exact HEAD of [PR #216](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/216) and its native Actions result, rather than assuming the earlier PR #127 blocker remains. The 2026-11-17 host-side acceptance at commit `86d875801e420ce970fdb62e5942b490dec21252`, [run #43938848355](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/43938848355), established a **same-workspace source-built unsigned pair**, not an independently reproduced, LK-booted or distributable release:
+
+- P25: 33,554,432 bytes; SHA256 `2d973adcdaf6ff2254a8208cf1d2aef2acdb47444d1d9e029f9e0a09b8dbb61a`; independent full-image readback PASS.
+- P26: 134,217,728 bytes; SHA256 `a980e7c57ba48efce768c2b34b552fdc2062d11b9314ea9877cc164520931bfd`; independent filesystem/readback PASS.
+- Same-run SHA binding and pair receipt PASS. Public GitHub Actions retained **no reusable image bytes**; hashes and logs are evidence, not build cache. The original ~61–91 minute baseline measured package jobs only and is not a like-for-like speed comparison with the complete pair build.
+
+**Next** prioritize independent second-workspace reproducibility (pinning and checking every source/toolchain/config input, rerunning the real build, comparing exact SHA and receipts). If hashes differ, isolate the first differing component rather than asserting deterministic reproduction. In parallel, investigate the separate public-source history scanner's nine findings without disabling checks or rewriting shared history blindly. Treat LK boot, board functionality, rights review, signing, flashing and distribution as distinct gates. Preserve the existing no-binary-upload rule.
 
 The cron **schedule, trigger count, task assignment and priority** do not change. This document is read by the policy's mandatory task selection steps on each future public-mainline cycle. A policy instruction cannot force a future agent or runtime to run; compliance is auditable through the required PR receipt fields.

@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Independent, fail-closed offline p26 full-byte and extracted-tree readback.
+
+Run in a separate process from pack_p26_rootfs.py. No device, signing, or upload.
+This verifier is deliberately not an attestation of OpenWrt source provenance.
+"""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import stat
+import subprocess
+import tempfile
+
+SIZE = 134_217_728
+
+def sha(path):
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for block in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(block)
+    return h.hexdigest()
+
+def inventory(root):
+    result = {}
+    # The SquashFS root inode also carries ownership, mode and xattrs.
+    # Omitting it can falsely accept a rootfs whose / permissions differ.
+    root_stat = root.lstat()
+    try:
+        root_attrs = {key: os.getxattr(root, key, follow_symlinks=False).hex()
+                      for key in os.listxattr(root, follow_symlinks=False)}
+    except OSError as exc:
+        raise ValueError("XATTR_INSPECTION_FAILED: .") from exc
+    result["."] = ("dir", "", stat.S_IMODE(root_stat.st_mode),
+                   root_stat.st_uid, root_stat.st_gid, root_attrs)
+    hardlink_groups = {}
+    # os.walk silently skips unreadable subtrees unless onerror is supplied.
+    # An incomplete inventory must never be accepted as a verified rootfs.
+    def fail_walk(error):
+        raise ValueError("TREE_WALK_FAILED") from error
+
+    for base, dirs, files in os.walk(root, topdown=True, followlinks=False,
+                                     onerror=fail_walk):
+        for name in dirs + files:
+            p = Path(base) / name
+            rel = p.relative_to(root).as_posix()
+            st = p.lstat()
+            mode = stat.S_IMODE(st.st_mode)
+            if stat.S_ISLNK(st.st_mode):
+                kind, value = "link", os.readlink(p)
+            elif stat.S_ISDIR(st.st_mode):
+                kind, value = "dir", ""
+            elif stat.S_ISREG(st.st_mode):
+                kind, value = "file", sha(p)
+                if st.st_nlink > 1:
+                    hardlink_groups.setdefault((st.st_dev, st.st_ino), []).append(rel)
+            else:
+                raise ValueError("SPECIAL_FILE: " + rel)
+            try:
+                attrs = {key: os.getxattr(p, key, follow_symlinks=False).hex()
+                         for key in os.listxattr(p, follow_symlinks=False)}
+            except OSError as exc:
+                raise ValueError("XATTR_INSPECTION_FAILED: " + rel) from exc
+            result[rel] = (kind, value, mode, st.st_uid, st.st_gid, attrs)
+            if kind == "link" and name in dirs:
+                dirs.remove(name)
+    # Compare hardlink equivalence classes, never raw inode numbers (which
+    # differ between staging and a separately extracted SquashFS image).
+    for inode, paths in hardlink_groups.items():
+        # A link outside the staging tree cannot be represented by the image.
+        # Refuse an incomplete hardlink class instead of silently accepting it.
+        first = root / paths[0]
+        if first.lstat().st_nlink != len(paths):
+            raise ValueError("HARDLINK_OUTSIDE_TREE: " + paths[0])
+        if len(paths) > 1:
+            group = tuple(sorted(paths))
+            for rel in group:
+                result[rel] += (group,)
+    return result
+
+def verify(root, p26, raw):
+    # Reject symlinked ancestors as well as leaf symlinks. A staging root
+    # reached through an alias could otherwise point outside the verified
+    # workspace, while an image path could be swapped through a linked parent.
+    for candidate in (root, p26, raw):
+        if candidate.is_symlink() or any(parent.is_symlink() for parent in candidate.parents):
+            raise ValueError("INVALID_INPUT")
+    if not root.is_dir() or not p26.is_file() or not raw.is_file():
+        raise ValueError("INVALID_INPUT")
+    if p26.stat().st_size != SIZE:
+        raise ValueError("PARTITION_SIZE")
+    raw_size = raw.stat().st_size
+    if not 0 < raw_size < SIZE:
+        raise ValueError("SQUASHFS_SIZE")
+    with raw.open("rb") as source, p26.open("rb") as partition:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            if partition.read(len(block)) != block:
+                raise ValueError("PREFIX_MISMATCH")
+        for block in iter(lambda: partition.read(1024 * 1024), b""):
+            if any(block):
+                raise ValueError("NONZERO_PADDING")
+    with tempfile.TemporaryDirectory(prefix="p26-independent-") as tmp:
+        dest = Path(tmp) / "extracted"
+        subprocess.run(["unsquashfs", "-no-progress", "-d", str(dest), str(raw)],
+                       check=True, timeout=1800)
+        expected = inventory(root)
+        actual = inventory(dest)
+        if expected != actual:
+            differences = sorted(k for k in expected.keys() | actual.keys()
+                                 if expected.get(k) != actual.get(k))
+            raise ValueError("TREE_METADATA_OR_CONTENT_MISMATCH: " + repr(differences[:12]))
+    return sha(p26)
+
+
+def attest(producer_receipt, attestation, p26, raw, verified_sha):
+    """Separate readback attestation, never mutate producer's provisional receipt.
+
+    Caller MUST invoke this only after verify(root, p26, raw) succeeds.
+    """
+    for path in (producer_receipt, p26, raw):
+        if (not path.is_file() or path.is_symlink()
+                or any(parent.is_symlink() for parent in path.parents)):
+            raise ValueError("ATTEST_INPUT_INVALID")
+    if (attestation.exists() or attestation.is_symlink()
+            or any(parent.is_symlink() for parent in attestation.parents)):
+        raise ValueError("ATTEST_OUTPUT_EXISTS_OR_SYMLINK")
+    # Independent verification happened before this call. Rehash the actual
+    # partition again immediately before attestation so an intervening
+    # modification cannot inherit an obsolete verified_sha from the caller.
+    if p26.stat().st_size != SIZE or sha(p26) != verified_sha:
+        raise ValueError("ATTEST_P26_CHANGED_AFTER_VERIFY")
+    def reject_duplicate_keys(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("ATTEST_PRODUCER_DUPLICATE_JSON_KEY")
+            result[key] = value
+        return result
+
+    # Bind to exactly the receipt bytes parsed, not a later replacement.
+    receipt_bytes = producer_receipt.read_bytes()
+    record = json.loads(receipt_bytes, object_pairs_hook=reject_duplicate_keys)
+    required = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
+                "partition_bytes": SIZE, "signed": False,
+                "hardware": "NONE", "public_binary": False}
+    if (not isinstance(record, dict)
+            or type(record.get("schema")) is not int
+            or type(record.get("partition_bytes")) is not int
+            or type(record.get("squashfs_bytes")) is not int
+            or type(record.get("signed")) is not bool
+            or type(record.get("public_binary")) is not bool
+            or any(record.get(k) != v for k, v in required.items())):
+        raise ValueError("ATTEST_PRODUCER_SCOPE")
+    # verify() required a nonempty SquashFS smaller than the partition.
+    # Recheck here: the input may have been truncated or grown since verify().
+    raw_size = raw.stat().st_size
+    if not 0 < raw_size < SIZE:
+        raise ValueError("ATTEST_SQUASHFS_SIZE_CHANGED_AFTER_VERIFY")
+    # The SquashFS input can change after verify() and before this receipt.
+    # Recheck its complete byte identity against the already verified partition.
+    with raw.open("rb") as source, p26.open("rb") as partition:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            if partition.read(len(block)) != block:
+                raise ValueError("ATTEST_SQUASHFS_CHANGED_AFTER_VERIFY")
+    if (record.get("p26_sha256") != verified_sha
+            or record.get("squashfs_sha256") != sha(raw)
+            or record.get("squashfs_bytes") != raw.stat().st_size
+            or p26.stat().st_size != SIZE):
+        raise ValueError("ATTEST_PRODUCER_IDENTITY")
+    evidence = {
+        "schema": 1, "status": "P26_INDEPENDENT_FS_READBACK_VERIFIED",
+        "p26_sha256": verified_sha,
+        "producer_receipt_sha256": hashlib.sha256(receipt_bytes).hexdigest(),
+        "partition_bytes": SIZE,
+        "squashfs_sha256": record["squashfs_sha256"],
+        "squashfs_bytes": record["squashfs_bytes"],
+        "verification": "INDEPENDENT_FULL_PARTITION_AND_EXTRACTED_METADATA",
+        "signed": False, "hardware": "NONE",
+        "public_binary": False,
+        "not_proven": ["physical Air6 boot", "LK acceptance",
+                       "radio/runtime behavior", "publication rights"]
+    }
+    # Exclusive creation prevents a stale or previously attested result from
+    # silently surviving a later changed p26 producer run.
+    created = False
+    try:
+        with attestation.open("x", encoding="utf-8") as f:
+            created = True
+            json.dump(evidence, f, sort_keys=True, indent=2)
+            f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
+        # Persist the newly created directory entry before reporting success.
+        # A synced file alone does not guarantee its name survives a crash.
+        dir_fd = os.open(attestation.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except BaseException:
+        # A failed write must never leave a truncated file looking like an
+        # independent attestation. Do not mask the original failure.
+        try:
+            if not created:
+                raise
+            attestation.unlink(missing_ok=True)
+            # Make rollback durable too: a crash must not resurrect a
+            # partially written attestation directory entry.
+            rollback_fd = os.open(attestation.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(rollback_fd)
+            finally:
+                os.close(rollback_fd)
+        except OSError:
+            pass
+        raise
+    return evidence
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--rootfs", type=Path, required=True)
+    parser.add_argument("--p26", type=Path, required=True)
+    parser.add_argument("--squashfs", type=Path, required=True)
+    parser.add_argument("--producer-receipt", type=Path)
+    parser.add_argument("--attestation", type=Path)
+    args = parser.parse_args()
+    if (args.producer_receipt is None) != (args.attestation is None):
+        parser.error("receipt and attestation must be specified together")
+    checked_sha = verify(args.rootfs, args.p26, args.squashfs)
+    if args.producer_receipt is not None:
+        result = attest(args.producer_receipt, args.attestation, args.p26,
+                        args.squashfs, checked_sha)
+        print("P26_INDEPENDENT_ATTESTATION_PASS", result["p26_sha256"])
+    print("P26_INDEPENDENT_READBACK_PASS", checked_sha)

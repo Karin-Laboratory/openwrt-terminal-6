@@ -1,0 +1,352 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Independent p26 verifier regression tests; synthetic bytes only."""
+import importlib.util
+import json
+from pathlib import Path
+import shutil
+import tempfile
+import unittest
+from unittest.mock import patch
+
+MODULE = Path(__file__).resolve().parents[1] / "tools/build/verify_p26_independent.py"
+spec = importlib.util.spec_from_file_location("verify_p26_independent", MODULE)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+
+
+class IndependentP26Tests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.base = Path(self.tmp.name)
+        self.root = self.base / "root"
+        self.root.mkdir()
+        (self.root / "etc").mkdir()
+        (self.root / "etc" / "test").write_bytes(b"payload")
+        (self.root / "link").symlink_to("etc/test")
+        self.raw = self.base / "root.squashfs"
+        self.raw.write_bytes(b"hsqs" + b"synthetic")
+        self.p26 = self.base / "p26.img"
+        self.p26.write_bytes(self.raw.read_bytes() + bytes(128 - self.raw.stat().st_size))
+        self.size = patch.object(mod, "SIZE", 128)
+        self.size.start()
+        self.addCleanup(self.size.stop)
+
+    def fake_unsquashfs(self, command, **kwargs):
+        shutil.copytree(self.root, Path(command[command.index("-d") + 1]), symlinks=True)
+        return None
+
+    def test_synthetic_matching_tree(self):
+        with patch.object(mod.subprocess, "run", side_effect=self.fake_unsquashfs):
+            self.assertEqual(mod.verify(self.root, self.p26, self.raw), mod.sha(self.p26))
+
+    def _producer_receipt(self):
+        receipt = self.base / "p26-receipt.json"
+        receipt.write_text(json.dumps({
+            "schema": 1,
+            "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
+            "partition_bytes": 128,
+            "p26_sha256": mod.sha(self.p26),
+            "squashfs_sha256": mod.sha(self.raw),
+            "squashfs_bytes": self.raw.stat().st_size,
+            "signed": False,
+            "hardware": "NONE",
+            "public_binary": False
+        }))
+        return receipt
+
+    def test_verified_attestation_binds_exact_p26(self):
+        receipt = self._producer_receipt()
+        attestation = self.base / "verified.json"
+        with patch.object(mod.subprocess, "run", side_effect=self.fake_unsquashfs):
+            checked = mod.verify(self.root, self.p26, self.raw)
+        result = mod.attest(receipt, attestation, self.p26, self.raw, checked)
+        self.assertEqual(result["p26_sha256"], checked)
+        self.assertEqual(json.loads(attestation.read_text())["status"],
+                         "P26_INDEPENDENT_FS_READBACK_VERIFIED")
+        with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
+            mod.attest(receipt, attestation, self.p26, self.raw, checked)
+
+    def test_attestation_rejects_changed_partition_since_readback(self):
+        receipt = self._producer_receipt()
+        verified_sha = mod.sha(self.p26)
+        damaged = bytearray(self.p26.read_bytes())
+        damaged[-1] = 1
+        self.p26.write_bytes(damaged)
+        with self.assertRaisesRegex(ValueError, "ATTEST_P26_CHANGED_AFTER_VERIFY"):
+            mod.attest(receipt, self.base / "verified.json", self.p26,
+                       self.raw, verified_sha)
+        self.assertFalse((self.base / "verified.json").exists())
+
+    def test_attestation_rejects_changed_squashfs_since_readback(self):
+        receipt = self._producer_receipt()
+        checked = mod.sha(self.p26)
+        # Preserve partition bytes but mutate the independent SquashFS input.
+        self.raw.write_bytes(b"changed" + self.raw.read_bytes()[7:])
+        doc = json.loads(receipt.read_text())
+        doc["squashfs_sha256"] = mod.sha(self.raw)
+        receipt.write_text(json.dumps(doc))
+        output = self.base / "verified.json"
+        with self.assertRaisesRegex(ValueError, "ATTEST_SQUASHFS_CHANGED_AFTER_VERIFY"):
+            mod.attest(receipt, output, self.p26, self.raw, checked)
+        self.assertFalse(output.exists())
+
+    def test_attestation_rejects_empty_or_oversized_squashfs_after_verify(self):
+        for data in (b"", b"x" * 128):
+            with self.subTest(size=len(data)):
+                self.raw.write_bytes(b"hsqs" + b"synthetic")
+                receipt = self._producer_receipt()
+                checked = mod.sha(self.p26)
+                self.raw.write_bytes(data)
+                output = self.base / "verified.json"
+                with self.assertRaisesRegex(ValueError, "ATTEST_SQUASHFS_SIZE_CHANGED_AFTER_VERIFY"):
+                    mod.attest(receipt, output, self.p26, self.raw, checked)
+                self.assertFalse(output.exists())
+
+    def test_attestation_binds_original_receipt_if_replaced_after_parse(self):
+        import hashlib
+        receipt = self._producer_receipt()
+        original = receipt.read_bytes()
+        checked = mod.sha(self.p26)
+        output = self.base / "verified.json"
+        real_loads = mod.json.loads
+
+        def replace_after_parse(data, **kwargs):
+            parsed = real_loads(data, **kwargs)
+            receipt.write_text('{"status":"REPLACED_AFTER_PARSE"}')
+            return parsed
+
+        with patch.object(mod.json, "loads", side_effect=replace_after_parse):
+            evidence = mod.attest(receipt, output, self.p26, self.raw, checked)
+        self.assertEqual(evidence["producer_receipt_sha256"],
+                         hashlib.sha256(original).hexdigest())
+        self.assertEqual(real_loads(output.read_text())["producer_receipt_sha256"],
+                         hashlib.sha256(original).hexdigest())
+
+    def test_attestation_rejects_producer_hash_mismatch(self):
+        receipt = self._producer_receipt()
+        doc = json.loads(receipt.read_text())
+        doc["p26_sha256"] = "0" * 64
+        receipt.write_text(json.dumps(doc))
+        with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_IDENTITY"):
+            mod.attest(receipt, self.base / "verified.json", self.p26,
+                       self.raw, mod.sha(self.p26))
+        self.assertFalse((self.base / "verified.json").exists())
+
+    def test_attestation_rejects_false_provenance(self):
+        receipt = self._producer_receipt()
+        doc = json.loads(receipt.read_text())
+        doc["signed"] = True
+        receipt.write_text(json.dumps(doc))
+        with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_SCOPE"):
+            mod.attest(receipt, self.base / "verified.json", self.p26,
+                       self.raw, mod.sha(self.p26))
+
+    def test_attestation_rejects_boolean_numeric_receipt_fields(self):
+        for field in ("schema", "partition_bytes", "squashfs_bytes"):
+            with self.subTest(field=field):
+                receipt = self._producer_receipt()
+                doc = json.loads(receipt.read_text())
+                doc[field] = True
+                receipt.write_text(json.dumps(doc))
+                output = self.base / "verified.json"
+                with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_SCOPE"):
+                    mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+                self.assertFalse(output.exists())
+
+    def test_attestation_rejects_duplicate_producer_json_keys(self):
+        receipt = self._producer_receipt()
+        original = receipt.read_text()
+        receipt.write_text(original.replace('"schema": 1', '"schema": 1, "schema": 1', 1))
+        output = self.base / "verified.json"
+        with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_DUPLICATE_JSON_KEY"):
+            mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertFalse(output.exists())
+
+    def test_attestation_rejects_integer_boolean_scope_fields(self):
+        # JSON integer zero compares equal to False in Python, but is not a
+        # valid boolean assertion about signing or public distribution.
+        for field in ("signed", "public_binary"):
+            with self.subTest(field=field):
+                receipt = self._producer_receipt()
+                doc = json.loads(receipt.read_text())
+                doc[field] = 0
+                receipt.write_text(json.dumps(doc))
+                output = self.base / "verified.json"
+                with self.assertRaisesRegex(ValueError, "ATTEST_PRODUCER_SCOPE"):
+                    mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+                self.assertFalse(output.exists())
+
+    def test_exclusive_creation_race_preserves_existing_receipt(self):
+        # Another writer can create the output after the initial existence
+        # check. A failed exclusive open must never delete its file.
+        receipt = self._producer_receipt()
+        output = self.base / "verified.json"
+        original_open = Path.open
+
+        def raced_open(path, *args, **kwargs):
+            if path == output and args and args[0] == "x":
+                output.write_bytes(b"another-writer")
+                raise FileExistsError("exclusive creation lost race")
+            return original_open(path, *args, **kwargs)
+
+        with patch.object(Path, "open", autospec=True, side_effect=raced_open):
+            with self.assertRaises(FileExistsError):
+                mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertEqual(output.read_bytes(), b"another-writer")
+
+    def test_attestation_write_failure_removes_partial_receipt(self):
+        receipt = self._producer_receipt()
+        output = self.base / "verified.json"
+        with patch.object(mod.json, "dump", side_effect=OSError("injected write failure")):
+            with self.assertRaisesRegex(OSError, "injected write failure"):
+                mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertFalse(output.exists())
+
+    def test_attestation_directory_sync_and_rollback(self):
+        receipt = self._producer_receipt()
+        output = self.base / "verified.json"
+        real_fsync = mod.os.fsync
+        calls = []
+
+        def count_sync(fd):
+            calls.append(fd)
+            return real_fsync(fd)
+
+        with patch.object(mod.os, "fsync", side_effect=count_sync):
+            mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(output.exists())
+        output.unlink()
+
+        def fail_directory_sync(fd):
+            calls.append(fd)
+            if len(calls) == 4:
+                raise OSError("injected directory fsync failure")
+            return real_fsync(fd)
+
+        with patch.object(mod.os, "fsync", side_effect=fail_directory_sync):
+            with self.assertRaisesRegex(OSError, "directory fsync failure"):
+                mod.attest(receipt, output, self.p26, self.raw, mod.sha(self.p26))
+        self.assertFalse(output.exists())
+        # Two syncs for the successful attempt, then file sync,
+        # failed directory sync and rollback directory sync.
+        self.assertEqual(len(calls), 5)
+
+    def test_directory_walk_error_fails_closed(self):
+        # os.walk normally swallows scandir errors, silently omitting files.
+        # Force the error callback without depending on root permissions.
+        real_walk = mod.os.walk
+
+        def failed_walk(root, **kwargs):
+            kwargs["onerror"](PermissionError("synthetic unreadable subtree"))
+            yield from ()
+
+        with patch.object(mod.os, "walk", side_effect=failed_walk):
+            with self.assertRaisesRegex(ValueError, "TREE_WALK_FAILED"):
+                mod.inventory(self.root)
+
+    def test_partition_size_rejected(self):
+        self.p26.write_bytes(b"short")
+        with self.assertRaisesRegex(ValueError, "PARTITION_SIZE"):
+            mod.verify(self.root, self.p26, self.raw)
+
+    def test_prefix_corruption_rejected(self):
+        data = bytearray(self.p26.read_bytes())
+        data[0] ^= 1
+        self.p26.write_bytes(data)
+        with self.assertRaisesRegex(ValueError, "PREFIX_MISMATCH"):
+            mod.verify(self.root, self.p26, self.raw)
+
+    def test_nonzero_padding_rejected(self):
+        data = bytearray(self.p26.read_bytes())
+        data[-1] = 1
+        self.p26.write_bytes(data)
+        with self.assertRaisesRegex(ValueError, "NONZERO_PADDING"):
+            mod.verify(self.root, self.p26, self.raw)
+
+    def test_extracted_content_mismatch_rejected(self):
+        def changed(command, **kwargs):
+            self.fake_unsquashfs(command, **kwargs)
+            dest = Path(command[command.index("-d") + 1])
+            (dest / "etc" / "test").write_bytes(b"changed")
+        with patch.object(mod.subprocess, "run", side_effect=changed):
+            with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
+                mod.verify(self.root, self.p26, self.raw)
+
+    def test_root_directory_mode_mismatch_rejected(self):
+        def changed_root(command, **kwargs):
+            self.fake_unsquashfs(command, **kwargs)
+            dest = Path(command[command.index("-d") + 1])
+            dest.chmod(0o700 if (self.root.stat().st_mode & 0o777) != 0o700 else 0o755)
+        with patch.object(mod.subprocess, "run", side_effect=changed_root):
+            with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
+                mod.verify(self.root, self.p26, self.raw)
+
+    def test_extracted_symlink_target_mismatch_rejected(self):
+        def changed_link(command, **kwargs):
+            self.fake_unsquashfs(command, **kwargs)
+            dest = Path(command[command.index("-d") + 1])
+            (dest / "link").unlink()
+            (dest / "link").symlink_to("etc/other")
+        with patch.object(mod.subprocess, "run", side_effect=changed_link):
+            with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
+                mod.verify(self.root, self.p26, self.raw)
+
+    def test_extracted_file_mode_mismatch_rejected(self):
+        def changed_mode(command, **kwargs):
+            self.fake_unsquashfs(command, **kwargs)
+            dest = Path(command[command.index("-d") + 1])
+            target = dest / "etc" / "test"
+            target.chmod(0o600 if (target.stat().st_mode & 0o777) != 0o600 else 0o644)
+        with patch.object(mod.subprocess, "run", side_effect=changed_mode):
+            with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
+                mod.verify(self.root, self.p26, self.raw)
+
+    def test_hardlink_outside_staging_tree_rejected(self):
+        # An external inode alias is not part of the staged filesystem and
+        # cannot be faithfully represented by the SquashFS image.
+        outside = self.base / "outside"
+        outside.hardlink_to(self.root / "etc" / "test")
+        with self.assertRaisesRegex(ValueError, "HARDLINK_OUTSIDE_TREE"):
+            mod.inventory(self.root)
+
+    def test_hardlink_relationship_mismatch_rejected(self):
+        # Same bytes and permissions are insufficient when the image silently
+        # turns two hardlinked files into independent regular files.
+        (self.root / "hardlink").hardlink_to(self.root / "etc" / "test")
+        with patch.object(mod.subprocess, "run", side_effect=self.fake_unsquashfs):
+            with self.assertRaisesRegex(ValueError, "TREE_METADATA_OR_CONTENT_MISMATCH"):
+                mod.verify(self.root, self.p26, self.raw)
+
+    def test_hardlink_relationship_preserved(self):
+        (self.root / "hardlink").hardlink_to(self.root / "etc" / "test")
+        def preserve(command, **kwargs):
+            self.fake_unsquashfs(command, **kwargs)
+            dest = Path(command[command.index("-d") + 1])
+            (dest / "hardlink").unlink()
+            (dest / "hardlink").hardlink_to(dest / "etc" / "test")
+        with patch.object(mod.subprocess, "run", side_effect=preserve):
+            self.assertEqual(mod.verify(self.root, self.p26, self.raw), mod.sha(self.p26))
+
+    def test_symlinked_input_parent_rejected(self):
+        # A linked directory must not bypass the verifier input boundary.
+        alias = self.base / "linked-parent"
+        alias.symlink_to(self.base, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "INVALID_INPUT"):
+            mod.verify(alias / "root", self.p26, self.raw)
+        with self.assertRaisesRegex(ValueError, "INVALID_INPUT"):
+            mod.verify(self.root, alias / "p26.img", self.raw)
+        with self.assertRaisesRegex(ValueError, "INVALID_INPUT"):
+            mod.verify(self.root, self.p26, alias / "root.squashfs")
+
+    def test_symlink_input_rejected(self):
+        alias = self.base / "alias"
+        alias.symlink_to(self.p26)
+        with self.assertRaisesRegex(ValueError, "INVALID_INPUT"):
+            mod.verify(self.root, alias, self.raw)
+
+
+if __name__ == "__main__":
+    unittest.main()
