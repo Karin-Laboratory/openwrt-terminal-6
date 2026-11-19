@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import io
 import json
+from unittest import mock
 from pathlib import Path
 import struct
 import tarfile
@@ -123,6 +124,59 @@ class ProcdImageStageTests(unittest.TestCase):
             source.write_text(json.dumps(manifest))
             with self.assertRaisesRegex(ValueError, "boot policy identity mismatch"):
                 stage.package(rootfs, source, root / "out", root / "manifest")
+
+    def test_second_publish_failure_rolls_back_first_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rootfs, source = self.make_source(root)
+            out, manifest = root / "out", root / "manifest"
+            original_link = stage.os.link
+            calls = 0
+
+            def fail_second(src, dst):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise OSError("simulated second publish failure")
+                return original_link(src, dst)
+
+            with mock.patch.object(stage.os, "link", side_effect=fail_second):
+                with self.assertRaisesRegex(OSError, "simulated"):
+                    stage.package(rootfs, source, out, manifest)
+            self.assertFalse(out.exists())
+            self.assertFalse(manifest.exists())
+            self.assertEqual(list(root.glob(".air6-stage-*")), [])
+
+    def test_rollback_error_does_not_mask_publish_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rootfs, source = self.make_source(root)
+            out, manifest = root / "out", root / "manifest"
+            original_link = stage.os.link
+            original_unlink = Path.unlink
+            calls = 0
+
+            def fail_second(src, dst):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise OSError("primary publish failure")
+                return original_link(src, dst)
+
+            def fail_rollback(path, *args, **kwargs):
+                if path == out:
+                    raise OSError("rollback unlink failure")
+                return original_unlink(path, *args, **kwargs)
+
+            with mock.patch.object(stage.os, "link", side_effect=fail_second), \
+                    mock.patch.object(Path, "unlink", autospec=True, side_effect=fail_rollback):
+                with self.assertRaisesRegex(OSError, "primary publish failure") as raised:
+                    stage.package(rootfs, source, out, manifest)
+            self.assertTrue(any("rollback unlink failure" in note
+                                for note in raised.exception.__notes__))
+            self.assertTrue(out.exists())  # Explicitly detectable partial publication
+            self.assertFalse(manifest.exists())
+            self.assertEqual(list(root.glob(".air6-stage-*")), [])
 
     def test_no_existing_output_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:
