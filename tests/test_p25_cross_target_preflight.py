@@ -23,6 +23,11 @@ class CrossTargetPreflight(unittest.TestCase):
             ld.write_text("#!/bin/sh\necho " + repr(ld_banner) + "\nexit " + str(ld_exit) + "\n")
             gcc.chmod(0o755)
             ld.chmod(0o755)
+            # The test must reach the architecture checks even on minimal hosts
+            # without device-tree-compiler installed (no DTB is built here).
+            dtc = bindir / "dtc"
+            dtc.write_text("#!/bin/sh\nexit 99\n")
+            dtc.chmod(0o755)
             cpio = root / "first.cpio"
             cpio.write_bytes(b"070701")
             p26 = root / "rootfs.p26"
@@ -34,6 +39,7 @@ class CrossTargetPreflight(unittest.TestCase):
             independent.write_text("{}")
             env = os.environ.copy()
             env["AIR6_CROSS_COMPILE"] = str(bindir / "fake-")
+            env["PATH"] = str(bindir) + os.pathsep + env.get("PATH", "")
             result = subprocess.run(
                 ["bash", str(SCRIPT), str(root / "fresh"),
                  str(cpio), str(p26), str(producer), str(independent)],
