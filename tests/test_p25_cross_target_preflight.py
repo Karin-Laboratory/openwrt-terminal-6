@@ -58,15 +58,15 @@ class CrossTargetPreflight(unittest.TestCase):
     def test_compiler_target_with_extra_line_rejected(self):
         # A valid prefix must not mask a second reported target.
         self.check_target(
-            "aarch64-linux-gnu\\nx86_64-linux-gnu",
-            "GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux",
+            "aarch64-linux-gnu\nx86_64-linux-gnu",
+            "GNU ld 2.40\n  Supported emulations:\n   aarch64linux",
             "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET",
         )
 
     def test_compiler_target_with_trailing_words_rejected(self):
         self.check_target(
             "aarch64-linux-gnu injected",
-            "GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux",
+            "GNU ld 2.40\n  Supported emulations:\n   aarch64linux",
             "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET",
         )
 
