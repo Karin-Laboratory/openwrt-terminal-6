@@ -1,6 +1,6 @@
 # Source rights and redistribution audit queue (2026-10-30)
 
-> **Current engineering scope (2026-11-04):** The [p25/p26 mainline policy](MAINLINE-P25-P26-POLICY.md) permits implementation, proven backports, local tests and ephemeral unsigned image builds without finishing this entire 73-entry inventory. Each **publicly committed** source contribution still needs a defensible origin/license, and distributed binaries require component-specific compliance. Pending inventory status is **not a development stop-work gate**.
+> **Current engineering scope (2026-11-04):** The [p25/p26 mainline policy](MAINLINE-P25-P26-POLICY.md) permits implementation, proven backports, local tests and ephemeral unsigned image builds without finishing this entire 75-entry inventory. Each **publicly committed** source contribution still needs a defensible origin/license, and distributed binaries require component-specific compliance. Pending inventory status is **not a development stop-work gate**.
 
 
 **Issue #2, ongoing review. This document does not grant copyright, contributor authorization, secure disclosure clearance, or firmware redistribution permission.**
@@ -42,7 +42,7 @@ The labels are not a copyright ruling. New/modified source retains a catalog ide
 
 ## Minimal per-change provenance; distribution review separately
 
-During normal development, a **one-line PR origin/revision/license note** is sufficient; do not mass-approve `rights_review` from labels or CI. Before distributing specific source or binaries, resolve significant third-party permission questions and satisfy applicable GPL source and notice duties. A fuller private record (rights holder, license, permission evidence, reviewer and date) is useful for **disputed or unclear components**, not a standing 73-file precondition to developing firmware.
+During normal development, a **one-line PR origin/revision/license note** is sufficient; do not mass-approve `rights_review` from labels or CI. Before distributing specific source or binaries, resolve significant third-party permission questions and satisfy applicable GPL source and notice duties. A fuller private record (rights holder, license, permission evidence, reviewer and date) is useful for **disputed or unclear components**, not a standing 75-file precondition to developing firmware.
 
 ## Hard boundaries for future implementation
 
