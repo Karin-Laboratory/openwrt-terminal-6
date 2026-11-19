@@ -44,12 +44,15 @@ class CrossTargetPreflight(unittest.TestCase):
             self.assertFalse((root / "fresh").exists())
 
     def test_wrong_compiler_architecture(self):
-        self.check_target("x86_64-linux-gnu", "GNU ld (aarch64linux)", 
+        self.check_target("x86_64-linux-gnu", "GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux", 
                           "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET")
 
     def test_wrong_linker_architecture(self):
-        self.check_target("aarch64-linux-gnu", "GNU ld (elf_x86_64)",
+        self.check_target("aarch64-linux-gnu", "GNU ld 2.40\\n  Supported emulations:\\n   elf_x86_64",
                           "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET")
+
+    def test_aarch64_supported_but_not_default(self):
+        self.check_target("aarch64-linux-gnu", "GNU ld 2.40\\n  Supported emulations:\\n   elf_x86_64\\n   aarch64linux", "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET")
 
 
 if __name__ == "__main__":
