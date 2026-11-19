@@ -90,12 +90,12 @@ class CrossTargetPreflight(unittest.TestCase):
             bindir.mkdir()
             for name, body in (
                 ("fake-gcc", "echo aarch64-linux-gnu"),
-                ("fake-ld", "printf 'GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux\\n'"),
+                ("fake-ld", "printf 'GNU ld 2.40\n  Supported emulations:\n   aarch64linux\n'"),
                 ("dtc", "exit 99"),
                 ("git", "echo PUBLIC_TEST_GIT_CLONE_STOP >&2; exit 93"),
             ):
                 tool = bindir / name
-                tool.write_text("#!/bin/sh\\n" + body + "\\n")
+                tool.write_text("#!/bin/sh\n" + body + "\n")
                 tool.chmod(0o755)
             cpio = root / "first.cpio"
             cpio.write_bytes(b"070701")
