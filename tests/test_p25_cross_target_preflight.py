@@ -88,7 +88,7 @@ class CrossTargetPreflight(unittest.TestCase):
             with self.subTest(emulation=emulation):
                 self.check_target(
                     "aarch64-linux-gnu",
-                    "GNU ld 2.40\\n  Supported emulations:\\n   " + emulation,
+                    "GNU ld 2.40\n  Supported emulations:\n   " + emulation,
                     "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
                 )
 
