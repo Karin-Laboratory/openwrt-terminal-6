@@ -50,9 +50,9 @@ class HistoryScannerTests(unittest.TestCase):
         # A later cleanup must not make a historical publication appear safe.
         # Use a synthetic RFC1918 address, never an actual device endpoint.
         p = self.root / "guide.txt"
-        p.write_text("example endpoint: 192.168.99.123\\n")
+        p.write_text("example endpoint: 192.168.99.123\n")
         self.commit("synthetic historical endpoint")
-        p.write_text("endpoint removed\\n")
+        p.write_text("endpoint removed\n")
         self.commit("remove synthetic endpoint")
         current = set()
         gate.current_findings(current)
@@ -60,6 +60,21 @@ class HistoryScannerTests(unittest.TestCase):
         historical = set()
         gate.history_findings(historical)
         self.assertIn(("guide.txt", "private network endpoint"), historical)
+
+    def test_private_endpoint_on_non_head_branch_is_still_blocked(self):
+        # Every reachable branch matters, not only the checked-out HEAD.
+        (self.root / "README.md").write_text("safe\\n")
+        self.commit("clean main")
+        git(self.root, "checkout", "-qb", "synthetic-side")
+        (self.root / "side.txt").write_text("endpoint: 192.168.99.124\\n")
+        self.commit("synthetic endpoint on side branch")
+        git(self.root, "checkout", "-q", "master")
+        current = set()
+        gate.current_findings(current)
+        self.assertEqual(current, set())
+        historical = set()
+        gate.history_findings(historical)
+        self.assertIn(("side.txt", "private network endpoint"), historical)
 
     def test_same_blob_different_path_detects_risky_alias(self):
         data = b"same harmless content\n"
