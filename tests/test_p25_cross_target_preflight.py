@@ -81,6 +81,17 @@ class CrossTargetPreflight(unittest.TestCase):
             "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
         )
 
+    def test_big_endian_linker_default_rejected(self):
+        # The kernel and OpenWrt AArch64 target here are little-endian.
+        # A big-endian ld default is not an interchangeable ARM64 linker.
+        for emulation in ("aarch64linuxb", "aarch64elfb"):
+            with self.subTest(emulation=emulation):
+                self.check_target(
+                    "aarch64-linux-gnu",
+                    "GNU ld 2.40\\n  Supported emulations:\\n   " + emulation,
+                    "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
+                )
+
     def test_valid_aarch64_targets_pass_preflight_before_git_clone(self):
         # The rejection-only tests must not accidentally allow a preflight
         # that rejects every toolchain, including a valid GNU ARM64 pair.
