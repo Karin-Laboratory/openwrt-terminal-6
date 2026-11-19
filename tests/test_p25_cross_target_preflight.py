@@ -135,7 +135,7 @@ class CrossTargetPreflight(unittest.TestCase):
         # AArch64 big-endian GCC must not pass as the little-endian pair.
         self.check_target(
             "aarch64_be-linux-gnu",
-            "GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux",
+            "GNU ld 2.40\n  Supported emulations:\n   aarch64linux",
             "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET",
         )
 
