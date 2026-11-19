@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-05",
+  "scope": "PUBLIC_SOURCE_ONLY",
+  "purpose": "Human-readable progress handoff and pre-work discovery; not an automated scheduler or proof of current live CI state.",
+  "authoritative_policy": "docs/MAINLINE-P25-P26-POLICY.md",
+  "entrypoint": "docs/EVIDENCE-WORKFLOW-INDEX-20261105.md",
+  "workflow_history": {
+    "pr": "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/128",
+    "doc": "https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/p25-p26-reuse-workflow-audit-20261105/docs/MAINLINE-WORKFLOW-GOLDEN-REPLAY-20261105.ja.md",
+    "snapshot": "https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/p25-p26-reuse-workflow-audit-20261105/docs/evidence/WORKFLOW-RUNS-SNAPSHOT-20261105.json",
+    "cutoff": "2026-11-05T10:09:59Z",
+    "note": "Historical fixed snapshot, not current status."
+  },
+  "readiness_rules": [
+    "Do not claim completed output without real full-size image, full SHA, and separate independent verification receipt.",
+    "Never treat cross-PR successful CI from different head commits as one successful integration.",
+    "Inspect the latest PR HEAD and workflow logs before changing a status; null means unknown.",
+    "No private binaries, signing material, device operations, or uploaded CI images."
+  ],
+  "items": [
+    {
+      "id": "PUBLIC_P26_ROOTFS",
+      "owner_pr": "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/127",
+      "related_prs": [
+        "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/118"
+      ],
+      "state": "BLOCKED_REAL_ARTIFACT_UNVERIFIED",
+      "verified_scope": "Source/synthetic tests and upstream native build evidence only; successful runs must be pinned to their own HEAD.",
+      "blocking_requirement": "One actual pinned public-source package/install rootfs with manifest into the p26 packer, then independent full-tree ownership, symlink, xattr, SquashFS, padding and 128MiB SHA acceptance.",
+      "next_safe_step": "Compare current #127 HEAD with most recent CI, fix the first demonstrated source-catalog error if still present; reuse existing package/install and packer in one job.",
+      "latest_failure_reference": "https://github.com/Karin-Laboratory/openwrt-terminal-6/blob/docs/p25-p26-reuse-workflow-audit-20261105/docs/MAINLINE-WORKFLOW-GOLDEN-REPLAY-20261105.ja.md",
+      "failure_pattern_ids": [
+        "PUB-CATALOG-IDENTITY",
+        "PUB-UNCATALOGUED-NEW-VERIFY",
+        "PUB-STAGE-LOST",
+        "PUB-METADATA-LOSS"
+      ],
+      "evidence_pointer": "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/127",
+      "output_sha256": null,
+      "last_verified_image_receipt": null
+    },
+    {
+      "id": "PUBLIC_P25_BOOT",
+      "owner_issue": "https://github.com/Karin-Laboratory/openwrt-terminal-6/issues/20",
+      "related_prs": [
+        "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/121",
+        "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/122",
+        "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/123",
+        "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/124",
+        "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/126"
+      ],
+      "state": "BLOCKED_REAL_ARTIFACT_UNVERIFIED",
+      "verified_scope": "Image/DTB/source checks are narrower than a complete boot-v2 32MiB image.",
+      "blocking_requirement": "Compatible lawful board kernel + true boot-v2 p25 assembly and a separate full-file readback of the completed unsigned 32MiB output.",
+      "next_safe_step": "Inspect current DTS/DTB PR heads and existing boot layout contracts; close the first concrete assembly input gap without duplicate rebuilding.",
+      "failure_pattern_ids": [
+        "PUB-KERNEL-NOT-P25"
+      ],
+      "output_sha256": null,
+      "last_verified_image_receipt": null
+    },
+    {
+      "id": "PUBLIC_NATIVE_USERSpace",
+      "owner_pr": "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/118",
+      "related_prs": [
+        "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/127"
+      ],
+      "state": "INTEGRATION_PENDING",
+      "verified_scope": "wpad package/source work is on a separate open PR; its outputs do not automatically appear in the #127 checkout.",
+      "blocking_requirement": "Pinned build input and manifest proving any required LAN/AP packages actually came from the same merged or explicitly combined checkout.",
+      "next_safe_step": "Review actual checked-out workflow blob, package manifest and run SHA before claiming readiness.",
+      "failure_pattern_ids": [
+        "PUB-CROSS-HEAD-PASS"
+      ]
+    },
+    {
+      "id": "PUBLIC_WORKFLOW_PROVENANCE",
+      "owner_pr": "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/128",
+      "related_prs": [
+        "https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/129"
+      ],
+      "state": "INDEX_IN_REVIEW",
+      "verified_scope": "648 historical Actions run metadata entries through a fixed cutoff; not all job logs audited.",
+      "blocking_requirement": null,
+      "next_safe_step": "Keep #128 as workflow-history primary source and #129 as navigation/triage entrypoint; link, do not duplicate the 648-event JSON.",
+      "failure_pattern_ids": [
+        "PUB-CI-SCOPE-CONFUSION"
+      ]
+    }
+  ],
+  "maintenance": "Manual snapshot only. Update each item's state with the exact newer PR SHA, Actions run and observed evidence; do not let a dated catalog override newer live findings. This phase does not alter cron or workflows."
+}
