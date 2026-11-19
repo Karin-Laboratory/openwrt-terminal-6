@@ -103,6 +103,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "scripts/air6_ethernet_dts_preflight.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "2a068a58c936a506c171ab6bae30468bf4cb9dc3",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "scripts/air6-diagnostic-init.c",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -288,6 +297,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "3cc1c75bf769882c674806709801e20b7276c9c7",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_air6_ethernet_dts_preflight.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "52f0214eb98cc795e68133db0348c0f2bcd60e15",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
