@@ -76,6 +76,14 @@ class CrossTargetPreflight(unittest.TestCase):
             "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
         )
 
+    def test_linker_default_line_with_extra_token_rejected(self):
+        # Do not treat a malformed emulation line as a valid default.
+        self.check_target(
+            "aarch64-linux-gnu",
+            "GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux injected",
+            "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
+        )
+
     def test_linker_spoofed_aarch64_prefix_rejected(self):
         self.check_target(
             "aarch64-linux-gnu",
