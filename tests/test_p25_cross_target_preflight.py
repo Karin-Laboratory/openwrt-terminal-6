@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Fail-fast checks for the public P25 source-build toolchain preflight."""
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import tempfile
@@ -20,7 +21,8 @@ class CrossTargetPreflight(unittest.TestCase):
             gcc = bindir / "fake-gcc"
             ld = bindir / "fake-ld"
             gcc.write_text("#!/bin/sh\necho " + repr(gcc_target) + "\nexit " + str(gcc_exit) + "\n")
-            ld.write_text("#!/bin/sh\necho " + repr(ld_banner) + "\nexit " + str(ld_exit) + "\n")
+            # Use printf: shell echo handles backslash escapes inconsistently.
+            ld.write_text("#!/bin/sh\nprintf '%s\\n' " + shlex.quote(ld_banner) + "\nexit " + str(ld_exit) + "\n")
             gcc.chmod(0o755)
             ld.chmod(0o755)
             # Preflight requires dtc to exist, but must reject a wrong target
