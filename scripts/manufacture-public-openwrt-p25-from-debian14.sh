@@ -23,6 +23,20 @@ done
 [[ -n ${AIR6_CROSS_COMPILE:-} ]] || { echo "PUBLIC_PAIR_BLOCKED_MATCHING_OPENWRT_CROSS_PREFIX_REQUIRED" >&2; exit 2; }
 command -v "${AIR6_CROSS_COMPILE}gcc" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER" >&2; exit 2; }
 command -v "${AIR6_CROSS_COMPILE}ld" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_CROSS_LINKER" >&2; exit 2; }
+# A compiler prefix may exist yet target the wrong architecture. Reject it
+# before the expensive pinned-source checkout and kernel build.
+compiler_target="$("${AIR6_CROSS_COMPILE}gcc" -dumpmachine)" ||
+  { echo 'PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET_QUERY' >&2; exit 2; }
+case "$compiler_target" in
+  aarch64-*) ;;
+  *) echo "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET:$compiler_target" >&2; exit 2 ;;
+esac
+linker_target="$("${AIR6_CROSS_COMPILE}ld" -V 2>&1)" ||
+  { echo 'PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET_QUERY' >&2; exit 2; }
+case "$linker_target" in
+  *aarch64*) ;;
+  *) echo 'PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET' >&2; exit 2 ;;
+esac
 mkdir -m 0700 "$out"
 # Pin the PUBLIC Debian PR14 source, then let its independent 17-blob source
 # manifest verify every MT6990 donor input. No private source import.
