@@ -80,7 +80,7 @@ class CrossTargetPreflight(unittest.TestCase):
         # Do not treat a malformed emulation line as a valid default.
         self.check_target(
             "aarch64-linux-gnu",
-            "GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux injected",
+            "GNU ld 2.40\n  Supported emulations:\n   aarch64linux injected",
             "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
         )
 
