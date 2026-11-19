@@ -31,6 +31,12 @@ Observed mean ~70m56s. These timings measure the **native compile job**, not com
 4. Accept reproducibility only when source and input identities match, both complete independent builds and readbacks pass, P25 is exactly 33,554,432 bytes, P26 is exactly 134,217,728 bytes, both remain unsigned, and each pair's full-file hashes match across A and B. On any mismatch, retain safe diagnostic metadata privately and report the first divergent layer rather than declaring PASS.
 5. Do not publish firmware binaries or sensitive build paths in public CI artifacts, caches, releases, or logs. If isolated independent workspaces or retained verified bytes are unavailable, report `BLOCKED_INDEPENDENT_REPRODUCTION` and the missing prerequisite, even if same-workspace CI succeeds.
 
+## Mismatch triage and evidence boundary
+
+When the two independent receipts disagree, **do not** rerun a whole build before locating the first divergence. Check the pinned source commit, feeds and toolchain identities first; then compare the P26 rootfs input manifest, kernel Image/DTB, initramfs CPIO and final P25/P26 packer inputs in dependency order. Record only component names and SHA-256 digests in public diagnostics, never private workspace paths, device identifiers or firmware bytes. An equal final digest without independent input provenance is insufficient.
+
+A receipt comparator returning `PUBLIC_PAIR_CROSS_WORKSPACE_RECEIPT_IDENTITIES_MATCH` verifies only the recorded digest fields. Its `INDEPENDENT_BUILD_PROVENANCE_NOT_VERIFIED` marker must remain visible in reporting. Independently verify the actual image files, complete readbacks, source/input provenance and isolated build environments before declaring `IMAGE_ACCEPTED`. If either build output is unavailable, report `BLOCKED_INDEPENDENT_REPRODUCTION` rather than using historical CI logs as a substitute.
+
 ## Next execution order
 
 **First** inspect the latest PR #216 manufacturing evidence and CI at its exact HEAD, identify the first remaining blocker to independently reproducing both images in two separate workspaces, and run the existing PR #218 receipt comparator on actual independently manufactured outputs. Do not mistake a receipt-only comparison or a same-workspace repeat for an independent build. **In parallel without file collision**, inspect existing p25 Image/DTB/boot-v2 provenance and assemble the unsigned 32 MiB p25 from licensable source. Optimization must not delay either real image and is not a new feature milestone.
