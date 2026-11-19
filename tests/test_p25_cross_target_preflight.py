@@ -74,6 +74,13 @@ class CrossTargetPreflight(unittest.TestCase):
             "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
         )
 
+    def test_linker_spoofed_aarch64_prefix_rejected(self):
+        self.check_target(
+            "aarch64-linux-gnu",
+            "GNU ld 2.40\\n  Supported emulations:\\n   aarch64notanemulation",
+            "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
+        )
+
     def test_compiler_target_query_failure(self):
         self.check_target("aarch64-linux-gnu", "GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux",
                           "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET_QUERY", gcc_exit=1)
