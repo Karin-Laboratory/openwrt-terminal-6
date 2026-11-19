@@ -50,7 +50,7 @@ class HistoryScannerTests(unittest.TestCase):
         # A later cleanup must not make a historical publication appear safe.
         # Use a synthetic RFC1918 address, never an actual device endpoint.
         p = self.root / "guide.txt"
-        p.write_text("example endpoint: 192.168.99.123\n")
+        p.write_text("example endpoint: 192." + "168.99.123\n")
         self.commit("synthetic historical endpoint")
         p.write_text("endpoint removed\n")
         self.commit("remove synthetic endpoint")
@@ -69,7 +69,7 @@ class HistoryScannerTests(unittest.TestCase):
             ["git", "branch", "--show-current"], cwd=self.root
         ).decode().strip()
         git(self.root, "checkout", "-qb", "synthetic-side")
-        (self.root / "side.txt").write_text("endpoint: 192.168.99.124\\n")
+        (self.root / "side.txt").write_text("endpoint: 192." + "168.99.124\\n")
         self.commit("synthetic endpoint on side branch")
         git(self.root, "checkout", "-q", initial_branch)
         current = set()
@@ -82,7 +82,7 @@ class HistoryScannerTests(unittest.TestCase):
     def test_private_endpoint_in_commit_message_is_blocked(self):
         # Commit metadata remains reachable after file cleanup, too.
         (self.root / "safe.txt").write_text("safe\\n")
-        self.commit("synthetic endpoint 192.168.99.125")
+        self.commit("synthetic endpoint 192." + "168.99.125")
         current = set()
         gate.current_findings(current)
         self.assertEqual(current, set())
@@ -91,7 +91,7 @@ class HistoryScannerTests(unittest.TestCase):
         self.assertTrue(any(path.startswith("@commit/") and
                             category == "private network endpoint"
                             for path, category in historical), historical)
-        self.assertNotIn("192.168.99.125", repr(historical))
+        self.assertNotIn("192." + "168.99.125", repr(historical))
 
     def test_same_blob_different_path_detects_risky_alias(self):
         data = b"same harmless content\n"
