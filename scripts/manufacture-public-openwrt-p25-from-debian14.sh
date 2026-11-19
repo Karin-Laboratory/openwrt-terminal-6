@@ -33,9 +33,12 @@ case "$compiler_target" in
 esac
 linker_target="$("${AIR6_CROSS_COMPILE}ld" -V 2>&1)" ||
   { echo 'PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET_QUERY' >&2; exit 2; }
-case "$linker_target" in
-  *aarch64*) ;;
-  *) echo 'PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET' >&2; exit 2 ;;
+# GNU ld -V lists supported emulations with the default first. A later
+# aarch64 entry does not prove that the default linker output is ARM64.
+linker_default="$(printf '%s\\n' "$linker_target" | awk '/^[[:space:]]*Supported emulations:/{getline; print $1; exit}')"
+case "$linker_default" in
+  aarch64*) ;;
+  *) echo "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET:$linker_default" >&2; exit 2 ;;
 esac
 mkdir -m 0700 "$out"
 # Pin the PUBLIC Debian PR14 source, then let its independent 17-blob source
