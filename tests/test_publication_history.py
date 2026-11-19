@@ -65,10 +65,13 @@ class HistoryScannerTests(unittest.TestCase):
         # Every reachable branch matters, not only the checked-out HEAD.
         (self.root / "README.md").write_text("safe\\n")
         self.commit("clean main")
+        initial_branch = subprocess.check_output(
+            ["git", "branch", "--show-current"], cwd=self.root
+        ).decode().strip()
         git(self.root, "checkout", "-qb", "synthetic-side")
         (self.root / "side.txt").write_text("endpoint: 192.168.99.124\\n")
         self.commit("synthetic endpoint on side branch")
-        git(self.root, "checkout", "-q", "master")
+        git(self.root, "checkout", "-q", initial_branch)
         current = set()
         gate.current_findings(current)
         self.assertEqual(current, set())
