@@ -93,6 +93,21 @@ class HistoryScannerTests(unittest.TestCase):
                             for path, category in historical), historical)
         self.assertNotIn("192." + "168.99.125", repr(historical))
 
+    def test_private_endpoint_in_annotated_tag_is_blocked(self):
+        # Tag annotations are published independently of commit messages.
+        (self.root / "safe.txt").write_text("safe\\n")
+        self.commit("safe commit")
+        git(self.root, "tag", "-a", "synthetic-endpoint", "-m",
+            "example endpoint 192." + "168.99.126")
+        current = set()
+        gate.current_findings(current)
+        self.assertEqual(current, set())
+        historical = set()
+        gate.history_findings(historical)
+        self.assertTrue(any(path.startswith("@tag/") and
+                            category == "private network endpoint"
+                            for path, category in historical), historical)
+
     def test_same_blob_different_path_detects_risky_alias(self):
         data = b"same harmless content\n"
         (self.root / "safe.txt").write_bytes(data)
