@@ -14,8 +14,20 @@ FIELDS = (
 )
 
 
+def reject_duplicate_keys(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key: " + key)
+        result[key] = value
+    return result
+
+
 def load(path):
-    obj = json.loads(Path(path).read_text(encoding="utf-8"))
+    obj = json.loads(
+        Path(path).read_text(encoding="utf-8"),
+        object_pairs_hook=reject_duplicate_keys,
+    )
     if not isinstance(obj, dict):
         raise ValueError("receipt must be an object")
     for field in FIELDS:
