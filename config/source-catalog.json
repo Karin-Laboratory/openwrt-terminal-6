@@ -188,7 +188,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "68522ad0eca1c34bf2fea96305ade0613fc107f6",
+      "git_blob_sha1": "9b4f24ca84afae324a949e6edbf90d6d82befc04",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -441,6 +441,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "929c49056031886253a19787a80f33c6ff05d4e9",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_p25_cross_target_preflight.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "2f3c5917fdfdaff3361be52ef4e7269b2dd3445e",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -971,7 +980,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "f549fa4ebf28a18b8c53ce7dda5848990fcdda8d",
+      "git_blob_sha1": "f814eb12e0da00e03e0479d5d7b33ffb3d337093",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }

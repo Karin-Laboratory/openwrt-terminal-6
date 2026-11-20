@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Fail-fast checks for the public P25 source-build toolchain preflight."""
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import tempfile
@@ -19,8 +20,9 @@ class CrossTargetPreflight(unittest.TestCase):
             bindir.mkdir()
             gcc = bindir / "fake-gcc"
             ld = bindir / "fake-ld"
-            gcc.write_text("#!/bin/sh\necho " + repr(gcc_target) + "\nexit " + str(gcc_exit) + "\n")
-            ld.write_text("#!/bin/sh\necho " + repr(ld_banner) + "\nexit " + str(ld_exit) + "\n")
+            gcc.write_text("#!/bin/sh\nprintf '%s\\n' " + shlex.quote(gcc_target) + "\nexit " + str(gcc_exit) + "\n")
+            # Use printf: shell echo handles backslash escapes inconsistently.
+            ld.write_text("#!/bin/sh\nprintf '%s\\n' " + shlex.quote(ld_banner) + "\nexit " + str(ld_exit) + "\n")
             gcc.chmod(0o755)
             ld.chmod(0o755)
             # Preflight requires dtc to exist, but must reject a wrong target
@@ -53,6 +55,21 @@ class CrossTargetPreflight(unittest.TestCase):
         self.check_target("x86_64-linux-gnu", "GNU ld 2.40\n  Supported emulations:\n   aarch64linux", 
                           "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET")
 
+    def test_compiler_target_with_extra_line_rejected(self):
+        # A valid prefix must not mask a second reported target.
+        self.check_target(
+            "aarch64-linux-gnu\nx86_64-linux-gnu",
+            "GNU ld 2.40\n  Supported emulations:\n   aarch64linux",
+            "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET",
+        )
+
+    def test_compiler_target_with_trailing_words_rejected(self):
+        self.check_target(
+            "aarch64-linux-gnu injected",
+            "GNU ld 2.40\n  Supported emulations:\n   aarch64linux",
+            "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET",
+        )
+
     def test_wrong_linker_architecture(self):
         self.check_target("aarch64-linux-gnu", "GNU ld 2.40\n  Supported emulations:\n   elf_x86_64",
                           "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET")
@@ -67,6 +84,13 @@ class CrossTargetPreflight(unittest.TestCase):
             "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
         )
 
+    def test_linker_fake_emulation_banner_without_gnu_ld_rejected(self):
+        self.check_target(
+            "aarch64-linux-gnu",
+            "custom linker 1.0\n  Supported emulations:\n   aarch64linux",
+            "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_IDENTITY",
+        )
+
     def test_linker_unrelated_banner_rejected(self):
         self.check_target(
             "aarch64-linux-gnu",
@@ -74,12 +98,90 @@ class CrossTargetPreflight(unittest.TestCase):
             "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
         )
 
+    def test_linker_default_line_with_extra_token_rejected(self):
+        # Do not treat a malformed emulation line as a valid default.
+        self.check_target(
+            "aarch64-linux-gnu",
+            "GNU ld 2.40\n  Supported emulations:\n   aarch64linux injected",
+            "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
+        )
+
+    def test_linker_spoofed_aarch64_prefix_rejected(self):
+        self.check_target(
+            "aarch64-linux-gnu",
+            "GNU ld 2.40\n  Supported emulations:\n   aarch64notanemulation",
+            "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
+        )
+
+    def test_big_endian_linker_default_rejected(self):
+        # The kernel and OpenWrt AArch64 target here are little-endian.
+        # A big-endian ld default is not an interchangeable ARM64 linker.
+        for emulation in ("aarch64linuxb", "aarch64elfb"):
+            with self.subTest(emulation=emulation):
+                self.check_target(
+                    "aarch64-linux-gnu",
+                    "GNU ld 2.40\n  Supported emulations:\n   " + emulation,
+                    "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET",
+                )
+
+    def check_valid_aarch64_preflight(self, emulation):
+        # The rejection-only tests must not accidentally allow a preflight
+        # that rejects every toolchain, including a valid GNU ARM64 pair.
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            bindir = root / "bin"
+            bindir.mkdir()
+            for name, body in (
+                ("fake-gcc", "echo aarch64-linux-gnu"),
+                ("fake-ld", "printf 'GNU ld 2.40\n  Supported emulations:\n   " + emulation + "\n'"),
+                ("dtc", "exit 99"),
+                ("git", "echo PUBLIC_TEST_GIT_CLONE_STOP >&2; exit 93"),
+            ):
+                tool = bindir / name
+                tool.write_text("#!/bin/sh\n" + body + "\n")
+                tool.chmod(0o755)
+            cpio = root / "first.cpio"
+            cpio.write_bytes(b"070701")
+            p26 = root / "rootfs.p26"
+            with p26.open("wb") as output:
+                output.truncate(134217728)
+            producer = root / "producer.json"
+            independent = root / "independent.json"
+            producer.write_text("{}")
+            independent.write_text("{}")
+            env = os.environ.copy()
+            env["AIR6_CROSS_COMPILE"] = str(bindir / "fake-")
+            env["PATH"] = str(bindir) + os.pathsep + env.get("PATH", "")
+            result = subprocess.run(
+                ["bash", str(SCRIPT), str(root / "fresh"),
+                 str(cpio), str(p26), str(producer), str(independent)],
+                env=env, capture_output=True, text=True, timeout=20,
+            )
+            self.assertEqual(result.returncode, 93, result.stderr)
+            self.assertIn("PUBLIC_TEST_GIT_CLONE_STOP", result.stderr)
+            self.assertTrue((root / "fresh").is_dir())
+
+    def test_valid_aarch64_targets_pass_preflight_before_git_clone(self):
+        # Both allowed little-endian GNU ld defaults must reach the
+        # simulated clone boundary without a network checkout.
+        for emulation in ("aarch64linux", "aarch64elf"):
+            with self.subTest(emulation=emulation):
+                self.check_valid_aarch64_preflight(emulation)
+
+    def test_big_endian_compiler_target_rejected(self):
+        # AArch64 big-endian GCC must not pass as the little-endian pair.
+        self.check_target(
+            "aarch64_be-linux-gnu",
+            "GNU ld 2.40\n  Supported emulations:\n   aarch64linux",
+            "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET",
+        )
+
     def test_compiler_target_query_failure(self):
-        self.check_target("aarch64-linux-gnu", "GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux",
+        self.check_target("aarch64-linux-gnu", "GNU ld 2.40\n  Supported emulations:\n   aarch64linux",
                           "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET_QUERY", gcc_exit=1)
 
     def test_linker_target_query_failure(self):
-        self.check_target("aarch64-linux-gnu", "GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux",
+        self.check_target("aarch64-linux-gnu", "GNU ld 2.40\n  Supported emulations:\n   aarch64linux",
                           "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET_QUERY", ld_exit=1)
 
 

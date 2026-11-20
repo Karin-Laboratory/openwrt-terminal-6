@@ -27,17 +27,24 @@ command -v "${AIR6_CROSS_COMPILE}ld" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_C
 # before the expensive pinned-source checkout and kernel build.
 compiler_target="$("${AIR6_CROSS_COMPILE}gcc" -dumpmachine)" ||
   { echo 'PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET_QUERY' >&2; exit 2; }
-case "$compiler_target" in
-  aarch64-*) ;;
-  *) echo "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET:$compiler_target" >&2; exit 2 ;;
-esac
+# -dumpmachine must be exactly one plausible target triplet, not a prefix
+# followed by whitespace, a second line, or arbitrary injected text.
+if [[ ! "$compiler_target" =~ ^aarch64-[a-zA-Z0-9_.+-]+$ ]]; then
+  echo "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET:$compiler_target" >&2
+  exit 2
+fi
 linker_target="$("${AIR6_CROSS_COMPILE}ld" -V 2>&1)" ||
   { echo 'PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET_QUERY' >&2; exit 2; }
-# GNU ld -V lists supported emulations with the default first. A later
+# Reject lookalike tool output even when it fabricates an emulation section.
+# The toolchain contract is GNU binutils ld, not an arbitrary -V responder.
+if [[ ! "$linker_target" =~ ^GNU[[:space:]]ld([[:space:]]|$) ]]; then
+  echo "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_IDENTITY" >&2
+  exit 2
+fi
 # aarch64 entry does not prove that the default linker output is ARM64.
-linker_default="$(printf '%s\n' "$linker_target" | awk '/^[[:space:]]*Supported emulations:/{getline; print $1; exit}')"
+linker_default="$(printf '%s\n' "$linker_target" | awk '/^[[:space:]]*Supported emulations:[[:space:]]*$/ { if (getline > 0 && NF == 1) print $1; exit }')"
 case "$linker_default" in
-  aarch64*) ;;
+  aarch64linux|aarch64elf) ;;
   *) echo "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET:$linker_default" >&2; exit 2 ;;
 esac
 mkdir -m 0700 "$out"
