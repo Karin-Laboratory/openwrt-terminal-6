@@ -55,6 +55,22 @@ class WorkflowPolicyTests(unittest.TestCase):
         self.assertIn("every job must use an approved literal GitHub-hosted runner",
                       gate.check(multi))
 
+    def test_block_second_job_without_runner(self):
+        multi = SAFE + "  missing-runner:\n    steps:\n      - run: echo hello\n"
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                      gate.check(multi))
+
+    def test_block_nested_runner_not_job_runner(self):
+        multi = SAFE + ("  missing-runner:\n    steps:\n"
+                        "      - run: echo hello\n"
+                        "        env:\n          runs-on: ubuntu-latest\n")
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                      gate.check(multi))
+
+    def test_accept_two_approved_jobs(self):
+        multi = SAFE + "  second-job:\n    runs-on: ubuntu-24.04\n"
+        self.assertEqual(gate.check(multi), [])
+
     def test_block_write_all_and_unpinned_container(self):
         altered = SAFE.replace("contents: read", "permissions: write-all")
         altered += "      - uses: docker://sample:latest\n"
