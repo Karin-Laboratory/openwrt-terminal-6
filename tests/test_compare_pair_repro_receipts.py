@@ -103,6 +103,20 @@ class ReceiptComparisonTest(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("different receipt files", result.stderr)
 
+    @unittest.skipUnless(hasattr(os, "O_NOFOLLOW"), "O_NOFOLLOW required")
+    def test_symlink_receipt_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, target, b = (Path(tmp) / name for name in ("a.json", "target.json", "b.json"))
+            a.write_text(json.dumps(self.a), encoding="utf-8")
+            target.write_text(json.dumps(self.a), encoding="utf-8")
+            b.symlink_to(target)
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(a), str(b)],
+                capture_output=True, text=True, timeout=3,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("REPRO_RECEIPT_INVALID", result.stderr)
+
     def test_invalid_utf8_receipt_returns_invalid_exit(self):
         with tempfile.TemporaryDirectory() as tmp:
             a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
