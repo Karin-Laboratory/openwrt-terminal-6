@@ -27,6 +27,7 @@ def load(path):
     obj = json.loads(
         Path(path).read_text(encoding="utf-8"),
         object_pairs_hook=reject_duplicate_keys,
+        parse_constant=lambda value: (_ for _ in ()).throw(ValueError("nonstandard JSON constant: " + value)),
     )
     if not isinstance(obj, dict):
         raise ValueError("receipt must be an object")
