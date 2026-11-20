@@ -449,7 +449,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "cf42070872d566c70efb908c969730a7e6eba34c",
+      "git_blob_sha1": "3f9f6b9f866e88ebea4f4efb5456828e06fa7779",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
