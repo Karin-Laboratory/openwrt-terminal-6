@@ -49,6 +49,8 @@ def main():
     parser.add_argument("workspace_b")
     args = parser.parse_args()
     try:
+        if Path(args.workspace_a).resolve() == Path(args.workspace_b).resolve():
+            raise ValueError("workspace A and B must be different receipt files")
         a, b = load(args.workspace_a), load(args.workspace_b)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         parser.exit(2, "REPRO_RECEIPT_INVALID: " + str(exc) + "\n")
