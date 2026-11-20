@@ -77,6 +77,18 @@ class WorkflowPolicyTests(unittest.TestCase):
         multi = SAFE + "  second-job:\n    runs-on: ubuntu-24.04\n"
         self.assertEqual(gate.check(multi), [])
 
+    def test_block_numeric_job_name_without_runner(self):
+        multi = SAFE + "  123-build:\\n    steps: []\\n"
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                      gate.check(multi))
+
+    def test_block_quoted_job_name_without_runner(self):
+        for name in ("'quoted job'", '"quoted job"'):
+            with self.subTest(name=name):
+                multi = SAFE + f"  {name}:\\n    steps: []\\n"
+                self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                              gate.check(multi))
+
     def test_block_write_all_and_unpinned_container(self):
         altered = SAFE.replace("contents: read", "permissions: write-all")
         altered += "      - uses: docker://sample:latest\n"
