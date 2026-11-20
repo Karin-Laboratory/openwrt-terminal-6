@@ -74,6 +74,19 @@ class ReceiptComparisonTest(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("different receipt files", result.stderr)
 
+    def test_invalid_utf8_receipt_returns_invalid_exit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
+            a.write_text(json.dumps(self.a), encoding="utf-8")
+            b.write_bytes(b"\\xff\\xfe")
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(a), str(b)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("REPRO_RECEIPT_INVALID:", result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
+
     def test_cli_exit_codes(self):
         with tempfile.TemporaryDirectory() as tmp:
             a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
