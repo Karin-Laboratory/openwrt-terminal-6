@@ -78,7 +78,7 @@ class ReceiptComparisonTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
             a.write_text(json.dumps(self.a), encoding="utf-8")
-            b.write_bytes(b"\\xff\\xfe")
+            b.write_bytes(bytes((0xff, 0xfe)))
             result = subprocess.run(
                 [sys.executable, str(SCRIPT), str(a), str(b)],
                 capture_output=True, text=True,
