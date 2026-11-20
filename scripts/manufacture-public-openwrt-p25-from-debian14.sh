@@ -37,7 +37,10 @@ linker_target="$("${AIR6_CROSS_COMPILE}ld" -V 2>&1)" ||
   { echo 'PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET_QUERY' >&2; exit 2; }
 # Reject lookalike tool output even when it fabricates an emulation section.
 # The toolchain contract is GNU binutils ld, not an arbitrary -V responder.
-if [[ ! "$linker_target" =~ (^|
+if [[ ! "$linker_target" =~ ^GNU[[:space:]]ld[[:space:]] ]]; then
+  echo "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET:non-GNU-ld" >&2
+  exit 2
+fi
 # aarch64 entry does not prove that the default linker output is ARM64.
 linker_default="$(printf '%s\n' "$linker_target" | awk '/^[[:space:]]*Supported emulations:[[:space:]]*$/ { if (getline > 0 && NF == 1) print $1; exit }')"
 case "$linker_default" in
