@@ -46,6 +46,15 @@ class ReceiptComparisonTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
                 mod.load(path)
 
+    def test_same_receipt_path_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            path.write_text(json.dumps(self.a))
+            command = [sys.executable, str(SCRIPT), str(path), str(path)]
+            result = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("different receipt files", result.stderr)
+
     def test_cli_exit_codes(self):
         with tempfile.TemporaryDirectory() as tmp:
             a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
