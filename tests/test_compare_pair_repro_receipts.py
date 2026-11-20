@@ -68,6 +68,21 @@ class ReceiptComparisonTest(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "nonstandard JSON constant"):
                         mod.load(path)
 
+    def test_overflowed_json_number_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            for exponent in ("1e1000000", "-1e1000000"):
+                with self.subTest(exponent=exponent):
+                    path.write_text(json.dumps(self.a)[:-1] + ', "extra": ' + exponent + '}')
+                    with self.assertRaisesRegex(ValueError, "non-finite JSON number"):
+                        mod.load(path)
+
+    def test_finite_json_number_allowed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            path.write_text(json.dumps(self.a)[:-1] + ', "extra": 1.25e2}')
+            self.assertEqual(mod.load(path)["extra"], 125.0)
+
     def test_same_receipt_path_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "receipt.json"
