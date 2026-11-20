@@ -9,7 +9,6 @@ import json
 import math
 import os
 import stat
-from pathlib import Path
 
 MAX_RECEIPT_BYTES = 65536
 
@@ -35,10 +34,11 @@ def finite_json_float(value):
     return number
 
 
-def load(path):
+def load_with_identity(path):
     fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0))
     with os.fdopen(fd, "rb") as receipt:
-        if not stat.S_ISREG(os.fstat(receipt.fileno()).st_mode):
+        identity = os.fstat(receipt.fileno())
+        if not stat.S_ISREG(identity.st_mode):
             raise ValueError("receipt must be a regular file")
         data = receipt.read(MAX_RECEIPT_BYTES + 1)
     if len(data) > MAX_RECEIPT_BYTES:
@@ -57,7 +57,11 @@ def load(path):
             ch not in "0123456789abcdef" for ch in value
         ):
             raise ValueError("missing or malformed SHA-256: " + field)
-    return obj
+    return obj, (identity.st_dev, identity.st_ino)
+
+
+def load(path):
+    return load_with_identity(path)[0]
 
 
 def compare(a, b):
@@ -70,9 +74,10 @@ def main():
     parser.add_argument("workspace_b")
     args = parser.parse_args()
     try:
-        if Path(args.workspace_a).samefile(args.workspace_b):
+        a, identity_a = load_with_identity(args.workspace_a)
+        b, identity_b = load_with_identity(args.workspace_b)
+        if identity_a == identity_b:
             raise ValueError("workspace A and B must be different receipt files")
-        a, b = load(args.workspace_a), load(args.workspace_b)
     except (OSError, UnicodeError, ValueError, RecursionError) as exc:
         parser.exit(2, "REPRO_RECEIPT_INVALID: " + str(exc) + "\n")
     differences = compare(a, b)
