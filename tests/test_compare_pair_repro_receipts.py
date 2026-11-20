@@ -120,6 +120,32 @@ class ReceiptComparisonTest(unittest.TestCase):
                         status = "DIFF" if checked == field else "MATCH"
                         self.assertIn("REPRO_" + checked.upper() + "=" + status, result.stdout)
 
+    def test_oversized_receipt_is_invalid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
+            a.write_text(json.dumps(self.a), encoding="utf-8")
+            b.write_bytes(b" " * (mod.MAX_RECEIPT_BYTES + 1))
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(a), str(b)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("receipt exceeds maximum size", result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
+
+    def test_deeply_nested_json_is_invalid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
+            a.write_text(json.dumps(self.a), encoding="utf-8")
+            b.write_text("[" * 2000 + "0" + "]" * 2000, encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(a), str(b)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("REPRO_RECEIPT_INVALID:", result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
+
     def test_cli_exit_codes(self):
         with tempfile.TemporaryDirectory() as tmp:
             a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
