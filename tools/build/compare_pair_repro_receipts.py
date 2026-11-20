@@ -36,7 +36,7 @@ def finite_json_float(value):
 
 
 def load(path):
-    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0))
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0))
     with os.fdopen(fd, "rb") as receipt:
         if not stat.S_ISREG(os.fstat(receipt.fileno()).st_mode):
             raise ValueError("receipt must be a regular file")
