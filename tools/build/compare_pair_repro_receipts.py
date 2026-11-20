@@ -7,6 +7,7 @@ This is a metadata gate, not proof of matching underlying image bytes.
 import argparse
 import json
 import math
+import os
 import stat
 from pathlib import Path
 
@@ -35,8 +36,9 @@ def finite_json_float(value):
 
 
 def load(path):
-    with Path(path).open("rb") as receipt:
-        if not stat.S_ISREG(receipt.stat().st_mode):
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0))
+    with os.fdopen(fd, "rb") as receipt:
+        if not stat.S_ISREG(os.fstat(receipt.fileno()).st_mode):
             raise ValueError("receipt must be a regular file")
         data = receipt.read(MAX_RECEIPT_BYTES + 1)
     if len(data) > MAX_RECEIPT_BYTES:
