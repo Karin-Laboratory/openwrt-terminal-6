@@ -30,6 +30,13 @@ class WorkflowPolicyTests(unittest.TestCase):
     def test_explicit_hosted_arm64_runner_is_allowed(self):
         self.assertEqual(gate.check(SAFE.replace("ubuntu-latest", "ubuntu-24.04-arm")), [])
 
+    def test_explicit_hosted_ubuntu_2404_runner_is_allowed(self):
+        self.assertEqual(gate.check(SAFE.replace("ubuntu-latest", "ubuntu-24.04")), [])
+
+    def test_unapproved_ubuntu_version_is_rejected(self):
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                      gate.check(SAFE.replace("ubuntu-latest", "ubuntu-22.04")))
+
     def test_block_self_hosted_and_target_event(self):
         issues = gate.check(SAFE.replace("pull_request:", "pull_request_target:").replace(
             "ubuntu-latest", "self-hosted"
@@ -47,6 +54,40 @@ class WorkflowPolicyTests(unittest.TestCase):
         multi = SAFE + "  another-job:\n    runs-on: vars.RUNNER\n"
         self.assertIn("every job must use an approved literal GitHub-hosted runner",
                       gate.check(multi))
+
+    def test_block_second_job_without_runner(self):
+        multi = SAFE + "  missing-runner:\n    steps:\n      - run: echo hello\n"
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                      gate.check(multi))
+
+    def test_block_inline_job_mapping_without_literal_runner(self):
+        # An inline YAML job must not disappear from the per-job enumeration.
+        multi = SAFE + "  inline-job: {runs-on: vars.RUNNER, steps: []}\n"
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                      gate.check(multi))
+
+    def test_block_nested_runner_not_job_runner(self):
+        multi = SAFE + ("  missing-runner:\n    steps:\n"
+                        "      - run: echo hello\n"
+                        "        env:\n          runs-on: ubuntu-latest\n")
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                      gate.check(multi))
+
+    def test_accept_two_approved_jobs(self):
+        multi = SAFE + "  second-job:\n    runs-on: ubuntu-24.04\n"
+        self.assertEqual(gate.check(multi), [])
+
+    def test_block_numeric_job_name_without_runner(self):
+        multi = SAFE + "  123-build:\n    steps: []\n"
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                      gate.check(multi))
+
+    def test_block_quoted_job_name_without_runner(self):
+        for name in ("'quoted job'", '"quoted job"'):
+            with self.subTest(name=name):
+                multi = SAFE + f"  {name}:\n    steps: []\n"
+                self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                              gate.check(multi))
 
     def test_block_write_all_and_unpinned_container(self):
         altered = SAFE.replace("contents: read", "permissions: write-all")
