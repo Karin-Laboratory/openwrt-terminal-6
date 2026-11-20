@@ -64,6 +64,16 @@ class ReceiptComparisonTest(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("different receipt files", result.stderr)
 
+    def test_hard_linked_receipt_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
+            a.write_text(json.dumps(self.a))
+            b.hardlink_to(a)
+            command = [sys.executable, str(SCRIPT), str(a), str(b)]
+            result = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("different receipt files", result.stderr)
+
     def test_cli_exit_codes(self):
         with tempfile.TemporaryDirectory() as tmp:
             a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
