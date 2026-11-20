@@ -4,6 +4,7 @@ Origin: independently authored; SPDX-License-Identifier: MIT.
 """
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -134,6 +135,19 @@ class ReceiptComparisonTest(unittest.TestCase):
                     for checked in mod.FIELDS:
                         status = "DIFF" if checked == field else "MATCH"
                         self.assertIn("REPRO_" + checked.upper() + "=" + status, result.stdout)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "POSIX FIFO support required")
+    def test_fifo_receipt_is_rejected_without_hanging(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a.json", Path(tmp) / "fifo.json"
+            a.write_text(json.dumps(self.a), encoding="utf-8")
+            os.mkfifo(b)
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(a), str(b)],
+                capture_output=True, text=True, timeout=3,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("regular file", result.stderr)
 
     def test_oversized_receipt_is_invalid(self):
         with tempfile.TemporaryDirectory() as tmp:
