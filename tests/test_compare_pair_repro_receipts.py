@@ -46,6 +46,15 @@ class ReceiptComparisonTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
                 mod.load(path)
 
+    def test_nonstandard_json_constants_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            for constant in ("NaN", "Infinity", "-Infinity"):
+                with self.subTest(constant=constant):
+                    path.write_text(json.dumps(self.a)[:-1] + ', "extra": ' + constant + '}')
+                    with self.assertRaisesRegex(ValueError, "nonstandard JSON constant"):
+                        mod.load(path)
+
     def test_same_receipt_path_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "receipt.json"
