@@ -20,7 +20,7 @@ class CrossTargetPreflight(unittest.TestCase):
             bindir.mkdir()
             gcc = bindir / "fake-gcc"
             ld = bindir / "fake-ld"
-            gcc.write_text("#!/bin/sh\necho " + repr(gcc_target) + "\nexit " + str(gcc_exit) + "\n")
+            gcc.write_text("#!/bin/sh\nprintf '%s\\n' " + shlex.quote(gcc_target) + "\nexit " + str(gcc_exit) + "\n")
             # Use printf: shell echo handles backslash escapes inconsistently.
             ld.write_text("#!/bin/sh\nprintf '%s\\n' " + shlex.quote(ld_banner) + "\nexit " + str(ld_exit) + "\n")
             gcc.chmod(0o755)
