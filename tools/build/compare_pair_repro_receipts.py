@@ -7,6 +7,7 @@ This is a metadata gate, not proof of matching underlying image bytes.
 import argparse
 import json
 import math
+import stat
 from pathlib import Path
 
 MAX_RECEIPT_BYTES = 65536
@@ -35,6 +36,8 @@ def finite_json_float(value):
 
 def load(path):
     with Path(path).open("rb") as receipt:
+        if not stat.S_ISREG(receipt.stat().st_mode):
+            raise ValueError("receipt must be a regular file")
         data = receipt.read(MAX_RECEIPT_BYTES + 1)
     if len(data) > MAX_RECEIPT_BYTES:
         raise ValueError("receipt exceeds maximum size")
