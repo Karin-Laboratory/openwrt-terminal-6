@@ -38,6 +38,14 @@ class ReceiptComparisonTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     mod.load(path)
 
+    def test_duplicate_json_keys_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            original = json.dumps(self.a)
+            path.write_text(original[:-1] + ', "p25_sha256": "' + "b" * 64 + '"}')
+            with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
+                mod.load(path)
+
     def test_cli_exit_codes(self):
         with tempfile.TemporaryDirectory() as tmp:
             a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
