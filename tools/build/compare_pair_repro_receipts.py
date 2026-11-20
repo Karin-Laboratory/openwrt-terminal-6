@@ -6,6 +6,7 @@ This is a metadata gate, not proof of matching underlying image bytes.
 """
 import argparse
 import json
+import math
 from pathlib import Path
 
 MAX_RECEIPT_BYTES = 65536
@@ -25,6 +26,13 @@ def reject_duplicate_keys(pairs):
     return result
 
 
+def finite_json_float(value):
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("non-finite JSON number: " + value)
+    return number
+
+
 def load(path):
     with Path(path).open("rb") as receipt:
         data = receipt.read(MAX_RECEIPT_BYTES + 1)
@@ -33,6 +41,7 @@ def load(path):
     obj = json.loads(
         data.decode("utf-8"),
         object_pairs_hook=reject_duplicate_keys,
+        parse_float=finite_json_float,
         parse_constant=lambda value: (_ for _ in ()).throw(ValueError("nonstandard JSON constant: " + value)),
     )
     if not isinstance(obj, dict):
