@@ -6,6 +6,8 @@ on:
       - tools/build/compare_pair_repro_receipts.py
       - tests/test_compare_pair_repro_receipts.py
       - .github/workflows/compare-pair-repro-receipts.yml
+      - config/source-catalog.json
+      - tools/build/verify_source_catalog.py
   workflow_dispatch:
 permissions:
   contents: read
