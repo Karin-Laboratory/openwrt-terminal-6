@@ -53,6 +53,13 @@ class CrossTargetPreflight(unittest.TestCase):
         self.check_target("x86_64-linux-gnu", "GNU ld 2.40\n  Supported emulations:\n   aarch64linux", 
                           "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER_TARGET")
 
+    def test_non_gnu_linker_with_arm64_emulation_rejected(self):
+        self.check_target(
+            "aarch64-linux-gnu",
+            "Not GNU ld 2.40\\n  Supported emulations:\\n   aarch64linux",
+            "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_IDENTITY",
+        )
+
     def test_wrong_linker_architecture(self):
         self.check_target("aarch64-linux-gnu", "GNU ld 2.40\n  Supported emulations:\n   elf_x86_64",
                           "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET")
