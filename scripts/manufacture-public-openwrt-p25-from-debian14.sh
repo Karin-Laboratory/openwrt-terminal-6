@@ -37,7 +37,7 @@ linker_target="$("${AIR6_CROSS_COMPILE}ld" -V 2>&1)" ||
 # aarch64 entry does not prove that the default linker output is ARM64.
 linker_default="$(printf '%s\n' "$linker_target" | awk '/^[[:space:]]*Supported emulations:/{getline; print $1; exit}')"
 case "$linker_default" in
-  aarch64*) ;;
+  aarch64linux|aarch64elf) ;;
   *) echo "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET:$linker_default" >&2; exit 2 ;;
 esac
 mkdir -m 0700 "$out"
