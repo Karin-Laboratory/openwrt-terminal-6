@@ -56,7 +56,7 @@ def check(text: str):
     runners = re.findall(r"(?m)^[ \t]*runs-on:[ \t]*([^\n#]+)", text)
     # Both are public GitHub-hosted runners; never accept a variable,
     # private label, expression or generic self-hosted runner.
-    allowed_hosted = {"ubuntu-latest", "ubuntu-24.04-arm"}
+    allowed_hosted = {"ubuntu-latest", "ubuntu-24.04", "ubuntu-24.04-arm"}
     if not runners or any(value.strip() not in allowed_hosted for value in runners):
         violations.append("every job must use an approved literal GitHub-hosted runner")
     if re.search(r"(?m)^[ \t]*permissions:[ \t]*(?:write-all|write)[ \t]*$", text):
