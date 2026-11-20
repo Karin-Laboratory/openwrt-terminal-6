@@ -35,6 +35,11 @@ linker_target="$("${AIR6_CROSS_COMPILE}ld" -V 2>&1)" ||
   { echo 'PUBLIC_PAIR_BLOCKED_CROSS_LINKER_TARGET_QUERY' >&2; exit 2; }
 # GNU ld -V lists supported emulations with the default first. A later
 # aarch64 entry does not prove that the default linker output is ARM64.
+# A non-GNU linker can print a compatible emulation list. Require GNU ld
+# identification as well as the default emulation before building.
+if ! printf '%s\n' "$linker_target" | grep -Eq '^GNU ld([[:space:]]|[[:space:]]*\\()'; then
+  echo 'PUBLIC_PAIR_BLOCKED_CROSS_LINKER_IDENTITY' >&2; exit 2
+fi
 linker_default="$(printf '%s\n' "$linker_target" | awk '/^[[:space:]]*Supported emulations:/{getline; print $1; exit}')"
 case "$linker_default" in
   aarch64linux|aarch64elf) ;;
