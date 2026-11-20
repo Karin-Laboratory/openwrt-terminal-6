@@ -60,6 +60,12 @@ class WorkflowPolicyTests(unittest.TestCase):
         self.assertIn("every job must use an approved literal GitHub-hosted runner",
                       gate.check(multi))
 
+    def test_block_inline_job_mapping_without_literal_runner(self):
+        # An inline YAML job must not disappear from the per-job enumeration.
+        multi = SAFE + "  inline-job: {runs-on: vars.RUNNER, steps: []}\n"
+        self.assertIn("every job must use an approved literal GitHub-hosted runner",
+                      gate.check(multi))
+
     def test_block_nested_runner_not_job_runner(self):
         multi = SAFE + ("  missing-runner:\n    steps:\n"
                         "      - run: echo hello\n"
