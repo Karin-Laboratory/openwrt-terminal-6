@@ -100,6 +100,26 @@ class ReceiptComparisonTest(unittest.TestCase):
             self.assertIn("REPRO_RECEIPT_INVALID:", result.stderr)
             self.assertNotIn("Traceback", result.stderr)
 
+    def test_cli_reports_each_mismatch_without_false_match(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
+            a.write_text(json.dumps(self.a), encoding="utf-8")
+            for field in mod.FIELDS:
+                with self.subTest(field=field):
+                    changed = dict(self.a)
+                    changed[field] = "b" * 64
+                    b.write_text(json.dumps(changed), encoding="utf-8")
+                    result = subprocess.run(
+                        [sys.executable, str(SCRIPT), str(a), str(b)],
+                        capture_output=True, text=True,
+                    )
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn("REPRO_RECEIPT_MISMATCH: " + field, result.stdout)
+                    self.assertNotIn("REPRO_RECEIPT_HASHES_MATCH", result.stdout)
+                    for checked in mod.FIELDS:
+                        status = "DIFF" if checked == field else "MATCH"
+                        self.assertIn("REPRO_" + checked.upper() + "=" + status, result.stdout)
+
     def test_cli_exit_codes(self):
         with tempfile.TemporaryDirectory() as tmp:
             a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
