@@ -58,7 +58,7 @@ def check(text: str):
     job_runners = []
     if jobs_match:
         jobs_body = re.split(r"(?m)^[^ \t#\r\n][^\r\n]*:", text[jobs_match.end():], maxsplit=1)[0]
-        headers = list(re.finditer(r"(?m)^  [A-Za-z_][A-Za-z0-9_-]*:", jobs_body))
+        headers = list(re.finditer(r"(?m)^  (?:[A-Za-z0-9_-]+|\u0027[^\u0027\r\n]+\u0027|\u0022[^\u0022\r\n]+\u0022):", jobs_body))
         for index, header in enumerate(headers):
             end = headers[index + 1].start() if index + 1 < len(headers) else len(jobs_body)
             job_runners.append(re.findall(r"(?m)^    runs-on:[ \t]*([^\n#]+)", jobs_body[header.end():end]))
