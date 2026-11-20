@@ -87,7 +87,7 @@ class CrossTargetPreflight(unittest.TestCase):
     def test_linker_fake_emulation_banner_without_gnu_ld_rejected(self):
         self.check_target(
             "aarch64-linux-gnu",
-            "custom linker 1.0\\n  Supported emulations:\\n   aarch64linux",
+            "custom linker 1.0\n  Supported emulations:\n   aarch64linux",
             "PUBLIC_PAIR_BLOCKED_CROSS_LINKER_IDENTITY",
         )
 
