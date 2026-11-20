@@ -53,11 +53,18 @@ PROHIBITED = [
 
 def check(text: str):
     violations = [category for category, pattern in PROHIBITED if pattern.search(text)]
-    runners = re.findall(r"(?m)^[ \t]*runs-on:[ \t]*([^\n#]+)", text)
-    # Both are public GitHub-hosted runners; never accept a variable,
-    # private label, expression or generic self-hosted runner.
+    # Check each declared job, not just the set of runners in the file.
+    jobs_match = re.search(r"(?m)^jobs:[ \t]*(?:#.*)?$", text)
+    job_runners = []
+    if jobs_match:
+        jobs_body = re.split(r"(?m)^[^ \t#\r\n][^\r\n]*:", text[jobs_match.end():], maxsplit=1)[0]
+        headers = list(re.finditer(r"(?m)^  [A-Za-z_][A-Za-z0-9_-]*:[ \t]*(?:#.*)?$", jobs_body))
+        for index, header in enumerate(headers):
+            end = headers[index + 1].start() if index + 1 < len(headers) else len(jobs_body)
+            job_runners.append(re.findall(r"(?m)^    runs-on:[ \t]*([^\n#]+)", jobs_body[header.end():end]))
     allowed_hosted = {"ubuntu-latest", "ubuntu-24.04", "ubuntu-24.04-arm"}
-    if not runners or any(value.strip() not in allowed_hosted for value in runners):
+    if not job_runners or any(len(runners) != 1 or runners[0].strip() not in allowed_hosted
+                              for runners in job_runners):
         violations.append("every job must use an approved literal GitHub-hosted runner")
     if re.search(r"(?m)^[ \t]*permissions:[ \t]*(?:write-all|write)[ \t]*$", text):
         violations.append("write-all permission is forbidden")
