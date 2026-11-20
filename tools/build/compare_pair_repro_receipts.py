@@ -53,7 +53,7 @@ def main():
         if Path(args.workspace_a).samefile(args.workspace_b):
             raise ValueError("workspace A and B must be different receipt files")
         a, b = load(args.workspace_a), load(args.workspace_b)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
         parser.exit(2, "REPRO_RECEIPT_INVALID: " + str(exc) + "\n")
     differences = compare(a, b)
     for field in FIELDS:
