@@ -38,6 +38,19 @@ class ReceiptComparisonTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     mod.load(path)
 
+    def test_all_digest_fields_reject_noncanonical_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            bad_values = ("A" * 64, "a" * 63, "a" * 65, "g" * 64, " " + "a" * 63, 123, None)
+            for field in mod.FIELDS:
+                for value in bad_values:
+                    with self.subTest(field=field, value=repr(value)):
+                        candidate = dict(self.a)
+                        candidate[field] = value
+                        path.write_text(json.dumps(candidate), encoding="utf-8")
+                        with self.assertRaisesRegex(ValueError, "missing or malformed SHA-256"):
+                            mod.load(path)
+
     def test_duplicate_json_keys_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "receipt.json"
