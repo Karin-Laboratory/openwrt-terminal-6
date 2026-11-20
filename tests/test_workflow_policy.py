@@ -78,14 +78,14 @@ class WorkflowPolicyTests(unittest.TestCase):
         self.assertEqual(gate.check(multi), [])
 
     def test_block_numeric_job_name_without_runner(self):
-        multi = SAFE + "  123-build:\\n    steps: []\\n"
+        multi = SAFE + "  123-build:\n    steps: []\n"
         self.assertIn("every job must use an approved literal GitHub-hosted runner",
                       gate.check(multi))
 
     def test_block_quoted_job_name_without_runner(self):
         for name in ("'quoted job'", '"quoted job"'):
             with self.subTest(name=name):
-                multi = SAFE + f"  {name}:\\n    steps: []\\n"
+                multi = SAFE + f"  {name}:\n    steps: []\n"
                 self.assertIn("every job must use an approved literal GitHub-hosted runner",
                               gate.check(multi))
 
