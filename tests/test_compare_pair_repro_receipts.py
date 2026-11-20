@@ -103,6 +103,23 @@ class ReceiptComparisonTest(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("different receipt files", result.stderr)
 
+    def test_open_descriptor_identity_detects_hard_links(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
+            a.write_text(json.dumps(self.a), encoding="utf-8")
+            b.hardlink_to(a)
+            first, identity_a = mod.load_with_identity(a)
+            second, identity_b = mod.load_with_identity(b)
+            self.assertEqual(first, second)
+            self.assertEqual(identity_a, identity_b)
+
+    def test_open_descriptor_identity_distinguishes_separate_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a.json", Path(tmp) / "b.json"
+            a.write_text(json.dumps(self.a), encoding="utf-8")
+            b.write_text(json.dumps(self.a), encoding="utf-8")
+            self.assertNotEqual(mod.load_with_identity(a)[1], mod.load_with_identity(b)[1])
+
     @unittest.skipUnless(hasattr(os, "O_NOFOLLOW"), "O_NOFOLLOW required")
     def test_symlink_receipt_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
