@@ -189,6 +189,15 @@ def produce(root, output, source_receipt):
                 all(c in "0123456789abcdef" for c in commit)
                 for name, commit in feeds.items()),
             "PINNED_FEEDS_RECEIPT_REQUIRED")
+    # A hard-linked receipt inside rootfs has a different pathname but the
+    # same inode. Path containment alone cannot prevent its inclusion.
+    receipt_identity = (metadata.st_dev, metadata.st_ino)
+    for staged in root.rglob("*"):
+        if staged.is_symlink():
+            continue
+        info = staged.stat(follow_symlinks=False)
+        require((info.st_dev, info.st_ino) != receipt_identity,
+                "SOURCE_RECEIPT_HARDLINK_INSIDE_ROOTFS")
     check_tree(root)
     check_target_ownership(root)
     require(output.is_absolute() and not output.exists() and
