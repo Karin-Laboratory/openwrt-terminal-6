@@ -280,6 +280,22 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "FIRMWARE_RIGHTS_UNPROVEN"):
                 mod.check_tree(root)
 
+    def test_ecdsa_host_private_key_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            key = root / "etc/dropbear/dropbear_ecdsa_host_key"
+            key.parent.mkdir(parents=True, exist_ok=True)
+            key.write_text("synthetic private key fixture")
+            with self.assertRaisesRegex(ValueError, "DEVICE_SECRET_OR_UNPROVISIONED_RADIO"):
+                mod.check_tree(root)
+            key.unlink()
+            key = root / "tmp/dropbear_ecdsa_host_key"
+            key.parent.mkdir(parents=True, exist_ok=True)
+            key.write_text("synthetic private key fixture")
+            with self.assertRaisesRegex(ValueError, "CREDENTIAL_OR_CALIBRATION"):
+                mod.check_tree(root)
+
     def test_unprovisioned_ssh_autostart_fails(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
