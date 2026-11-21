@@ -369,6 +369,27 @@ class P26PackerTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_INVALID_JSON"):
                         mod.produce(root, base / "out", receipt)
 
+    def test_source_receipt_hardlink_inside_rootfs_rejected(self):
+        import json
+        import os
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            root = base / "stage"
+            root.mkdir()
+            self.make_root(root)
+            receipt = base / "source.json"
+            receipt.write_text(json.dumps({
+                "openwrt_commit": "5799d2da76998be50432b0a3325b42713b4b619b",
+                "package_install": True, "source_built": True,
+                "packages": ["base-files", "busybox", "procd", "ubus",
+                             "uci", "netifd", "dropbear"], "feeds": {}
+            }))
+            os.link(receipt, root / "receipt-copy.json")
+            with self.assertRaisesRegex(ValueError,
+                                        "SOURCE_RECEIPT_HARDLINK_INSIDE_ROOTFS"):
+                mod.produce(root, base / "out", receipt)
+            self.assertFalse((base / "out").exists())
+
     def test_source_receipt_fifo_rejected_without_blocking(self):
         import os
         with tempfile.TemporaryDirectory() as d:
