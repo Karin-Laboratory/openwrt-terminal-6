@@ -65,7 +65,8 @@ def check_tree(root):
     for line in shadow.splitlines():
         fields = line.split(":")
         require(len(fields) == 9 and bool(fields[0]) and
-                not any(ch.isspace() or ord(ch) < 32 for ch in fields[0]) and
+                not any(ch.isspace() or ord(ch) < 32 or ord(ch) == 127
+                        for ch in fields[0]) and
                 fields[1].startswith(("!", "*")),
                 "UNLOCKED_OR_MALFORMED_SHADOW_ACCOUNT")
         require(fields[0] not in seen_accounts, "DUPLICATE_SHADOW_ACCOUNT")
