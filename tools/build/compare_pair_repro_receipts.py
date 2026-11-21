@@ -41,6 +41,9 @@ def load_with_identity(path):
         if not stat.S_ISREG(identity.st_mode):
             raise ValueError("receipt must be a regular file")
         data = receipt.read(MAX_RECEIPT_BYTES + 1)
+        after = os.fstat(receipt.fileno())
+        if (identity.st_dev, identity.st_ino, identity.st_size, identity.st_mtime_ns, identity.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError("receipt changed during read")
     if len(data) > MAX_RECEIPT_BYTES:
         raise ValueError("receipt exceeds maximum size")
     obj = json.loads(
