@@ -20,6 +20,12 @@ For a human-readable explanation of the full preparation sequence, including **w
 
 **Publication boundary:** public PRs contain shareable source only; public CI may compile images ephemerally but must not upload generated binaries to artifacts, caches, Releases or registries. Include one origin/revision/license line for each backport; the full pending inventory does not stop development. Modifying Wi-Fi/cellular operation can affect Japanese radio certification, carrier agreements and warranty; verify permissible use before RF transmission.
 
+## Public unsigned P25/P26 manufacture evidence (2026-11-18)
+
+[Draft PR #216](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/216) records a **same-workspace** public-source build and independent full-image readback at exact commit `86d875801e420ce970fdb62e5942b490dec21252`, [native CI run #43938848355](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/43938848355): unsigned P25 33,554,432 bytes (SHA-256 `2d973adcdaf6ff2254a8208cf1d2aef2acdb47444d1d9e029f9e0a09b8dbb61a`) and unsigned P26 134,217,728 bytes (SHA-256 `a980e7c57ba48efce768c2b34b552fdc2062d11b9314ea9877cc164520931bfd`). These are **historical CI evidence**, not retained downloadable binaries or evidence of independently reproducible builds.
+
+**Still required:** manufacture both images in two genuinely independent clean workspaces, verify full-file byte identities and provenance, and resolve the separate publication/history scanner findings without bypassing security checks. [Draft PR #218](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/218) supplies a receipt comparator but does not itself prove independent build provenance. [The mandatory incremental-build runbook](docs/MAINLINE-INCREMENTAL-BUILD-RUNBOOK-20261106.md) and [mainline policy](docs/MAINLINE-P25-P26-POLICY.md) govern next steps. This evidence does not establish boot verification, signing, safe flashing, or general distribution approval.
+
 ## Demonstrated development milestones
 
 - A development device booted Linux 6.18.44 with OpenWrt userspace; Ethernet and 2.4/5 GHz networking were reported functional in limited tests. A 6 GHz access point started, but external client association, Wi-Fi 7 EHT/MLO and stable reboot persistence were not established.
