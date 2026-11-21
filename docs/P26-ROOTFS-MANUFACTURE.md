@@ -1,6 +1,6 @@
 # Unsigned p26 rootfs_a packing lane (draft, 2026-11-04)
 
-**Status: PACKER SOURCE ONLY. No public-source-built 128 MiB p26 has yet been manufactured or independently verified.**
+**Status: CI-only source-built unsigned P26 with same-run independent readback evidence; independent second-environment reproduction, ownership/xattr acceptance, lawful redistribution review, and device boot remain unverified.**
 The authoritative policy is [MAINLINE-P25-P26-POLICY](MAINLINE-P25-P26-POLICY.md). No firmware distribution or device access is authorized.
 
 ## Reused, independently observed format
@@ -54,6 +54,12 @@ For an owner-controlled offline replay, use this fail-closed sequence:
 5. Run the unsigned packer, then perform a separate full-tree `unsquashfs` comparison and independent 128 MiB readback, including zero-padding and full SHA. Keep `P26_BUILD=BLOCKED` until the ownership/xattr and provenance gates below are satisfied.
 
 No signing, device flashing, boot-slot changes, reboot, or artifact publication is part of this handoff. This section is a procedure, **not** a record that the steps have run.
+
+## Verified CI milestone and its boundary (2026-11-16 evidence)
+
+At PR #127 HEAD `4576af7d7a7765396eedca7a8f9572aee63edc4e`, [native run #43641094318](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/43641094318) completed successfully. Its package/install job log records 37 installed packages, a 134,217,728-byte unsigned P26 with SHA-256 `5aa90d382df0ae8deb4a7355ade7eb7ba935081702015406e804881d0c5d368a`, and `P26_INDEPENDENT_READBACK_PASS` for that digest. This is **one ephemeral CI execution**, not an independently reproduced second build; the bytes were not retained, uploaded, or released. This supersedes the original draft's blanket claim that no real source-built P26 was ever manufactured.
+
+At later PR #127 HEAD `626242be8d9ccefed7a19dbcf4360a9f7e05c70a`, [native run #44916219225](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/44916219225), [P26 unit tests #44916219020](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/44916219020), and [onboarding QA #44916219000](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/44916219000) completed successfully; [public source checks #44916219198](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/44916219198) failed. The earlier P26 SHA must **not** be attributed to this later HEAD without its own job-log evidence. No distribution or boot readiness is implied.
 
 ## Remaining hard acceptance requirements
 
