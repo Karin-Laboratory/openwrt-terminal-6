@@ -170,6 +170,23 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "ROOT_ACCOUNT_NOT_LOCKED"):
                 mod.check_tree(root)
 
+    def test_secondary_accounts_must_be_locked_and_well_formed(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            shadow = root / "etc/shadow"
+            baseline = "root:!:0:0:99999:7:::\\n"
+            for account in ("guest:$6$hash:0:0:99999:7:::",
+                            "guest::0:0:99999:7:::",
+                            "guest:!", "guest:!x:0:0:99999:7:::extra"):
+                shadow.write_text(baseline + account + "\\n")
+                with self.subTest(account=account):
+                    with self.assertRaisesRegex(ValueError,
+                                                "UNLOCKED_OR_MALFORMED_SHADOW_ACCOUNT"):
+                        mod.check_tree(root)
+            shadow.write_text(baseline + "guest:!:0:0:99999:7:::\\n")
+            self.assertTrue(mod.check_tree(root))
+
     def test_malformed_root_shadow_record_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
