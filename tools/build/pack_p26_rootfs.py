@@ -59,6 +59,13 @@ def check_tree(root):
     require(len(rows) == 1 and len(rows[0].split(":")) == 9 and
             rows[0].split(":")[1].startswith(("!", "*")),
             "ROOT_ACCOUNT_NOT_LOCKED")
+    # An unprovisioned image must not contain usable password hashes for
+    # secondary accounts either. A locked root alone is insufficient.
+    for line in shadow.splitlines():
+        fields = line.split(":")
+        require(len(fields) == 9 and bool(fields[0]) and
+                fields[1].startswith(("!", "*")),
+                "UNLOCKED_OR_MALFORMED_SHADOW_ACCOUNT")
     # Do not follow symlinked ancestors when inspecting forbidden paths.
     # Otherwise a staged link can hide credentials outside the tree.
     for name in FORBIDDEN:
