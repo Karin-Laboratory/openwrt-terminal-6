@@ -178,7 +178,7 @@ class P26PackerTests(unittest.TestCase):
             baseline = "root:!:0:0:99999:7:::\n"
             for account in ("guest:$6$hash:0:0:99999:7:::",
                             "guest::0:0:99999:7:::",
-                            "guest:!", "guest:!x:0:0:99999:7:::extra"):
+                            "guest:!", "guest:!x:0:0:99999:7::::extra"):
                 shadow.write_text(baseline + account + "\n")
                 with self.subTest(account=account):
                     with self.assertRaisesRegex(ValueError,
