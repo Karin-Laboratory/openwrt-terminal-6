@@ -50,7 +50,8 @@ jobs:
           if record.get("encoding") != "base64" or record.get("type") != "file":
               raise SystemExit("Unexpected GitHub Contents API shape")
           import hashlib
-          payload = base64.b64decode(record["content"], validate=True)
+          # GitHub Contents API wraps base64 at 60/76 columns; strip only CR/LF.
+          payload = base64.b64decode(record["content"].replace("\n", "").replace("\r", ""), validate=True)
           if record.get("size") != len(payload):
               raise SystemExit("GitHub Contents API size mismatch")
           blob_sha = hashlib.sha1(b"blob " + str(len(payload)).encode() + b"\0" + payload).hexdigest()
