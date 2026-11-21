@@ -343,6 +343,22 @@ class P26PackerTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_NOT_OBJECT"):
                         mod.produce(root, base / "out", receipt)
 
+    def test_source_receipt_duplicate_keys_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            root = base / "stage"
+            root.mkdir()
+            self.make_root(root)
+            receipt = base / "source.json"
+            for payload in (
+                '{"openwrt_commit":"bad","openwrt_commit":"5799d2da76998be50432b0a3325b42713b4b619b"}',
+                '{"feeds":{"packages":"bad","packages":"5799d2da76998be50432b0a3325b42713b4b619b"}}',
+            ):
+                receipt.write_text(payload)
+                with self.subTest(payload=payload):
+                    with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_INVALID_JSON"):
+                        mod.produce(root, base / "out", receipt)
+
     def test_source_receipt_fifo_rejected_without_blocking(self):
         import os
         with tempfile.TemporaryDirectory() as d:
