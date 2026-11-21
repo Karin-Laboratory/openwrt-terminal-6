@@ -339,6 +339,28 @@ class P26PackerTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "PINNED_FEEDS_RECEIPT_REQUIRED"):
                         mod.produce(root, base / "out", receipt)
 
+    def test_feed_receipt_rejects_ambiguous_names(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            root = base / "stage"
+            root.mkdir()
+            self.make_root(root)
+            receipt = base / "source.json"
+            for name in (" packages", "packages ", "bad feed",
+                         "bad\\nfeed", "bad\\tfeed"):
+                receipt.write_text(json.dumps({
+                    "openwrt_commit": "5799d2da76998be50432b0a3325b42713b4b619b",
+                    "package_install": True, "source_built": True,
+                    "packages": ["base-files", "busybox", "procd", "ubus",
+                                 "uci", "netifd", "dropbear"],
+                    "feeds": {name: "a" * 40}
+                }))
+                with self.subTest(name=name):
+                    with self.assertRaisesRegex(ValueError, "PINNED_FEEDS_RECEIPT_REQUIRED"):
+                        mod.produce(root, base / "out", receipt)
+            self.assertFalse((base / "out").exists())
+
     def test_non_object_source_receipt_rejected_before_tree_checks(self):
         import json
         with tempfile.TemporaryDirectory() as d:
