@@ -373,7 +373,7 @@ class P26PackerTests(unittest.TestCase):
             root.mkdir()
             self.make_root(root)
             receipt = base / "source.json"
-            receipt.write_bytes(b"\\xff")
+            receipt.write_bytes(bytes([255]))
             with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_INVALID_JSON"):
                 mod.produce(root, base / "out", receipt)
 
