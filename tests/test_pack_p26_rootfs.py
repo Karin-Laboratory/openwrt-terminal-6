@@ -289,6 +289,16 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "UNPROVISIONED_AUTOSTART"):
                 mod.check_tree(root)
 
+    def test_disguised_autostart_symlink_target_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            rc = root / "etc/rc.d"
+            rc.mkdir(parents=True)
+            (rc / "S50service").symlink_to("../init.d/dropbear")
+            with self.assertRaisesRegex(ValueError, "UNPROVISIONED_AUTOSTART"):
+                mod.check_tree(root)
+
     def test_canonical_host_root_rejected_before_receipt(self):
         # /tmp/.. is lexically different from / but resolves to the host root.
         # Never inspect a receipt or traverse host files in this case.
