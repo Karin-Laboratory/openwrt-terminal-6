@@ -202,7 +202,7 @@ def produce(root, output, source_receipt):
     feeds = record.get("feeds")
     require(isinstance(feeds, dict) and
             all(isinstance(name, str) and name and name == name.strip() and
-                not any(c.isspace() or ord(c) < 32 for c in name) and
+                not any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in name) and
                 isinstance(commit, str) and len(commit) == 40 and
                 all(c in "0123456789abcdef" for c in commit)
                 for name, commit in feeds.items()),
