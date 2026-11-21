@@ -21,6 +21,8 @@ spec.loader.exec_module(mod)
 class ReceiptComparisonTest(unittest.TestCase):
     def setUp(self):
         self.a = {field: "a" * 64 for field in mod.FIELDS}
+        self.a.update(schema=1, status="UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED",
+                      signed=False, device_writes=False, public_binary=False)
 
     def test_identical(self):
         self.assertEqual(mod.compare(self.a, dict(self.a)), [])
@@ -52,6 +54,29 @@ class ReceiptComparisonTest(unittest.TestCase):
                         path.write_text(json.dumps(candidate), encoding="utf-8")
                         with self.assertRaisesRegex(ValueError, "missing or malformed SHA-256"):
                             mod.load(path)
+
+    def test_status_and_safety_flags_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            for field, bad_values in {
+                "schema": (None, True, 0, 2, "1"),
+                "status": (None, "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK", ""),
+                "signed": (None, True, 0, "false"),
+                "device_writes": (None, True, 0, "false"),
+                "public_binary": (None, True, 0, "false"),
+            }.items():
+                for bad in bad_values:
+                    with self.subTest(field=field, bad=repr(bad)):
+                        candidate = dict(self.a)
+                        candidate[field] = bad
+                        path.write_text(json.dumps(candidate), encoding="utf-8")
+                        with self.assertRaisesRegex(ValueError, "status or safety flags"):
+                            mod.load(path)
+                candidate = dict(self.a)
+                del candidate[field]
+                path.write_text(json.dumps(candidate), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "status or safety flags"):
+                    mod.load(path)
 
     def test_duplicate_json_keys_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
