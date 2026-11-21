@@ -241,6 +241,16 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "OUTPUT_INSIDE_INPUT_ROOTFS"):
                 mod.produce(root, root / "out", Path(d) / "missing.json")
 
+    def test_source_receipt_inside_rootfs_rejected_before_pack(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "stage"
+            root.mkdir()
+            self.make_root(root)
+            receipt = root / "provenance.json"
+            receipt.write_text('{"source_built": true}')
+            with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_INSIDE_ROOTFS"):
+                mod.produce(root, Path(d) / "output", receipt)
+
     def test_rootfs_symlink_rejected_before_receipt(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
