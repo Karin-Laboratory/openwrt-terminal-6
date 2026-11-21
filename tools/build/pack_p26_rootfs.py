@@ -184,7 +184,8 @@ def produce(root, output, source_receipt):
         return result
 
     try:
-        record = json.loads(data.decode("utf-8"), object_pairs_hook=unique_object)
+        record = json.loads(data.decode("utf-8"), object_pairs_hook=unique_object,
+                            parse_constant=lambda value: require(False, "SOURCE_RECEIPT_NONFINITE_NUMBER"))
     except (UnicodeError, ValueError, RecursionError) as exc:
         raise ValueError("P26_BLOCKED_SOURCE_RECEIPT_INVALID_JSON") from exc
     require(isinstance(record, dict), "SOURCE_RECEIPT_NOT_OBJECT")
