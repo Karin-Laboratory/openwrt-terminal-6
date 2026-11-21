@@ -20,6 +20,7 @@ class P26PackerTests(unittest.TestCase):
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text("test")
         (root / "etc/shadow").write_text("root:!:0:0:99999:7:::\n")
+        (root / "etc/shadow").chmod(0o600)
 
     def test_fakeroot_state_survives_separate_install_and_pack_processes(self):
         # Native CI uses separate fakeroot invocations for package/install and
@@ -147,6 +148,19 @@ class P26PackerTests(unittest.TestCase):
             (root / "usr/lib").symlink_to(outside, target_is_directory=True)
             with self.assertRaisesRegex(ValueError, "FIRMWARE_PARENT_SYMLINK"):
                 mod.check_tree(root)
+
+    def test_shadow_permissions_fail_closed(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            shadow = root / "etc/shadow"
+            for mode in (0o644, 0o606, 0o620):
+                shadow.chmod(mode)
+                with self.subTest(mode=oct(mode)):
+                    with self.assertRaisesRegex(ValueError, "SHADOW_PERMISSIONS_UNSAFE"):
+                        mod.check_tree(root)
+            shadow.chmod(0o640)
+            self.assertTrue(mod.check_tree(root))
 
     def test_unlocked_password_fails(self):
         with tempfile.TemporaryDirectory() as d:
