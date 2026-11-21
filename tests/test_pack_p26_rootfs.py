@@ -343,6 +343,40 @@ class P26PackerTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_NOT_OBJECT"):
                         mod.produce(root, base / "out", receipt)
 
+    def test_source_receipt_fifo_rejected_without_blocking(self):
+        import os
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            root = base / "stage"
+            root.mkdir()
+            self.make_root(root)
+            fifo = base / "source.fifo"
+            os.mkfifo(fifo)
+            with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_NOT_REGULAR_FILE"):
+                mod.produce(root, base / "out", fifo)
+
+    def test_source_receipt_oversize_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            root = base / "stage"
+            root.mkdir()
+            self.make_root(root)
+            receipt = base / "source.json"
+            receipt.write_bytes(b" " * 65537)
+            with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_TOO_LARGE"):
+                mod.produce(root, base / "out", receipt)
+
+    def test_source_receipt_invalid_utf8_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            root = base / "stage"
+            root.mkdir()
+            self.make_root(root)
+            receipt = base / "source.json"
+            receipt.write_bytes(b"\\xff")
+            with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_INVALID_JSON"):
+                mod.produce(root, base / "out", receipt)
+
     def test_output_requires_verified_source_receipt(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
