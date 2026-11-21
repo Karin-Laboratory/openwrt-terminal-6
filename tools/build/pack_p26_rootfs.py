@@ -51,7 +51,8 @@ def check_tree(root):
                 "MISSING_" + name.replace("/", "_").upper())
     shadow = (root / "etc/shadow").read_text()
     rows = [line for line in shadow.splitlines() if line.startswith("root:")]
-    require(len(rows) == 1 and rows[0].split(":")[1].startswith(("!", "*")),
+    require(len(rows) == 1 and len(rows[0].split(":")) == 9 and
+            rows[0].split(":")[1].startswith(("!", "*")),
             "ROOT_ACCOUNT_NOT_LOCKED")
     # Do not follow symlinked ancestors when inspecting forbidden paths.
     # Otherwise a staged link can hide credentials outside the tree.
