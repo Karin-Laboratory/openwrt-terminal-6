@@ -20,7 +20,7 @@ PARTITION_BYTES = 134_217_728
 REQUIRED = ("bin/busybox", "sbin/procd", "sbin/ubusd", "sbin/netifd",
             "sbin/uci", "usr/sbin/dropbear", "etc/shadow")
 FORBIDDEN = ("root/.ssh/authorized_keys", "etc/dropbear/dropbear_rsa_host_key",
-             "etc/dropbear/dropbear_ed25519_host_key", "etc/config/wireless")
+             "etc/dropbear/dropbear_ed25519_host_key", "etc/dropbear/dropbear_ecdsa_host_key", "etc/config/wireless")
 
 
 def require(ok, why):
@@ -117,7 +117,7 @@ def check_tree(root):
             require(not attrs, "XATTR_WOULD_BE_DROPPED")
         rel = path.relative_to(root).as_posix()
         require(not any(token in rel.lower() for token in
-                ("dropbear_rsa_host_key", "dropbear_ed25519_host_key", "calibration", "eeprom.bin")),
+                ("dropbear_rsa_host_key", "dropbear_ed25519_host_key", "dropbear_ecdsa_host_key", "calibration", "eeprom.bin")),
                 "CREDENTIAL_OR_CALIBRATION")
     require(not (root / "etc").is_symlink(), "AUTOSTART_PARENT_SYMLINK")
     rc = root / "etc/rc.d"
