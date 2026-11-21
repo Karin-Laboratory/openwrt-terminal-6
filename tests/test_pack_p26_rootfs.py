@@ -156,6 +156,16 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "ROOT_ACCOUNT_NOT_LOCKED"):
                 mod.check_tree(root)
 
+    def test_malformed_root_shadow_record_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            for malformed in ("root:", "root:!", "root:!:0:0:99999:7::"):
+                (root / "etc/shadow").write_text(malformed + "\n")
+                with self.subTest(malformed=malformed):
+                    with self.assertRaisesRegex(ValueError, "ROOT_ACCOUNT_NOT_LOCKED"):
+                        mod.check_tree(root)
+
     def test_standard_absolute_symlink_preserved(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
