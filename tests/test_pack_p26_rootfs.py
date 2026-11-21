@@ -366,7 +366,7 @@ class P26PackerTests(unittest.TestCase):
             for invalid in (packages + ["busybox"],
                             packages + ["bad package"],
                             packages + [" bad"],
-                            packages + ["bad\\nname"]):
+                            packages + ["bad" + chr(10) + "name"]):
                 receipt.write_text(json.dumps({
                     "openwrt_commit": "5799d2da76998be50432b0a3325b42713b4b619b",
                     "package_install": True, "source_built": True,
