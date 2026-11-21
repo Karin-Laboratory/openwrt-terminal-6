@@ -353,6 +353,30 @@ class P26PackerTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_NOT_OBJECT"):
                         mod.produce(root, base / "out", receipt)
 
+    def test_source_receipt_duplicate_or_ambiguous_packages_rejected(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            root = base / "stage"
+            root.mkdir()
+            self.make_root(root)
+            receipt = base / "source.json"
+            packages = ["base-files", "busybox", "procd", "ubus",
+                        "uci", "netifd", "dropbear"]
+            for invalid in (packages + ["busybox"],
+                            packages + ["bad package"],
+                            packages + [" bad"],
+                            packages + ["bad\\nname"]):
+                receipt.write_text(json.dumps({
+                    "openwrt_commit": "5799d2da76998be50432b0a3325b42713b4b619b",
+                    "package_install": True, "source_built": True,
+                    "packages": invalid, "feeds": {}
+                }))
+                with self.subTest(invalid=invalid[-1]):
+                    with self.assertRaisesRegex(ValueError, "INCOMPLETE_PACKAGE_INVENTORY"):
+                        mod.produce(root, base / "out", receipt)
+            self.assertFalse((base / "out").exists())
+
     def test_source_receipt_duplicate_keys_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             base = Path(d)
