@@ -248,6 +248,7 @@ def produce(root, output, source_receipt):
     receipt = {"schema": 1, "status": "P26_PACKED_AWAIT_INDEPENDENT_FS_READBACK",
                "partition_bytes": PARTITION_BYTES, "p26_sha256": digest(full),
                "squashfs_bytes": size, "squashfs_sha256": digest(raw),
+               "source_receipt_sha256": hashlib.sha256(data).hexdigest(),
                "openwrt_commit": record["openwrt_commit"],
                "feeds": record.get("feeds"), "packages": record.get("packages"),
                "squashfs_tools": subprocess.check_output(
