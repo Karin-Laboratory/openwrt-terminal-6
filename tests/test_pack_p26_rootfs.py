@@ -35,7 +35,7 @@ class P26PackerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             shadow = root / "shadow"
-            shadow.write_text("root:!:0:0:99999:7:::\\n")
+            shadow.write_text("root:!:0:0:99999:7:::\n")
             state = root / "fakeroot.state"
             install = subprocess.run(
                 ["fakeroot", "-s", str(state), "--", sys.executable, "-c",
