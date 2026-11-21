@@ -143,6 +143,9 @@ def produce(root, output, source_receipt):
             "OUTPUT_ANCESTOR_SYMLINK")
     require(all(not parent.is_symlink() for parent in source_receipt.parents),
             "SOURCE_RECEIPT_ANCESTOR_SYMLINK")
+    # Host provenance must never become part of the packaged rootfs.
+    require(not source_receipt.resolve().is_relative_to(root),
+            "SOURCE_RECEIPT_INSIDE_ROOTFS")
     require(source_receipt.exists() and not source_receipt.is_symlink(),
             "SOURCE_RECEIPT_REQUIRED")
     # Never block on a FIFO or consume an unbounded/untrusted receipt.
