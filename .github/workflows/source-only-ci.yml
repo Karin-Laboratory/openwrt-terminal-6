@@ -49,7 +49,14 @@ jobs:
           record = json.loads(pathlib.Path(sys.argv[1]).read_text())
           if record.get("encoding") != "base64" or record.get("type") != "file":
               raise SystemExit("Unexpected GitHub Contents API shape")
-          pathlib.Path(sys.argv[2]).write_bytes(base64.b64decode(record["content"], validate=True))
+          import hashlib
+          payload = base64.b64decode(record["content"], validate=True)
+          if record.get("size") != len(payload):
+              raise SystemExit("GitHub Contents API size mismatch")
+          blob_sha = hashlib.sha1(b"blob " + str(len(payload)).encode() + b"\0" + payload).hexdigest()
+          if record.get("sha") != blob_sha:
+              raise SystemExit("GitHub Contents API blob SHA mismatch")
+          pathlib.Path(sys.argv[2]).write_bytes(payload)
           PY
             fi
           done
