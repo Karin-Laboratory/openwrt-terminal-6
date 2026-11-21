@@ -193,7 +193,8 @@ def produce(root, output, source_receipt):
             record.get("source_built") is True, "UNVERIFIED_PACKAGE_SOURCE")
     require(isinstance(record.get("packages"), list) and
             all(isinstance(p, str) and p and p == p.strip() and
-                not any(c.isspace() for c in p) for p in record["packages"]) and
+                not any(c.isspace() or ord(c) < 32 or ord(c) == 127
+                        for c in p) for p in record["packages"]) and
             len(record["packages"]) == len(set(record["packages"])) and
             set(("base-files", "busybox", "procd", "ubus", "uci", "netifd", "dropbear")).issubset(record["packages"]),
             "INCOMPLETE_PACKAGE_INVENTORY")
