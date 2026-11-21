@@ -124,7 +124,9 @@ def check_tree(root):
     require(not rc.is_symlink(), "AUTOSTART_DIRECTORY_SYMLINK")
     if rc.exists():
         for item in rc.iterdir():
-            require(not any(x in item.name.lower() for x in ("dropbear", "wpad", "hostapd")),
+            require(not any(x in item.name.lower() or
+                            (item.is_symlink() and x in os.readlink(item).lower())
+                            for x in ("dropbear", "wpad", "hostapd")),
                     "UNPROVISIONED_AUTOSTART")
     return True
 
