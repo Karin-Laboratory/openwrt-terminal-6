@@ -54,6 +54,12 @@ def load_with_identity(path):
     )
     if not isinstance(obj, dict):
         raise ValueError("receipt must be an object")
+    if (type(obj.get("schema")) is not int or obj["schema"] != 1 or
+            obj.get("status") != "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED" or
+            obj.get("signed") is not False or
+            obj.get("device_writes") is not False or
+            obj.get("public_binary") is not False):
+        raise ValueError("invalid unsigned pair receipt status or safety flags")
     for field in FIELDS:
         value = obj.get(field)
         if not isinstance(value, str) or len(value) != 64 or any(
