@@ -475,6 +475,31 @@ class P26PackerTests(unittest.TestCase):
                         mod.produce(root, base / "out", receipt)
             self.assertFalse((base / "out").exists())
 
+    def test_source_receipt_nonfinite_json_rejected(self):
+        # Python's json.loads accepts NaN/Infinity by default, although
+        # neither is valid JSON for an immutable provenance receipt.
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            root = base / "stage"
+            root.mkdir()
+            self.make_root(root)
+            receipt = base / "source.json"
+            baseline = {
+                "openwrt_commit": "5799d2da76998be50432b0a3325b42713b4b619b",
+                "package_install": True, "source_built": True,
+                "packages": ["base-files", "busybox", "procd", "ubus",
+                             "uci", "netifd", "dropbear"],
+                "feeds": {}
+            }
+            for value in ("NaN", "Infinity", "-Infinity"):
+                receipt.write_text(json.dumps(baseline)[:-1] +
+                                   ',"untrusted_extra":' + value + '}')
+                with self.subTest(value=value):
+                    with self.assertRaisesRegex(ValueError, "SOURCE_RECEIPT_INVALID_JSON"):
+                        mod.produce(root, base / "out", receipt)
+            self.assertFalse((base / "out").exists())
+
     def test_source_receipt_duplicate_keys_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             base = Path(d)
