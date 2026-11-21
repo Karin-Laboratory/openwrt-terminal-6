@@ -387,7 +387,7 @@ class P26PackerTests(unittest.TestCase):
             self.make_root(root)
             receipt = base / "source.json"
             for name in (" packages", "packages ", "bad feed",
-                         "bad\nfeed", "bad\tfeed"):
+                         "bad\nfeed", "bad\tfeed", "bad" + chr(0) + "feed", "bad" + chr(127) + "feed"):
                 receipt.write_text(json.dumps({
                     "openwrt_commit": "5799d2da76998be50432b0a3325b42713b4b619b",
                     "package_install": True, "source_built": True,
