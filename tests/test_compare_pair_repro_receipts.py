@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 SCRIPT = Path(__file__).resolve().parents[1] / "tools/build/compare_pair_repro_receipts.py"
 spec = importlib.util.spec_from_file_location("pair_repro", SCRIPT)
@@ -83,6 +84,32 @@ class ReceiptComparisonTest(unittest.TestCase):
             path = Path(tmp) / "receipt.json"
             path.write_text(json.dumps(self.a)[:-1] + ', "extra": 1.25e2}')
             self.assertEqual(mod.load(path)["extra"], 125.0)
+
+    def test_receipt_mutation_during_read_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            path.write_text(json.dumps(self.a), encoding="utf-8")
+            original_fstat = mod.os.fstat
+            calls = 0
+
+            def changed_fstat(fd):
+                nonlocal calls
+                calls += 1
+                result = original_fstat(fd)
+                if calls == 2:
+                    from types import SimpleNamespace
+                    return SimpleNamespace(
+                        st_dev=result.st_dev, st_ino=result.st_ino,
+                        st_size=result.st_size, st_mode=result.st_mode,
+                        st_mtime_ns=result.st_mtime_ns + 1,
+                        st_ctime_ns=result.st_ctime_ns,
+                    )
+                return result
+
+            with mock.patch.object(mod.os, "fstat", side_effect=changed_fstat):
+                with self.assertRaisesRegex(ValueError, "receipt changed during read"):
+                    mod.load(path)
+            self.assertEqual(calls, 2)
 
     def test_same_receipt_path_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
