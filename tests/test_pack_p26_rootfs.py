@@ -232,6 +232,13 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "UNPROVISIONED_AUTOSTART"):
                 mod.check_tree(root)
 
+    def test_canonical_host_root_rejected_before_receipt(self):
+        # /tmp/.. is lexically different from / but resolves to the host root.
+        # Never inspect a receipt or traverse host files in this case.
+        with self.assertRaisesRegex(ValueError, "HOST_ROOT_FORBIDDEN"):
+            mod.produce(Path("/tmp/.."), Path("/tmp/p26-out"),
+                        Path("/tmp/missing-p26-receipt.json"))
+
     def test_output_inside_rootfs_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "stage"
