@@ -145,7 +145,22 @@ def produce(root, output, source_receipt):
             "SOURCE_RECEIPT_ANCESTOR_SYMLINK")
     require(source_receipt.is_file() and not source_receipt.is_symlink(),
             "SOURCE_RECEIPT_REQUIRED")
-    record = json.loads(source_receipt.read_text())
+    # Never block on a FIFO or consume an unbounded/untrusted receipt.
+    # O_NONBLOCK plus fstat rejects special files before reading any bytes.
+    fd = os.open(source_receipt, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        metadata = os.fstat(fd)
+        require(stat.S_ISREG(metadata.st_mode), "SOURCE_RECEIPT_NOT_REGULAR_FILE")
+        require(metadata.st_size <= 65536, "SOURCE_RECEIPT_TOO_LARGE")
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            data = stream.read(65537)
+        require(len(data) <= 65536, "SOURCE_RECEIPT_TOO_LARGE")
+    finally:
+        os.close(fd)
+    try:
+        record = json.loads(data.decode("utf-8"))
+    except (UnicodeError, ValueError, RecursionError) as exc:
+        raise ValueError("P26_BLOCKED_SOURCE_RECEIPT_INVALID_JSON") from exc
     require(isinstance(record, dict), "SOURCE_RECEIPT_NOT_OBJECT")
     require(record.get("openwrt_commit") ==
             "5799d2da76998be50432b0a3325b42713b4b619b",
