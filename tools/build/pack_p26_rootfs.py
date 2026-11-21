@@ -134,6 +134,9 @@ def produce(root, output, source_receipt):
     require(all(not parent.is_symlink() for parent in root.parents),
             "ROOTFS_ANCESTOR_SYMLINK")
     root = root.resolve(strict=True)
+    # A lexical path such as /tmp/.. can resolve to the host root.
+    # Reject the canonical path before walking or packing any host files.
+    require(root != Path("/"), "HOST_ROOT_FORBIDDEN")
     # Never write output inside the input tree: mksquashfs would ingest its
     # own output, and an ancestor symlink could conceal that relationship.
     require(not output.resolve().is_relative_to(root),
