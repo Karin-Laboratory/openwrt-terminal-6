@@ -157,8 +157,15 @@ def produce(root, output, source_receipt):
         require(len(data) <= 65536, "SOURCE_RECEIPT_TOO_LARGE")
     finally:
         os.close(fd)
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            require(key not in result, "SOURCE_RECEIPT_DUPLICATE_KEY")
+            result[key] = value
+        return result
+
     try:
-        record = json.loads(data.decode("utf-8"))
+        record = json.loads(data.decode("utf-8"), object_pairs_hook=unique_object)
     except (UnicodeError, ValueError, RecursionError) as exc:
         raise ValueError("P26_BLOCKED_SOURCE_RECEIPT_INVALID_JSON") from exc
     require(isinstance(record, dict), "SOURCE_RECEIPT_NOT_OBJECT")
