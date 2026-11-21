@@ -167,7 +167,11 @@ class P26PackerTests(unittest.TestCase):
                 with self.subTest(mode=oct(mode)):
                     with self.assertRaisesRegex(ValueError, "SHADOW_PERMISSIONS_UNSAFE"):
                         mod.check_tree(root)
+            # Group-readable shadow must remain rejected; only owner access is safe.
             shadow.chmod(0o640)
+            with self.assertRaisesRegex(ValueError, "SHADOW_PERMISSIONS_UNSAFE"):
+                mod.check_tree(root)
+            shadow.chmod(0o600)
             self.assertTrue(mod.check_tree(root))
 
     def test_unlocked_password_fails(self):
