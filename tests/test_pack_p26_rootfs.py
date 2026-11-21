@@ -89,6 +89,14 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "XATTR_WOULD_BE_DROPPED"):
                 mod.check_tree(root)
 
+    def test_shadow_group_read_is_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            (root / "etc/shadow").chmod(0o640)
+            with self.assertRaisesRegex(ValueError, "SHADOW_PERMISSIONS_UNSAFE"):
+                mod.check_tree(root)
+
     def test_missing_service_fails(self):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaisesRegex(ValueError, "MISSING_"):
