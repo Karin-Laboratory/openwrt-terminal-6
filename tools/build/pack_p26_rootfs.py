@@ -49,6 +49,11 @@ def check_tree(root):
         item = root / name
         require(item.is_file() and not item.is_symlink() and item.stat().st_size > 0,
                 "MISSING_" + name.replace("/", "_").upper())
+    # Never ship a readable password database even when root is locked.
+    shadow_mode = stat.S_IMODE((root / "etc/shadow").stat().st_mode)
+    require(shadow_mode & 0o007 == 0 and shadow_mode & 0o020 == 0 and
+            shadow_mode & 0o004 == 0,
+            "SHADOW_PERMISSIONS_UNSAFE")
     shadow = (root / "etc/shadow").read_text()
     rows = [line for line in shadow.splitlines() if line.startswith("root:")]
     require(len(rows) == 1 and len(rows[0].split(":")) == 9 and
