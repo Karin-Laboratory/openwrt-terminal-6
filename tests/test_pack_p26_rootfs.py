@@ -187,6 +187,21 @@ class P26PackerTests(unittest.TestCase):
             shadow.write_text(baseline + "guest:!:0:0:99999:7:::\n")
             self.assertTrue(mod.check_tree(root))
 
+    def test_duplicate_or_invalid_shadow_account_names_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            shadow = root / "etc/shadow"
+            baseline = "root:!:0:0:99999:7:::\n"
+            shadow.write_text(baseline + "guest:!:0:0:99999:7:::\n" * 2)
+            with self.assertRaisesRegex(ValueError, "DUPLICATE_SHADOW_ACCOUNT"):
+                mod.check_tree(root)
+            for name in ("guest user", "guest\\tuser"):
+                with self.subTest(name=name):
+                    shadow.write_text(baseline + f"{name}:!:0:0:99999:7:::\n")
+                    with self.assertRaisesRegex(ValueError, "UNLOCKED_OR_MALFORMED_SHADOW_ACCOUNT"):
+                        mod.check_tree(root)
+
     def test_malformed_root_shadow_record_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
