@@ -143,7 +143,7 @@ def produce(root, output, source_receipt):
             "OUTPUT_ANCESTOR_SYMLINK")
     require(all(not parent.is_symlink() for parent in source_receipt.parents),
             "SOURCE_RECEIPT_ANCESTOR_SYMLINK")
-    require(source_receipt.is_file() and not source_receipt.is_symlink(),
+    require(source_receipt.exists() and not source_receipt.is_symlink(),
             "SOURCE_RECEIPT_REQUIRED")
     # Never block on a FIFO or consume an unbounded/untrusted receipt.
     # O_NONBLOCK plus fstat rejects special files before reading any bytes.
