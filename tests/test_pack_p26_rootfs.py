@@ -502,7 +502,12 @@ class P26PackerTests(unittest.TestCase):
                             packages + [" bad"],
                             packages + ["bad" + chr(10) + "name"],
                             packages + ["bad" + chr(0) + "name"],
-                            packages + ["bad" + chr(127) + "name"]):
+                            packages + ["bad" + chr(127) + "name"],
+                            packages + ["../other"],
+                            packages + ["vendor/name"],
+                            packages + ["vendor\\\\name"],
+                            packages + ["name:variant"],
+                            packages + ["équipe"]):
                 receipt.write_text(json.dumps({
                     "openwrt_commit": "5799d2da76998be50432b0a3325b42713b4b619b",
                     "package_install": True, "source_built": True,
