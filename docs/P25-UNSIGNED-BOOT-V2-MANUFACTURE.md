@@ -3,7 +3,7 @@
 **履歴上の受入実績（2026-11-17）: 同一ワークスペースのunsigned P25/P26実製造・独立読戻しPASS。現行HEADの再製造PASSや独立2環境の決定論的再現性は未証明。**
 
 - 実証コミット `86d875801e420ce970fdb62e5942b490dec21252`、[native CI #43938848355](https://github.com/Karin-Laboratory/openwrt-terminal-6/actions/runs/43938848355) package job `133551046076` SUCCESS。P25: 33,554,432 bytes、SHA-256 `2d973adcdaf6ff2254a8208cf1d2aef2acdb47444d1d9e029f9e0a09b8dbb61a`。P26: 134,217,728 bytes、SHA-256 `a980e7c57ba48efce768c2b34b552fdc2062d11b9314ea9877cc164520931bfd`。画像実体は保存・配布されていない。これはホスト上の製造受入であり、実機起動・再配布権利・別環境再現性を証明しない。
-- 現行HEAD `0778912292ca621bff95672a18a885d9844d4f8b` は上記実証コミットと異なる。現行HEADの完全な製造CI受入は別途必要。
+- 2026-11-23の確認時点で開発HEADは上記実証コミットから更新されている。新しいHEADごとに完全な製造CI受入を再確認すること。
 
 - [OpenWrt PR #216](https://github.com/Karin-Laboratory/openwrt-terminal-6/pull/216) の [公開Linux 6.18.63ペア製造スクリプト](../scripts/manufacture-public-openwrt-p25-from-debian14.sh) を既存native OpenWrt CIへ接続した。従来のowner-private 64バイト接頭部が無い場合にも、公開仕様から製造するデフォルト経路を設けた。owner-private入力の既存経路は維持する。
 - 公開移植元は [Debian PR #14](https://github.com/Karin-Laboratory/Debian13-Terminal6/pull/14) の固定コミット e05811f8d4d3ee2606f44f27218ef59132a39a5f。Linux stable v6.18.63は1cdda838e8475edf89b73ff0cc952005dd0b1fa7。MT6990関連は移植元でGit blob SHA固定の公開OSS 17入力から再生し、GPL等の出典とライセンスを保持する。非公開ソースと秘密情報は使用しない。
