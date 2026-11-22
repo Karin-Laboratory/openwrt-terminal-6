@@ -147,7 +147,7 @@ class ReceiptComparisonTest(unittest.TestCase):
                 nonlocal calls
                 calls += 1
                 result = original_fstat(fd)
-                if calls == 1:
+                if calls in (1, 2):
                     from types import SimpleNamespace
                     return SimpleNamespace(
                         st_dev=result.st_dev, st_ino=result.st_ino,
