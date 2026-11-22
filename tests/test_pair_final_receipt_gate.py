@@ -98,7 +98,7 @@ class FinalReceiptGateTests(unittest.TestCase):
         self.assertNotEqual(self.run_gate().returncode, 0)
 
     def test_receipt_invalid_utf8(self):
-        self.receipt.write_bytes(b"\\xff")
+        self.receipt.write_bytes(bytes([0xff]))
         self.assertNotEqual(self.run_gate().returncode, 0)
 
     def test_missing_p26_digest(self):
