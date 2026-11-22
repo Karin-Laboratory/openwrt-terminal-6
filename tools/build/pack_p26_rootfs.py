@@ -120,6 +120,10 @@ def check_tree(root):
         # Reject authorized_keys anywhere, including dangling symlinks.
         require(path.name.lower() != "authorized_keys",
                 "UNPROVISIONED_AUTHORIZED_KEYS")
+        # Private SSH client identities must not be baked into a shared rootfs.
+        # Check names without dereferencing links, including dangling links.
+        require(path.name.lower() not in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"),
+                "UNPROVISIONED_SSH_PRIVATE_IDENTITY")
         require(not any(token in rel.lower() for token in
                 ("dropbear_rsa_host_key", "dropbear_ed25519_host_key", "dropbear_ecdsa_host_key", "ssh_host_", "calibration", "eeprom.bin")),
                 "CREDENTIAL_OR_CALIBRATION")
