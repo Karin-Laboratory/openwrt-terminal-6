@@ -136,6 +136,32 @@ class ReceiptComparisonTest(unittest.TestCase):
                     mod.load(path)
             self.assertEqual(calls, 2)
 
+    def test_short_read_rejected_before_json_acceptance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            path.write_text(json.dumps(self.a), encoding="utf-8")
+            original_fstat = mod.os.fstat
+            calls = 0
+
+            def overstated_size(fd):
+                nonlocal calls
+                calls += 1
+                result = original_fstat(fd)
+                if calls == 1:
+                    from types import SimpleNamespace
+                    return SimpleNamespace(
+                        st_dev=result.st_dev, st_ino=result.st_ino,
+                        st_size=result.st_size + 1, st_mode=result.st_mode,
+                        st_mtime_ns=result.st_mtime_ns,
+                        st_ctime_ns=result.st_ctime_ns,
+                    )
+                return result
+
+            with mock.patch.object(mod.os, "fstat", side_effect=overstated_size):
+                with self.assertRaisesRegex(ValueError, "receipt short read or size mismatch"):
+                    mod.load(path)
+            self.assertEqual(calls, 2)
+
     def test_same_receipt_path_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "receipt.json"
