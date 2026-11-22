@@ -331,6 +331,16 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "CREDENTIAL_OR_CALIBRATION"):
                 mod.check_tree(root)
 
+    def test_openssh_host_private_key_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            key = root / "etc/ssh/ssh_host_ed25519_key"
+            key.parent.mkdir(parents=True)
+            key.write_text("synthetic private key fixture")
+            with self.assertRaisesRegex(ValueError, "CREDENTIAL_OR_CALIBRATION"):
+                mod.check_tree(root)
+
     def test_unprovisioned_ssh_autostart_fails(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
