@@ -154,6 +154,25 @@ python3 "$root/tools/build/verify_unsigned_pair.py" \
   { echo 'PUBLIC_PAIR_BLOCKED_P25_SIZE' >&2; exit 1; }
 [[ $(stat -c %s "$p26") == 134217728 ]] ||
   { echo 'PUBLIC_PAIR_BLOCKED_P26_SIZE' >&2; exit 1; }
+# Bind the final full-image readback to the exact verified pair receipt.
+# Size-only checks and printing hashes do not prove that the final bytes
+# still match the identities accepted by the independent verifier.
+python3 - "$p25" "$p26" "$out/unsigned-pair/same-run-p25-p26-receipt.json" <<'PY'
+import hashlib, json, pathlib, sys
+p25, p26, receipt_path = map(pathlib.Path, sys.argv[1:])
+with receipt_path.open("r", encoding="utf-8") as stream:
+    receipt = json.load(stream)
+if receipt.get("status") != "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED":
+    raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_STATUS")
+for path, field in ((p25, "p25_sha256"), (p26, "p26_sha256")):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    if digest.hexdigest() != receipt.get(field):
+        raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_RECEIPT_MISMATCH_" + field)
+print("PUBLIC_PAIR_FINAL_RECEIPT_READBACK_PASS")
+PY
 # Read the complete images again from the ephemeral runner filesystem.
 echo 'PUBLIC_OPENWRT_61863_UNSIGNED_P25_P26_SOURCE_PAIRCHECK_PASS'
 sha256sum "$p25" "$p26"
