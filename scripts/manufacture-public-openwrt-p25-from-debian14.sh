@@ -175,8 +175,18 @@ def unique_object(pairs):
             raise ValueError("duplicate receipt field: " + key)
         result[key] = value
     return result
+# Fail closed on malformed final receipts, not just mismatched hashes.
+if receipt_path.is_symlink() or not receipt_path.is_file():
+    raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_NOT_REGULAR")
+if receipt_path.stat().st_size > 1024 * 1024:
+    raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_TOO_LARGE")
+def reject_constant(value):
+    raise ValueError("nonfinite receipt constant: " + value)
 with receipt_path.open("r", encoding="utf-8") as stream:
-    receipt = json.load(stream, object_pairs_hook=unique_object)
+    receipt = json.load(stream, object_pairs_hook=unique_object,
+                        parse_constant=reject_constant)
+if not isinstance(receipt, dict):
+    raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_NOT_OBJECT")
 if receipt.get("status") != "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED":
     raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_STATUS")
 for path, field in ((p25, "p25_sha256"), (p26, "p26_sha256")):
