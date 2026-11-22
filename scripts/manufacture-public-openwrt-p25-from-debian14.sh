@@ -96,6 +96,11 @@ if any(type(src[k]) is not int for k in
        ('page_size','header_version','header_size','os_version','kernel_addr',
         'ramdisk_addr','second_addr','tags_addr','dtb_addr')):
     raise SystemExit("invalid public boot-v2 numeric fields")
+if any(not 0 <= src[k] <= 0xffffffff for k in
+       ('os_version','kernel_addr','ramdisk_addr','second_addr','tags_addr','dtb_addr')):
+    raise SystemExit("public boot-v2 numeric field outside uint32 range")
+if not isinstance(src['cmdline'],str) or '\\x00' in src['cmdline']:
+    raise SystemExit("invalid public boot-v2 cmdline")
 if (src['page_size'],src['header_version'],src['header_size'],src['name']) != (2048,2,1660,"mt6990"):
     raise SystemExit("unsupported public boot-v2 profile")
 prefix=pathlib.Path(sys.argv[2]).read_bytes()
