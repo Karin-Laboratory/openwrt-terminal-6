@@ -39,6 +39,11 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_mt6990_native_subtarget.py' -v
           # Run pair identity and receipt rollback regressions before the long build.
           python3 -m unittest discover -s tests -p 'test_verify_unsigned_pair.py' -v
+          # Exercise the P25 packer and embedded-initramfs contract before
+          # spending runner hours on the native source builds. These are
+          # host-only regressions, not evidence of a newly manufactured image.
+          python3 -m unittest discover -s tests -p 'test_pack_p25_unsigned_v2.py' -v
+          python3 -m unittest discover -s tests -p 'test_verify_kernel_initramfs.py' -v
           # Syntax gate before expensive native compilation.
           bash -n scripts/manufacture-public-openwrt-p25-from-debian14.sh
           echo 'PUBLIC_PAIR_ORCHESTRATOR_SHELL_SYNTAX_PASS'
