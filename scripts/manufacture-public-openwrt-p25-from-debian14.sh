@@ -179,6 +179,11 @@ python3 "$root/tools/build/verify_unsigned_pair.py" \
 python3 - "$p25" "$p26" "$out/unsigned-pair/same-run-p25-p26-receipt.json" <<'PY'
 import hashlib, json, pathlib, re, sys
 p25, p26, receipt_path = map(pathlib.Path, sys.argv[1:])
+# A final readback must inspect regular image files, not substituted symlinks,
+# directories or special files that can masquerade as valid paths.
+for image_path, label in ((p25, "P25"), (p26, "P26")):
+    if image_path.is_symlink() or not image_path.is_file():
+        raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_" + label + "_NOT_REGULAR")
 def unique_object(pairs):
     result = {}
     for key, value in pairs:
