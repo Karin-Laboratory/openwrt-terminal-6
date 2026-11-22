@@ -123,6 +123,20 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "DEVICE_SECRET_OR_UNPROVISIONED_RADIO_ETC_DROPBEAR_AUTHORIZED_KEYS"):
                 mod.check_tree(root)
 
+    def test_authorized_keys_outside_standard_paths_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            keys = root / "home/service/.ssh/authorized_keys"
+            keys.parent.mkdir(parents=True)
+            keys.write_text("ssh-ed25519 synthetic-fixture\\n")
+            with self.assertRaisesRegex(ValueError, "UNPROVISIONED_AUTHORIZED_KEYS"):
+                mod.check_tree(root)
+            keys.unlink()
+            keys.symlink_to("/missing-key-file")
+            with self.assertRaisesRegex(ValueError, "UNPROVISIONED_AUTHORIZED_KEYS"):
+                mod.check_tree(root)
+
     def test_minimal_safe_stage(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
