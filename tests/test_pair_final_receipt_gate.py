@@ -83,6 +83,39 @@ class FinalReceiptGateTests(unittest.TestCase):
         self.p25.symlink_to(target)
         self.assertNotEqual(self.run_gate().returncode, 0)
 
+    def test_missing_status(self):
+        del self.data["status"]
+        self.save()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_wrong_status_type(self):
+        self.data["status"] = ["UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED"]
+        self.save()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_receipt_array(self):
+        self.receipt.write_text("[]", encoding="utf-8")
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_receipt_invalid_utf8(self):
+        self.receipt.write_bytes(b"\\xff")
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_missing_p26_digest(self):
+        del self.data["p26_sha256"]
+        self.save()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_p26_symlink(self):
+        target = self.base / "p26-target.bin"
+        self.p26.rename(target)
+        self.p26.symlink_to(target)
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_missing_p25_image(self):
+        self.p25.unlink()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
     def test_receipt_oversize(self):
         self.receipt.write_bytes(b" " * (1024 * 1024 + 1))
         self.assertNotEqual(self.run_gate().returncode, 0)
