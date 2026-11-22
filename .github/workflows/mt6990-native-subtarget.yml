@@ -262,17 +262,10 @@ jobs:
           # The previous native run built Image/rootfs successfully, then
           # failed silently in this new gate. Resolve only the actual MT6990
           # kernel directory and report each failed prerequisite explicitly.
-          # Find the actual built Image rather than pinning a transient
-          # OpenWrt kernel patch version. Refuse ambiguous matches.
-          mapfile -t native_images < <(find "$work/openwrt/build_dir" -type f \
-            -path '*/linux-mediatek_mt6990/linux-*/arch/arm64/boot/Image' \
-            -size +0c -print)
-          if test "${#native_images[@]}" -ne 1; then
-            echo "Expected exactly one native MT6990 Image; found ${#native_images[@]}" >&2
-            printf '%s\n' "${native_images[@]}" >&2
-            exit 1
-          fi
-          kernel="${native_images[0]%/arch/arm64/boot/Image}"
+          # Reuse the uniquely selected Image from the earlier compile gate.
+          # This avoids a second ambiguous filesystem scan and preserves
+          # whitespace/newlines in kernel paths via the NUL-delimited result.
+          kernel="${compiled_images[0]%/arch/arm64/boot/Image}"
           if ! test -s "$kernel/arch/arm64/boot/Image"; then
             echo "Missing native MT6990 Image at $kernel" >&2
             exit 1
