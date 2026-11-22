@@ -200,6 +200,7 @@ def produce(root, output, source_receipt):
             record.get("source_built") is True, "UNVERIFIED_PACKAGE_SOURCE")
     require(isinstance(record.get("packages"), list) and
             all(isinstance(p, str) and p and p == p.strip() and
+                p not in (".", "..") and
                 all(c.isascii() and (c.isalnum() or c in "._+-") for c in p)
                 for p in record["packages"]) and
             len(record["packages"]) == len(set(record["packages"])) and
@@ -209,6 +210,7 @@ def produce(root, output, source_receipt):
     feeds = record.get("feeds")
     require(isinstance(feeds, dict) and
             all(isinstance(name, str) and name and name == name.strip() and
+                name not in (".", "..") and
                 all(c.isascii() and (c.isalnum() or c in "_.-") for c in name) and
                 isinstance(commit, str) and len(commit) == 40 and
                 all(c in "0123456789abcdef" for c in commit)
