@@ -116,6 +116,10 @@ def check_tree(root):
                 raise ValueError("P26_BLOCKED_XATTR_INSPECTION_FAILED") from exc
             require(not attrs, "XATTR_WOULD_BE_DROPPED")
         rel = path.relative_to(root).as_posix()
+        # Credentials may be installed under service-specific home directories.
+        # Reject authorized_keys anywhere, including dangling symlinks.
+        require(path.name.lower() != "authorized_keys",
+                "UNPROVISIONED_AUTHORIZED_KEYS")
         require(not any(token in rel.lower() for token in
                 ("dropbear_rsa_host_key", "dropbear_ed25519_host_key", "dropbear_ecdsa_host_key", "calibration", "eeprom.bin")),
                 "CREDENTIAL_OR_CALIBRATION")
