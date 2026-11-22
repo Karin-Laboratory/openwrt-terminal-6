@@ -21,6 +21,8 @@ on:
       - 'tools/build/verify_unsigned_pair.py'
       - 'tests/test_verify_kernel_initramfs.py'
       - 'tests/test_verify_unsigned_pair.py'
+      - 'tests/test_pair_final_receipt_gate.py'
+      - 'scripts/manufacture-public-openwrt-p25-from-debian14.sh'
       - 'tools/boot/make_p25_dtb_table.py'
       - 'tests/test_make_p25_dtb_table.py'
       - 'docs/P25-UNSIGNED-BOOT-V2-MANUFACTURE.md'
@@ -51,6 +53,8 @@ jobs:
           python3 -m py_compile tools/boot/verify_kernel_initramfs.py tools/build/verify_unsigned_pair.py
           python3 -m unittest discover -s tests -p test_verify_kernel_initramfs.py -v
           python3 -m unittest discover -s tests -p test_verify_unsigned_pair.py -v
+          python3 -m py_compile tests/test_pair_final_receipt_gate.py
+          python3 -m unittest discover -s tests -p test_pair_final_receipt_gate.py -v
           sh -n tools/boot/verify_bound_p26.sh
           python3 -m unittest discover -s tests -p test_verify_bound_p26.py -v
           sh -n tools/boot/air6_first_stage.sh
