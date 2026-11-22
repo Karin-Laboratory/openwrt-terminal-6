@@ -92,6 +92,28 @@ class FinalReceiptGateTests(unittest.TestCase):
         self.p25.symlink_to(target)
         self.assertNotEqual(self.run_gate().returncode, 0)
 
+    def test_wrong_status_value(self):
+        self.data["status"] = "PENDING"
+        self.save()
+        result = self.run_gate()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("PUBLIC_PAIR_FINAL_RECEIPT_READBACK_PASS", result.stdout)
+
+    def test_p26_directory(self):
+        self.p26.unlink()
+        self.p26.mkdir()
+        result = self.run_gate()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("PUBLIC_PAIR_FINAL_RECEIPT_READBACK_PASS", result.stdout)
+
+    def test_p25_digest_valid_format_wrong_bytes(self):
+        self.data["p25_sha256"] = "0" * 64
+        self.save()
+        result = self.run_gate()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_RECEIPT_MISMATCH_p25_sha256", result.stderr)
+        self.assertNotIn("PUBLIC_PAIR_FINAL_RECEIPT_READBACK_PASS", result.stdout)
+
     def test_missing_status(self):
         del self.data["status"]
         self.save()
