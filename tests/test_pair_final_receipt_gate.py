@@ -48,7 +48,16 @@ class FinalReceiptGateTests(unittest.TestCase):
         )
 
     def test_matching_receipt(self):
-        self.assertEqual(self.run_gate().returncode, 0)
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("PUBLIC_PAIR_FINAL_RECEIPT_READBACK_PASS", result.stdout)
+
+    def test_swapped_receipt_digests(self):
+        self.data["p25_sha256"], self.data["p26_sha256"] = (self.data["p26_sha256"], self.data["p25_sha256"])
+        self.save()
+        result = self.run_gate()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_RECEIPT_MISMATCH_p25_sha256", result.stderr)
 
     def test_p25_mutated_after_receipt(self):
         self.p25.write_bytes(b"changed")
