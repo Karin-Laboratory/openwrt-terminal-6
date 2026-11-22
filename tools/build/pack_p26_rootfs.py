@@ -19,7 +19,7 @@ import subprocess
 PARTITION_BYTES = 134_217_728
 REQUIRED = ("bin/busybox", "sbin/procd", "sbin/ubusd", "sbin/netifd",
             "sbin/uci", "usr/sbin/dropbear", "etc/shadow")
-FORBIDDEN = ("root/.ssh/authorized_keys", "etc/dropbear/dropbear_rsa_host_key",
+FORBIDDEN = ("root/.ssh/authorized_keys", "etc/dropbear/authorized_keys", "etc/dropbear/dropbear_rsa_host_key",
              "etc/dropbear/dropbear_ed25519_host_key", "etc/dropbear/dropbear_ecdsa_host_key", "etc/config/wireless")
 
 
