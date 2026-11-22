@@ -158,10 +158,17 @@ python3 "$root/tools/build/verify_unsigned_pair.py" \
 # Size-only checks and printing hashes do not prove that the final bytes
 # still match the identities accepted by the independent verifier.
 python3 - "$p25" "$p26" "$out/unsigned-pair/same-run-p25-p26-receipt.json" <<'PY'
-import hashlib, json, pathlib, sys
+import hashlib, json, pathlib, re, sys
 p25, p26, receipt_path = map(pathlib.Path, sys.argv[1:])
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate receipt field: " + key)
+        result[key] = value
+    return result
 with receipt_path.open("r", encoding="utf-8") as stream:
-    receipt = json.load(stream)
+    receipt = json.load(stream, object_pairs_hook=unique_object)
 if receipt.get("status") != "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED":
     raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_STATUS")
 for path, field in ((p25, "p25_sha256"), (p26, "p26_sha256")):
@@ -169,7 +176,10 @@ for path, field in ((p25, "p25_sha256"), (p26, "p26_sha256")):
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
-    if digest.hexdigest() != receipt.get(field):
+    expected = receipt.get(field)
+    if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+        raise SystemExit("PUBLIC_PAIR_BLOCKED_INVALID_RECEIPT_DIGEST_" + field)
+    if digest.hexdigest() != expected:
         raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_RECEIPT_MISMATCH_" + field)
 print("PUBLIC_PAIR_FINAL_RECEIPT_READBACK_PASS")
 PY
