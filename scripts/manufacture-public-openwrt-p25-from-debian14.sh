@@ -90,10 +90,17 @@ import hashlib,json,pathlib,sys
 src=json.loads(pathlib.Path(sys.argv[1]).read_text())
 required={'cmdline','dtb_addr','header_size','header_version','kernel_addr',
           'name','os_version','page_size','ramdisk_addr','second_addr','tags_addr'}
-assert set(src)==required and (src['page_size'],src['header_version'],
-        src['header_size'],src['name'])==(2048,2,1660,"mt6990")
+if not isinstance(src,dict) or set(src)!=required:
+    raise SystemExit("invalid public boot-v2 profile fields")
+if any(type(src[k]) is not int for k in
+       ('page_size','header_version','header_size','os_version','kernel_addr',
+        'ramdisk_addr','second_addr','tags_addr','dtb_addr')):
+    raise SystemExit("invalid public boot-v2 numeric fields")
+if (src['page_size'],src['header_version'],src['header_size'],src['name']) != (2048,2,1660,"mt6990"):
+    raise SystemExit("unsupported public boot-v2 profile")
 prefix=pathlib.Path(sys.argv[2]).read_bytes()
-assert len(prefix)==64
+if len(prefix)!=64:
+    raise SystemExit("invalid DTB prefix length")
 profile={k:"0x%x"%src[k] for k in
          ('kernel_addr','ramdisk_addr','second_addr','tags_addr','dtb_addr')}
 profile.update({"page_size":2048,"os_version":src['os_version'],
