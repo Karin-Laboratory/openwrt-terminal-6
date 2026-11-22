@@ -19,6 +19,8 @@ class P26PackerTests(unittest.TestCase):
             p = root / name
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text("test")
+            if name != "etc/shadow":
+                p.chmod(0o755)
         (root / "etc/shadow").write_text("root:!:0:0:99999:7:::\n")
         (root / "etc/shadow").chmod(0o600)
 
@@ -107,6 +109,15 @@ class P26PackerTests(unittest.TestCase):
                 with self.subTest(mode=oct(mode)):
                     with self.assertRaisesRegex(ValueError, "SHADOW_PERMISSIONS_UNSAFE"):
                         mod.check_tree(root)
+
+    def test_required_service_without_execute_bit_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            service = root / "sbin/procd"
+            service.chmod(0o644)
+            with self.assertRaisesRegex(ValueError, "NOT_EXECUTABLE_SBIN_PROCD"):
+                mod.check_tree(root)
 
     def test_missing_service_fails(self):
         with tempfile.TemporaryDirectory() as d:
