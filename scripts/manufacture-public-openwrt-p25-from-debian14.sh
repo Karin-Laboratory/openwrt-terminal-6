@@ -23,6 +23,11 @@ done
 [[ -n ${AIR6_CROSS_COMPILE:-} ]] || { echo "PUBLIC_PAIR_BLOCKED_MATCHING_OPENWRT_CROSS_PREFIX_REQUIRED" >&2; exit 2; }
 command -v "${AIR6_CROSS_COMPILE}gcc" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER" >&2; exit 2; }
 command -v "${AIR6_CROSS_COMPILE}ld" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_CROSS_LINKER" >&2; exit 2; }
+# Pin input identities before the long kernel build. A source-built P26 or
+# first-stage archive replaced during compilation must never be paired with
+# the resulting P25, even when its replacement has the expected byte length.
+p26_sha_before="$(sha256sum "$p26" | cut -d ' ' -f 1)"
+cpio_sha_before="$(sha256sum "$cpio" | cut -d ' ' -f 1)"
 mkdir -m 0700 "$out"
 # Pin the PUBLIC Debian PR14 source, then let its independent 17-blob source
 # manifest verify every MT6990 donor input. No private source import.
@@ -63,6 +68,12 @@ export DTB_PATH="$out/dtb/board/terminal6-debian-ethernet-experimental.dtb"
 export CROSS_COMPILE="$AIR6_CROSS_COMPILE"
 export JOBS=4
 bash "$deb/scripts/build-openwrt-pair-local.sh"
+# The kernel embedded the archive passed at build time. Fail closed if either
+# externally supplied image changed while the expensive build was running.
+[[ "$(sha256sum "$p26" | cut -d ' ' -f 1)" == "$p26_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_P26_CHANGED_DURING_BUILD' >&2; exit 1; }
+[[ "$(sha256sum "$cpio" | cut -d ' ' -f 1)" == "$cpio_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_CPIO_CHANGED_DURING_BUILD' >&2; exit 1; }
 kernel="$out/linux-6.18.63"
 image="$kernel/arch/arm64/boot/Image"
 dtb="$DTB_PATH"
