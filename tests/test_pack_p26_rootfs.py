@@ -137,6 +137,24 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "UNPROVISIONED_AUTHORIZED_KEYS"):
                 mod.check_tree(root)
 
+    def test_ssh_client_private_identities_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            ssh = root / "home/service/.ssh"
+            ssh.mkdir(parents=True)
+            for name in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"):
+                key = ssh / name
+                with self.subTest(name=name):
+                    key.write_text("synthetic private key fixture")
+                    with self.assertRaisesRegex(ValueError, "UNPROVISIONED_SSH_PRIVATE_IDENTITY"):
+                        mod.check_tree(root)
+                    key.unlink()
+                    key.symlink_to("/missing-private-key")
+                    with self.assertRaisesRegex(ValueError, "UNPROVISIONED_SSH_PRIVATE_IDENTITY"):
+                        mod.check_tree(root)
+                    key.unlink()
+
     def test_minimal_safe_stage(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
