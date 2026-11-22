@@ -144,6 +144,12 @@ python3 "$root/tools/build/verify_unsigned_pair.py" \
   --cpio "$cpio" --initramfs-object "$kernel/usr/initramfs_data.o" \
   --vmlinux "$kernel/vmlinux" --image "$image" \
   --out "$out/unsigned-pair/same-run-p25-p26-receipt.json"
+# Revalidate immutable external inputs after all packing and verification.
+# The long verification stage must not silently accept later replacements.
+[[ "$(sha256sum "$p26" | cut -d ' ' -f 1)" == "$p26_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_P26_CHANGED_AFTER_VERIFICATION' >&2; exit 1; }
+[[ "$(sha256sum "$cpio" | cut -d ' ' -f 1)" == "$cpio_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_CPIO_CHANGED_AFTER_VERIFICATION' >&2; exit 1; }
 [[ $(stat -c %s "$p25") == 33554432 ]] ||
   { echo 'PUBLIC_PAIR_BLOCKED_P25_SIZE' >&2; exit 1; }
 [[ $(stat -c %s "$p26") == 134217728 ]] ||
