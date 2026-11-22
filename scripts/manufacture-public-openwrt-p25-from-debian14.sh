@@ -28,6 +28,8 @@ command -v "${AIR6_CROSS_COMPILE}ld" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_C
 # the resulting P25, even when its replacement has the expected byte length.
 p26_sha_before="$(sha256sum "$p26" | cut -d ' ' -f 1)"
 cpio_sha_before="$(sha256sum "$cpio" | cut -d ' ' -f 1)"
+producer_sha_before="$(sha256sum "$producer" | cut -d ' ' -f 1)"
+independent_sha_before="$(sha256sum "$independent" | cut -d ' ' -f 1)"
 mkdir -m 0700 "$out"
 # Pin the PUBLIC Debian PR14 source, then let its independent 17-blob source
 # manifest verify every MT6990 donor input. No private source import.
@@ -144,6 +146,12 @@ python3 "$root/tools/build/verify_unsigned_pair.py" \
   --cpio "$cpio" --initramfs-object "$kernel/usr/initramfs_data.o" \
   --vmlinux "$kernel/vmlinux" --image "$image" \
   --out "$out/unsigned-pair/same-run-p25-p26-receipt.json"
+# The producer and independent attestation are external build inputs too.
+# Reject any replacement between preflight and final pair acceptance.
+[[ "$(sha256sum "$producer" | cut -d ' ' -f 1)" == "$producer_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_PRODUCER_RECEIPT_CHANGED' >&2; exit 1; }
+[[ "$(sha256sum "$independent" | cut -d ' ' -f 1)" == "$independent_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_INDEPENDENT_ATTESTATION_CHANGED' >&2; exit 1; }
 # Revalidate immutable external inputs after all packing and verification.
 # The long verification stage must not silently accept later replacements.
 [[ "$(sha256sum "$p26" | cut -d ' ' -f 1)" == "$p26_sha_before" ]] ||
