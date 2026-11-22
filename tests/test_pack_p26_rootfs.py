@@ -97,6 +97,17 @@ class P26PackerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "SHADOW_PERMISSIONS_UNSAFE"):
                 mod.check_tree(root)
 
+    def test_shadow_executable_mode_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.make_root(root)
+            shadow = root / "etc/shadow"
+            for mode in (0o700, 0o500, 0o410):
+                shadow.chmod(mode)
+                with self.subTest(mode=oct(mode)):
+                    with self.assertRaisesRegex(ValueError, "SHADOW_PERMISSIONS_UNSAFE"):
+                        mod.check_tree(root)
+
     def test_missing_service_fails(self):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaisesRegex(ValueError, "MISSING_"):
