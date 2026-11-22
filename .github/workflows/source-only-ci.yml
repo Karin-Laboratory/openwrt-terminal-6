@@ -46,7 +46,14 @@ jobs:
                 --output "$tmp/github-content.json"
               python3 - "$tmp/github-content.json" "$destination" <<'PY'
           import base64, json, pathlib, sys
-          record = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          def unique_keys(pairs):
+              result = {}
+              for key, value in pairs:
+                  if key in result:
+                      raise ValueError(f"Duplicate GitHub Contents API key: {key}")
+                  result[key] = value
+              return result
+          record = json.loads(pathlib.Path(sys.argv[1]).read_text(), object_pairs_hook=unique_keys)
           if record.get("encoding") != "base64" or record.get("type") != "file":
               raise SystemExit("Unexpected GitHub Contents API shape")
           import hashlib
