@@ -141,7 +141,7 @@ jobs:
             -size +0c -print0)
           if test "${#compiled_images[@]}" -ne 1; then
             echo "Expected one compiled native MT6990 Image; found ${#compiled_images[@]}" >&2
-            printf '%s\\n' "${compiled_images[@]}" >&2
+            printf '%s\n' "${compiled_images[@]}" >&2
             exit 1
           fi
           echo 'PUBLIC_MT6990_NATIVE_KERNEL_IMAGE_BUILD_PASS'
