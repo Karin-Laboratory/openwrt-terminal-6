@@ -472,7 +472,7 @@ class P26PackerTests(unittest.TestCase):
             root.mkdir()
             self.make_root(root)
             receipt = base / "source.json"
-            for name in (" packages", "packages ", "bad feed",
+            for name in (".", "..", " packages", "packages ", "bad feed",
                          "bad\nfeed", "bad\tfeed", "bad" + chr(0) + "feed", "bad" + chr(127) + "feed",
                          "../packages", "vendor/name", "vendor\\\\name", "bad:feed", "équipe"):
                 receipt.write_text(json.dumps({
@@ -511,7 +511,7 @@ class P26PackerTests(unittest.TestCase):
             receipt = base / "source.json"
             packages = ["base-files", "busybox", "procd", "ubus",
                         "uci", "netifd", "dropbear"]
-            for invalid in (packages + ["busybox"],
+            for invalid in (packages + ["."], packages + [".."], packages + ["busybox"],
                             packages + ["bad package"],
                             packages + [" bad"],
                             packages + ["bad" + chr(10) + "name"],
