@@ -94,6 +94,25 @@ class ContentsFallbackTests(unittest.TestCase):
                 self.assertNotEqual(status, 0)
                 self.assertEqual(output, b'original')
 
+    def test_duplicate_metadata_key_rejected_without_overwrite(self):
+        record = self.fixture()
+        for field, duplicate in (('sha', '0' * 40), ('size', 0), ('encoding', 'none')):
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as tmp:
+                    source = Path(tmp) / 'record.json'
+                    destination = Path(tmp) / 'source.c'
+                    # Preserve duplicate keys on disk; a dict would collapse them.
+                    raw = json.dumps(record)
+                    raw = raw[:-1] + ',' + json.dumps(field) + ':' + json.dumps(duplicate) + '}'
+                    source.write_text(raw, encoding='utf-8')
+                    destination.write_bytes(b'original')
+                    proc = subprocess.run(
+                        [sys.executable, '-c', decoder_source(), str(source), str(destination)],
+                        capture_output=True, text=True, check=False,
+                    )
+                    self.assertNotEqual(proc.returncode, 0)
+                    self.assertEqual(destination.read_bytes(), b'original')
+
     def test_wrong_api_shape_rejected(self):
         record = self.fixture()
         record['type'] = 'dir'
