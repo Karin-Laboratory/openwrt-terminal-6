@@ -121,7 +121,7 @@ def check_tree(root):
         require(path.name.lower() != "authorized_keys",
                 "UNPROVISIONED_AUTHORIZED_KEYS")
         require(not any(token in rel.lower() for token in
-                ("dropbear_rsa_host_key", "dropbear_ed25519_host_key", "dropbear_ecdsa_host_key", "calibration", "eeprom.bin")),
+                ("dropbear_rsa_host_key", "dropbear_ed25519_host_key", "dropbear_ecdsa_host_key", "ssh_host_", "calibration", "eeprom.bin")),
                 "CREDENTIAL_OR_CALIBRATION")
     require(not (root / "etc").is_symlink(), "AUTOSTART_PARENT_SYMLINK")
     rc = root / "etc/rc.d"
