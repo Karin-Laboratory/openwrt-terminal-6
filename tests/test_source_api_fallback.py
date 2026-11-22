@@ -113,6 +113,21 @@ class ContentsFallbackTests(unittest.TestCase):
                     self.assertNotEqual(proc.returncode, 0)
                     self.assertEqual(destination.read_bytes(), b'original')
 
+    def test_malformed_json_rejected_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / 'record.json'
+            destination = Path(tmp) / 'source.c'
+            destination.write_bytes(b'original')
+            for raw in ('{', '[]', 'null', '{"size": 1,}'):
+                with self.subTest(raw=raw):
+                    source.write_text(raw, encoding='utf-8')
+                    proc = subprocess.run(
+                        [sys.executable, '-c', decoder_source(), str(source), str(destination)],
+                        capture_output=True, text=True, check=False,
+                    )
+                    self.assertNotEqual(proc.returncode, 0)
+                    self.assertEqual(destination.read_bytes(), b'original')
+
     def test_wrong_api_shape_rejected(self):
         record = self.fixture()
         record['type'] = 'dir'
