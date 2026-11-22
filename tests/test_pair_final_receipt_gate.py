@@ -121,5 +121,24 @@ class FinalReceiptGateTests(unittest.TestCase):
         self.assertNotEqual(self.run_gate().returncode, 0)
 
 
+    def test_missing_receipt(self):
+        self.receipt.unlink()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_truncated_receipt_json(self):
+        self.receipt.write_text('{"status":', encoding="utf-8")
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_missing_p25_digest(self):
+        del self.data["p25_sha256"]
+        self.save()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_p26_digest_uppercase(self):
+        self.data["p26_sha256"] = self.data["p26_sha256"].upper()
+        self.save()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
