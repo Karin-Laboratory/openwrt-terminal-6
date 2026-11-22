@@ -71,6 +71,29 @@ class ContentsFallbackTests(unittest.TestCase):
         self.assertNotEqual(status, 0)
         self.assertEqual(output, b'original')
 
+    def test_same_length_tampering_rejected_without_overwrite(self):
+        record = self.fixture()
+        record['content'] = base64.b64encode(b'X' * record['size']).decode()
+        status, output = self.run_decoder(record)
+        self.assertNotEqual(status, 0)
+        self.assertEqual(output, b'original')
+
+    def test_invalid_base64_padding_rejected_without_overwrite(self):
+        record = self.fixture()
+        record['content'] = record['content'].rstrip('=')
+        status, output = self.run_decoder(record)
+        self.assertNotEqual(status, 0)
+        self.assertEqual(output, b'original')
+
+    def test_missing_metadata_rejected_without_overwrite(self):
+        for field in ('size', 'sha', 'content', 'encoding'):
+            with self.subTest(field=field):
+                record = self.fixture()
+                del record[field]
+                status, output = self.run_decoder(record)
+                self.assertNotEqual(status, 0)
+                self.assertEqual(output, b'original')
+
     def test_wrong_api_shape_rejected(self):
         record = self.fixture()
         record['type'] = 'dir'
