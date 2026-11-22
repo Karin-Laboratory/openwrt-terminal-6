@@ -49,6 +49,9 @@ def check_tree(root):
         item = root / name
         require(item.is_file() and not item.is_symlink() and item.stat().st_size > 0,
                 "MISSING_" + name.replace("/", "_").upper())
+        if name != "etc/shadow":
+            require(stat.S_IMODE(item.stat().st_mode) & 0o111 != 0,
+                    "NOT_EXECUTABLE_" + name.replace("/", "_").upper())
     # Never ship a readable password database even when root is locked.
     shadow_mode = stat.S_IMODE((root / "etc/shadow").stat().st_mode)
     require(shadow_mode & 0o177 == 0,
