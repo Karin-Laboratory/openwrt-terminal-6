@@ -46,10 +46,25 @@ jobs:
                 --output "$tmp/github-content.json"
               python3 - "$tmp/github-content.json" "$destination" <<'PY'
           import base64, json, pathlib, sys
-          record = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          def unique_keys(pairs):
+              result = {}
+              for key, value in pairs:
+                  if key in result:
+                      raise ValueError(f"Duplicate GitHub Contents API key: {key}")
+                  result[key] = value
+              return result
+          record = json.loads(pathlib.Path(sys.argv[1]).read_text(), object_pairs_hook=unique_keys)
           if record.get("encoding") != "base64" or record.get("type") != "file":
               raise SystemExit("Unexpected GitHub Contents API shape")
-          pathlib.Path(sys.argv[2]).write_bytes(base64.b64decode(record["content"], validate=False))
+          import hashlib
+          # GitHub Contents API wraps base64 at 60/76 columns; strip only CR/LF.
+          payload = base64.b64decode(record["content"].replace("\n", "").replace("\r", ""), validate=True)
+          if record.get("size") != len(payload):
+              raise SystemExit("GitHub Contents API size mismatch")
+          blob_sha = hashlib.sha1(b"blob " + str(len(payload)).encode() + b"\0" + payload).hexdigest()
+          if record.get("sha") != blob_sha:
+              raise SystemExit("GitHub Contents API blob SHA mismatch")
+          pathlib.Path(sys.argv[2]).write_bytes(payload)
           PY
             fi
           done

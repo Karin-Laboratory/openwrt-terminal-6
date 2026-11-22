@@ -463,6 +463,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_source_api_fallback.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "dc281ba60d787e6ecb151bedbd7ca7e4beb9acea",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_source_catalog.py",
       "component": "kernel",
       "origin": "independent-original",
