@@ -140,5 +140,25 @@ class FinalReceiptGateTests(unittest.TestCase):
         self.assertNotEqual(self.run_gate().returncode, 0)
 
 
+    def test_p25_digest_wrong_type(self):
+        self.data["p25_sha256"] = ["0" * 64]
+        self.save()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_p26_digest_null(self):
+        self.data["p26_sha256"] = None
+        self.save()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_receipt_directory(self):
+        self.receipt.unlink()
+        self.receipt.mkdir()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
+    def test_p25_directory(self):
+        self.p25.unlink()
+        self.p25.mkdir()
+        self.assertNotEqual(self.run_gate().returncode, 0)
+
 if __name__ == "__main__":
     unittest.main()
