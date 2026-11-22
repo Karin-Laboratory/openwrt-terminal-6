@@ -37,6 +37,9 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests -p 'test_mt6990_native_subtarget.py' -v
+          # Syntax gate before expensive native compilation.
+          bash -n scripts/manufacture-public-openwrt-p25-from-debian14.sh
+          echo 'PUBLIC_PAIR_ORCHESTRATOR_SHELL_SYNTAX_PASS'
           python3 tools/build/verify_source_catalog.py
       - name: Pin clean upstream OpenWrt and register noninstallable target
         shell: bash
