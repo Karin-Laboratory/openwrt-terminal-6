@@ -265,7 +265,7 @@ jobs:
             -size +0c -print)
           if test "${#native_images[@]}" -ne 1; then
             echo "Expected exactly one native MT6990 Image; found ${#native_images[@]}" >&2
-            printf '%s\\n' "${native_images[@]}" >&2
+            printf '%s\n' "${native_images[@]}" >&2
             exit 1
           fi
           kernel="${native_images[0]%/arch/arm64/boot/Image}"
