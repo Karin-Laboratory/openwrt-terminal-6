@@ -51,7 +51,7 @@ def check_tree(root):
                 "MISSING_" + name.replace("/", "_").upper())
     # Never ship a readable password database even when root is locked.
     shadow_mode = stat.S_IMODE((root / "etc/shadow").stat().st_mode)
-    require(shadow_mode & 0o077 == 0,
+    require(shadow_mode & 0o177 == 0,
             "SHADOW_PERMISSIONS_UNSAFE")
     shadow = (root / "etc/shadow").read_text()
     rows = [line for line in shadow.splitlines() if line.startswith("root:")]
