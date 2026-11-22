@@ -31,6 +31,17 @@ cpio_sha_before="$(sha256sum "$cpio" | cut -d ' ' -f 1)"
 producer_sha_before="$(sha256sum "$producer" | cut -d ' ' -f 1)"
 independent_sha_before="$(sha256sum "$independent" | cut -d ' ' -f 1)"
 mkdir -m 0700 "$out"
+# A receipt is evidence of full acceptance, not just verifier completion.
+# Later checks can still fail (external input mutation, size, final readback).
+# Never leave a success-shaped receipt behind after any nonzero exit.
+pair_receipt="$out/unsigned-pair/same-run-p25-p26-receipt.json"
+cleanup_failed_receipt() {
+  local status=$?
+  if (( status != 0 )); then
+    rm -f -- "$pair_receipt"
+  fi
+}
+trap cleanup_failed_receipt EXIT
 # Pin the PUBLIC Debian PR14 source, then let its independent 17-blob source
 # manifest verify every MT6990 donor input. No private source import.
 pin=e05811f8d4d3ee2606f44f27218ef59132a39a5f
