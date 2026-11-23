@@ -190,6 +190,44 @@ class ImageReadbackTests(unittest.TestCase):
         self.assertEqual(verifier.call_count, 4)
         self.assertIn("REPRO_IMAGE_FULL_READBACK_PASS", output.getvalue())
 
+    def test_readback_is_bounded_to_expected_size(self):
+        # Even a file that grows while being read must not cause an
+        # unbounded stream of full-size reads.
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "image"
+            payload = b"x" * (2 * 1024 * 1024)
+            path.write_bytes(payload)
+            original_fdopen = os.fdopen
+            requests = []
+
+            class TrackedStream:
+                def __init__(self, wrapped):
+                    self.wrapped = wrapped
+
+                def __enter__(self):
+                    self.wrapped.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.wrapped.__exit__(*args)
+
+                def fileno(self):
+                    return self.wrapped.fileno()
+
+                def read(self, size=-1):
+                    requests.append(size)
+                    return self.wrapped.read(size)
+
+            def tracking_fdopen(fd, mode):
+                return TrackedStream(original_fdopen(fd, mode))
+
+            with mock.patch.object(pair.os, "fdopen", side_effect=tracking_fdopen):
+                self.assertEqual(
+                    pair.verify_image(str(path), hashlib.sha256(payload).hexdigest(), len(payload)),
+                    hashlib.sha256(payload).hexdigest(),
+                )
+            self.assertEqual(requests, [1024 * 1024, 1024 * 1024, 1])
+
     def test_corruption_and_size(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "image"
