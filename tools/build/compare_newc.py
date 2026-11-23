@@ -76,6 +76,15 @@ def entries(path):
     return result
 
 
+def file_sha256(path):
+    """Hash complete archive bytes, including trailer padding."""
+    digest = hashlib.sha256()
+    with open(path, 'rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def compare(a, b):
     left, right = entries(a), entries(b)
     la = {e['name']: e for e in left}
@@ -90,7 +99,7 @@ def compare(a, b):
             changes.append({'path': name, 'fields': changed})
     order_a = [e['name'] for e in left]
     order_b = [e['name'] for e in right]
-    return {'entries_a': len(left), 'entries_b': len(right), 'order_matches': order_a == order_b, 'changed': changes}
+    return {'entries_a': len(left), 'entries_b': len(right), 'order_matches': order_a == order_b, 'changed': changes, 'byte_identical': file_sha256(a) == file_sha256(b)}
 
 
 def main():
@@ -103,7 +112,7 @@ def main():
     except (OSError, ValueError) as exc:
         p.exit(2, f'NEWC_INVALID: {exc}\n')
     print(json.dumps(result, ensure_ascii=True, indent=2))
-    return 1 if result['changed'] or not result['order_matches'] else 0
+    return 1 if result['changed'] or not result['order_matches'] or not result['byte_identical'] else 0
 
 
 if __name__ == '__main__':
