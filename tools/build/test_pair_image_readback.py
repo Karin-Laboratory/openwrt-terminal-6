@@ -153,6 +153,43 @@ class ImageReadbackTests(unittest.TestCase):
         self.assertIn("all four image paths", stderr.getvalue())
         loader.assert_not_called()
 
+    def test_require_images_rejects_receipt_only_invocation(self):
+        import contextlib
+        import io
+        import sys
+        with (
+            mock.patch.object(sys, "argv", ["compare", "receipt-a", "receipt-b", "--require-images"]),
+            mock.patch.object(pair, "load_with_identity") as loader,
+            contextlib.redirect_stderr(io.StringIO()) as stderr,
+        ):
+            with self.assertRaises(SystemExit) as caught:
+                pair.main()
+        self.assertEqual(caught.exception.code, 2)
+        self.assertIn("--require-images requires all four image paths", stderr.getvalue())
+        loader.assert_not_called()
+
+    def test_require_images_accepts_four_distinct_verified_images(self):
+        import contextlib
+        import io
+        import sys
+        receipt = {field: "a" * 64 for field in pair.FIELDS}
+        args = ["compare", "receipt-a", "receipt-b", "--require-images",
+                "--p25-a", "p25-a", "--p25-b", "p25-b",
+                "--p26-a", "p26-a", "--p26-b", "p26-b"]
+        identities = iter([(1, 1), (1, 2), (1, 3), (1, 4)])
+        with (
+            mock.patch.object(sys, "argv", args),
+            mock.patch.object(pair, "load_with_identity", side_effect=[
+                (receipt, (2, 1)), (receipt.copy(), (2, 2))
+            ]),
+            mock.patch.object(pair, "verify_image",
+                              side_effect=lambda *a, **k: ("a" * 64, next(identities))) as verifier,
+            contextlib.redirect_stdout(io.StringIO()) as output,
+        ):
+            self.assertEqual(pair.main(), 0)
+        self.assertEqual(verifier.call_count, 4)
+        self.assertIn("REPRO_IMAGE_FULL_READBACK_PASS", output.getvalue())
+
     def test_corruption_and_size(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "image"
