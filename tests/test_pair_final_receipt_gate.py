@@ -86,6 +86,36 @@ class FinalReceiptGateTests(unittest.TestCase):
         self.receipt.symlink_to(target)
         self.assertNotEqual(self.run_gate().returncode, 0)
 
+    def test_replaced_p25_path_rejected(self):
+        # Simulate replacement during the final digest without racing timing:
+        # monkeypatch the stream read to atomically replace the pathname.
+        gate = final_gate()
+        injection = """
+import builtins
+_original_open = os.open
+_original_fdopen = os.fdopen
+_replaced = False
+def _swap_fdopen(fd, *args, **kwargs):
+    global _replaced
+    if not _replaced:
+        _replaced = True
+        replacement = p25.with_name("replacement-p25")
+        replacement.write_bytes(p25.read_bytes())
+        os.replace(replacement, p25)
+    return _original_fdopen(fd, *args, **kwargs)
+os.fdopen = _swap_fdopen
+"""
+        # Insert just before the image digest loop, after receipt validation.
+        anchor = 'for path, field in ((p25, "p25_sha256"), (p26, "p26_sha256")):'
+        self.assertIn(anchor, gate)
+        gate = gate.replace(anchor, injection + "\\n" + anchor, 1)
+        result = subprocess.run(
+            ["python3", "-", str(self.p25), str(self.p26), str(self.receipt)],
+            input=gate, text=True, capture_output=True, check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_REPLACED_p25_sha256", result.stderr)
+
     def test_image_symlink(self):
         target = self.base / "target.bin"
         self.p25.rename(target)
