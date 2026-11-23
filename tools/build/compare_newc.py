@@ -43,8 +43,12 @@ def entries(path):
             if name == b'TRAILER!!!\0':
                 if size != 0:
                     raise ValueError('nonempty trailer')
-                if f.read().strip(b'\0'):
-                    raise ValueError('nonzero bytes after trailer')
+                while True:
+                    tail = f.read(1024 * 1024)
+                    if not tail:
+                        break
+                    if tail.strip(b'\0'):
+                        raise ValueError('nonzero bytes after trailer')
                 break
             digest = hashlib.sha256()
             remaining = size
