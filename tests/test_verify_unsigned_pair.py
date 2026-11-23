@@ -160,6 +160,25 @@ class PairTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "OUTPUT_EXISTS"):
             self.run_pair()
 
+    def test_output_symlink_swap_at_open_rejected(self):
+        # An attacker may create the destination symlink after the initial
+        # out.exists()/is_symlink() checks, immediately before os.open().
+        # O_NOFOLLOW must reject it without touching the symlink target.
+        victim = self.base / "victim.txt"
+        victim.write_text("unchanged")
+        real_open = pair.os.open
+
+        def swap_at_creation(path, flags, *args, **kwargs):
+            if Path(path) == self.out and flags & os.O_CREAT:
+                self.out.symlink_to(victim)
+            return real_open(path, flags, *args, **kwargs)
+
+        with patch.object(pair.os, "open", side_effect=swap_at_creation):
+            with self.assertRaises(OSError):
+                self.run_pair()
+        self.assertTrue(self.out.is_symlink())
+        self.assertEqual(victim.read_text(), "unchanged")
+
     def test_receipt_sync_failure_removes_partial_evidence(self):
         # The first fsync targets the receipt file; rollback must sync its
         # parent directory after unlinking the incomplete receipt.
