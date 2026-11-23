@@ -103,6 +103,13 @@ jobs:
         independent_run: [A, B]
     runs-on: ubuntu-24.04
     timeout-minutes: 180
+    # Pin build-time identity for both independent matrix workers. This is
+    # a reproducibility input, not proof that kernel/rootfs bytes now match.
+    env:
+      SOURCE_DATE_EPOCH: '0'
+      KBUILD_BUILD_TIMESTAMP: 'Thu Jan  1 00:00:00 UTC 1970'
+      KBUILD_BUILD_USER: openwrt
+      KBUILD_BUILD_HOST: reproducible
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
