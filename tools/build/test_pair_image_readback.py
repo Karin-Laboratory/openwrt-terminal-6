@@ -200,6 +200,62 @@ class ImageReadbackTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pair.verify_image(str(path), hashlib.sha256(b"abce").hexdigest(), 4)
 
+    def test_bounded_read_never_requests_more_than_remaining_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "image"
+            payload = b"x" * (1024 * 1024 + 7)
+            path.write_bytes(payload)
+            expected = hashlib.sha256(payload).hexdigest()
+            original_fdopen = pair.os.fdopen
+            requests = []
+
+            class RecordingStream:
+                def __init__(self, stream):
+                    self.stream = stream
+
+                def __enter__(self):
+                    self.stream.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.stream.__exit__(*args)
+
+                def fileno(self):
+                    return self.stream.fileno()
+
+                def read(self, size=-1):
+                    requests.append(size)
+                    return self.stream.read(size)
+
+            def recording_fdopen(fd, mode):
+                return RecordingStream(original_fdopen(fd, mode))
+
+            with mock.patch.object(pair.os, "fdopen", side_effect=recording_fdopen):
+                self.assertEqual(pair.verify_image(path, expected, len(payload)), expected)
+            self.assertEqual(requests, [1024 * 1024, 7, 1])
+
+    def test_append_after_initial_stat_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "image"
+            payload = b"stable image"
+            path.write_bytes(payload)
+            original_fstat = pair.os.fstat
+            calls = 0
+
+            def append_after_initial_stat(fd):
+                nonlocal calls
+                calls += 1
+                result = original_fstat(fd)
+                if calls == 1:
+                    with path.open("ab") as out:
+                        out.write(b"!")
+                return result
+
+            with mock.patch.object(pair.os, "fstat", side_effect=append_after_initial_stat):
+                with self.assertRaisesRegex(ValueError, "grew beyond expected size"):
+                    pair.verify_image(path, hashlib.sha256(payload).hexdigest(), len(payload))
+            self.assertEqual(calls, 1)
+
     def test_symlink_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "image"
