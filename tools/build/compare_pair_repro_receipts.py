@@ -135,7 +135,7 @@ def main():
             ):
                 verify_image(path, receipt[field], size)
         except (OSError, ValueError) as exc:
-            parser.exit(2, "REPRO_IMAGE_INVALID: " + str(exc) + "\\n")
+            parser.exit(2, "REPRO_IMAGE_INVALID: " + str(exc) + "\n")
         print("REPRO_IMAGE_FULL_READBACK_PASS")
     differences = compare(a, b)
     for field in FIELDS:
@@ -143,7 +143,7 @@ def main():
     if differences:
         print("REPRO_RECEIPT_MISMATCH: " + ",".join(differences))
         return 1
-    print("REPRO_RECEIPT_HASHES_MATCH; independent byte verification remains required")
+    print("REPRO_RECEIPT_HASHES_MATCH; " + ("local image readback verified" if all(image_paths) else "independent byte verification remains required"))
     return 0
 
 
