@@ -41,6 +41,10 @@ def entries(path):
             if f.read(padding) != b'\0' * padding:
                 raise ValueError(f'invalid name padding at {offset}')
             if name == b'TRAILER!!!\0':
+                if header[:6] == b'070702' and item['check'] != 0:
+                    raise ValueError('nonzero trailer CRC')
+                if header[:6] == b'070701' and item['check'] != 0:
+                    raise ValueError('nonzero trailer checksum')
                 if size != 0:
                     raise ValueError('nonempty trailer')
                 while True:
@@ -51,13 +55,20 @@ def entries(path):
                         raise ValueError('nonzero bytes after trailer')
                 break
             digest = hashlib.sha256()
+            checksum = 0
             remaining = size
             while remaining:
                 chunk = f.read(min(1024*1024, remaining))
                 if not chunk:
                     raise ValueError(f'truncated payload at {offset}')
                 digest.update(chunk)
+                if header[:6] == b'070702':
+                    checksum = (checksum + sum(chunk)) & 0xffffffff
                 remaining -= len(chunk)
+            if header[:6] == b'070702' and checksum != item['check']:
+                raise ValueError(f'newc CRC mismatch at {offset}')
+            if header[:6] == b'070701' and item['check'] != 0:
+                raise ValueError(f'nonzero checksum in non-CRC newc at {offset}')
             padding = align4(f.tell()) - f.tell()
             if f.read(padding) != b'\0' * padding:
                 raise ValueError(f'invalid payload padding at {offset}')
