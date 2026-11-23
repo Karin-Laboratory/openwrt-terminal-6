@@ -21,5 +21,7 @@ jobs:
           persist-credentials: false
       - name: Run offline receipt comparator regression
         run: python3 -m unittest discover -s tests -p 'test_compare_pair_repro_receipts.py' -v
+      - name: Run full-image readback regression (synthetic bytes only)
+        run: python3 -m unittest discover -s tools/build -p 'test_pair_image_readback.py' -v
       - name: Verify source catalog
         run: python3 tools/build/verify_source_catalog.py
