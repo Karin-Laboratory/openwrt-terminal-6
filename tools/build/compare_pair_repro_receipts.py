@@ -5,6 +5,7 @@ Origin: independently authored for this repository; SPDX-License-Identifier: MIT
 This is a metadata gate, not proof of matching underlying image bytes.
 """
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -79,11 +80,44 @@ def compare(a, b):
     return [field for field in FIELDS if a[field] != b[field]]
 
 
+def verify_image(path, expected_digest, expected_size):
+    """Read the entire local image, rejecting symlinks and truncated files."""
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) |
+                 getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(fd, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size != expected_size:
+            raise ValueError("image is not a regular file of expected size")
+        digest = hashlib.sha256()
+        count = 0
+        while True:
+            chunk = stream.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+            count += len(chunk)
+        after = os.fstat(stream.fileno())
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+                before.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size,
+                                         after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError("image changed during read")
+        if count != expected_size or digest.hexdigest() != expected_digest:
+            raise ValueError("image bytes do not match receipt")
+    return digest.hexdigest()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("workspace_a")
     parser.add_argument("workspace_b")
+    parser.add_argument("--p25-a")
+    parser.add_argument("--p25-b")
+    parser.add_argument("--p26-a")
+    parser.add_argument("--p26-b")
     args = parser.parse_args()
+    image_paths = (args.p25_a, args.p25_b, args.p26_a, args.p26_b)
+    if any(image_paths) and not all(image_paths):
+        parser.error("all four image paths are required for byte verification")
     try:
         a, identity_a = load_with_identity(args.workspace_a)
         b, identity_b = load_with_identity(args.workspace_b)
@@ -91,6 +125,18 @@ def main():
             raise ValueError("workspace A and B must be different receipt files")
     except (OSError, UnicodeError, ValueError, RecursionError) as exc:
         parser.exit(2, "REPRO_RECEIPT_INVALID: " + str(exc) + "\n")
+    if all(image_paths):
+        try:
+            for path, receipt, field, size in (
+                (args.p25_a, a, "p25_sha256", 32 * 1024 * 1024),
+                (args.p25_b, b, "p25_sha256", 32 * 1024 * 1024),
+                (args.p26_a, a, "p26_sha256", 128 * 1024 * 1024),
+                (args.p26_b, b, "p26_sha256", 128 * 1024 * 1024),
+            ):
+                verify_image(path, receipt[field], size)
+        except (OSError, ValueError) as exc:
+            parser.exit(2, "REPRO_IMAGE_INVALID: " + str(exc) + "\\n")
+        print("REPRO_IMAGE_FULL_READBACK_PASS")
     differences = compare(a, b)
     for field in FIELDS:
         print("REPRO_" + field.upper() + "=" + ("DIFF" if field in differences else "MATCH"))
