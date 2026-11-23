@@ -35,7 +35,7 @@ def entries(path):
             if not 1 <= namesize <= 4096:
                 raise ValueError(f'invalid name length at {offset}')
             name = f.read(namesize)
-            if len(name) != namesize or not name.endswith(b'\0'):
+            if len(name) != namesize or not name.endswith(b'\0') or b'\0' in name[:-1]:
                 raise ValueError(f'invalid name at {offset}')
             padding = align4(f.tell()) - f.tell()
             if f.read(padding) != b'\0' * padding:
