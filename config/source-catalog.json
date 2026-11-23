@@ -355,6 +355,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_compare_pair_repro_receipts.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "29fa6c4194a6df416057ec230eee56bb41e30936",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_feed_git_objects.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -562,6 +571,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/build/compare_pair_repro_receipts.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "917cbadac0928eea676b348e2c190ae612ed6f0a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/build/mt6990-target/mt6990.mk",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -585,6 +603,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "b7a647c77b34884b4c04a4f8a08c4b420cb7fc28",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/test_pair_image_readback.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "b54db779f535a65fce8aa06efd783eecfcb49905",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -674,7 +701,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "f549fa4ebf28a18b8c53ce7dda5848990fcdda8d",
+      "git_blob_sha1": "f814eb12e0da00e03e0479d5d7b33ffb3d337093",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
