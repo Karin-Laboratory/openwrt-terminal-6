@@ -562,6 +562,24 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/build/tests/test_compare_newc_crc.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "1e7022f27bc40bbc5afd9bdab1d2f23dac8e8f55",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/compare_newc.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "8a242ee47a8df4fbfdcc6c698cb350f3d4b91519",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/build/mt6990-target/mt6990.mk",
       "component": "openwrt-userland",
       "origin": "independent-original",
