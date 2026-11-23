@@ -112,12 +112,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("workspace_a")
     parser.add_argument("workspace_b")
+    parser.add_argument("--require-images", action="store_true",
+                        help="fail closed unless all four P25/P26 image paths are supplied")
     parser.add_argument("--p25-a")
     parser.add_argument("--p25-b")
     parser.add_argument("--p26-a")
     parser.add_argument("--p26-b")
     args = parser.parse_args()
     image_paths = (args.p25_a, args.p25_b, args.p26_a, args.p26_b)
+    if args.require_images and not all(image_paths):
+        parser.error("--require-images requires all four image paths")
     if any(image_paths) and not all(image_paths):
         parser.error("all four image paths are required for byte verification")
     try:
