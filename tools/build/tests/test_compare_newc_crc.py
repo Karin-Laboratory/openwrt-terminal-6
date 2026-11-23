@@ -55,6 +55,14 @@ class ChecksumTests(unittest.TestCase):
             b.write_bytes(payload)
             self.assertTrue(mod.compare(a, b)["byte_identical"])
 
+    def test_nonhex_header_field_rejected(self):
+        original = record("hello", b"abc")
+        for invalid in (b" ", b"+", b"g"):
+            with self.subTest(invalid=invalid):
+                malformed = original[:6] + invalid + original[7:]
+                with self.assertRaisesRegex(ValueError, "invalid newc field"):
+                    self.parse(malformed)
+
     def test_valid_crc(self):
         self.assertEqual(self.parse(record("hello", b"abc", crc=True))[0]["filesize"], 3)
 
