@@ -80,7 +80,7 @@ def compare(a, b):
     return [field for field in FIELDS if a[field] != b[field]]
 
 
-def verify_image(path, expected_digest, expected_size):
+def verify_image(path, expected_digest, expected_size, return_identity=False):
     """Read the entire local image, rejecting symlinks and truncated files."""
     fd = os.open(path, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) |
                  getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
@@ -103,6 +103,8 @@ def verify_image(path, expected_digest, expected_size):
             raise ValueError("image changed during read")
         if count != expected_size or digest.hexdigest() != expected_digest:
             raise ValueError("image bytes do not match receipt")
+    if return_identity:
+        return (digest.hexdigest(), (before.st_dev, before.st_ino))
     return digest.hexdigest()
 
 
@@ -127,13 +129,17 @@ def main():
         parser.exit(2, "REPRO_RECEIPT_INVALID: " + str(exc) + "\n")
     if all(image_paths):
         try:
+            image_identities = {}
             for path, receipt, field, size in (
                 (args.p25_a, a, "p25_sha256", 32 * 1024 * 1024),
                 (args.p25_b, b, "p25_sha256", 32 * 1024 * 1024),
                 (args.p26_a, a, "p26_sha256", 128 * 1024 * 1024),
                 (args.p26_b, b, "p26_sha256", 128 * 1024 * 1024),
             ):
-                verify_image(path, receipt[field], size)
+                _, identity = verify_image(path, receipt[field], size, return_identity=True)
+                if identity in image_identities:
+                    raise ValueError("image paths must refer to four distinct files: " + image_identities[identity] + " and " + field)
+                image_identities[identity] = field
         except (OSError, ValueError) as exc:
             parser.exit(2, "REPRO_IMAGE_INVALID: " + str(exc) + "\n")
         print("REPRO_IMAGE_FULL_READBACK_PASS")
