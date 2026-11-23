@@ -219,9 +219,22 @@ jobs:
           # Unlike target/install it cannot produce a device boot/flash image.
           # CONFIG_SIGNED_PACKAGES=n prevents package-index signing.
           make -C "$work/openwrt" -j1 package/install
-          rootfs="$(find "$work/openwrt/build_dir" -maxdepth 3 \
-            -type d -name 'root-mediatek' -print -quit)"
-          test -n "$rootfs" && test -d "$rootfs"
+          # A stale second staging tree must not silently become the rootfs
+          # accepted by this job. Check find's status and require one match.
+          rootfs_candidates="$work/native-mt6990-rootfs-candidates.nul"
+          if ! find "$work/openwrt/build_dir" -maxdepth 3 \
+              -type d -name 'root-mediatek' -print0 > "$rootfs_candidates"; then
+            echo 'Native MT6990 rootfs discovery failed' >&2
+            exit 1
+          fi
+          mapfile -d '' -t staged_rootfs < "$rootfs_candidates"
+          if test "${#staged_rootfs[@]}" -ne 1; then
+            echo "Expected one staged native MT6990 rootfs; found ${#staged_rootfs[@]}" >&2
+            printf '%s\\n' "${staged_rootfs[@]}" >&2
+            exit 1
+          fi
+          rootfs="${staged_rootfs[0]}"
+          test -d "$rootfs"
           for executable in bin/busybox sbin/procd sbin/netifd \
                             sbin/ubusd sbin/uci usr/sbin/dropbear; do
             test -s "$rootfs/$executable" || {
