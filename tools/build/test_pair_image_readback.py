@@ -48,12 +48,17 @@ class ImageReadbackTests(unittest.TestCase):
                 "--p25-a", images[0], "--p25-b", images[1],
                 "--p26-a", images[2], "--p26-b", images[3]]
         identities = iter([(0, 1), (0, 1)])
-        with mock.patch.object(sys, "argv", args), \\
-             mock.patch.object(pair, "load_with_identity", side_effect=[
-                 (receipt, (1, 1)), (receipt, (1, 2))]), \\
-             mock.patch.object(pair, "verify_image",
-                               side_effect=lambda *a, **k: ("a" * 64, next(identities))), \\
-             contextlib.redirect_stderr(io.StringIO()) as stderr:
+        with (
+            mock.patch.object(sys, "argv", args),
+            mock.patch.object(pair, "load_with_identity", side_effect=[
+                (receipt, (1, 1)), (receipt, (1, 2))
+            ]),
+            mock.patch.object(
+                pair, "verify_image",
+                side_effect=lambda *a, **k: ("a" * 64, next(identities)),
+            ),
+            contextlib.redirect_stderr(io.StringIO()) as stderr,
+        ):
             with self.assertRaises(SystemExit) as caught:
                 pair.main()
         self.assertEqual(caught.exception.code, 2)
