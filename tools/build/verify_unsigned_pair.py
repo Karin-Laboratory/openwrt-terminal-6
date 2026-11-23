@@ -133,6 +133,9 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     require(isinstance(cfg, dict), "P25_CONFIG_NOT_OBJECT")
     require(cfg.get("ramdisk_mode") == "kernel_embedded",
             "RC14_PROFILE_REQUIRES_KERNEL_EMBEDDED_INITRAMFS")
+    # Pin the ELF used by the initramfs verifier as well as its derived Image.
+    # A late vmlinux replacement must not produce a receipt for mixed inputs.
+    vmlinux_hash = digest(vmlinux)
     init_check = initramfs_verify or initramfs_verifier().verify
     initramfs_result = init_check(initramfs_object, vmlinux, image, kernel,
                                   cpio, "xz")
@@ -217,6 +220,8 @@ def verify_pair(p25, kernel, ramdisk, dtb, config, p26, producer,
     }
     # The linked kernel artifacts are attested earlier. Reject a later edit
     # before recording their identities in the same-run receipt.
+    require(digest(vmlinux) == vmlinux_hash,
+            "VMLINUX_CHANGED_BEFORE_RECEIPT")
     require(digest(kernel) == initramfs_result["kernel_gzip_sha256"],
             "KERNEL_GZIP_CHANGED_BEFORE_RECEIPT")
     require(digest(image) == initramfs_result["kernel_image_sha256"],
