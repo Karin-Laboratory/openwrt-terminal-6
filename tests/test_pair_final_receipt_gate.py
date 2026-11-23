@@ -108,7 +108,7 @@ os.fdopen = _swap_fdopen
         # Insert just before the image digest loop, after receipt validation.
         anchor = 'for path, field in ((p25, "p25_sha256"), (p26, "p26_sha256")):'
         self.assertIn(anchor, gate)
-        gate = gate.replace(anchor, injection + "\\n" + anchor, 1)
+        gate = gate.replace(anchor, injection + "\n" + anchor, 1)
         result = subprocess.run(
             ["python3", "-", str(self.p25), str(self.p26), str(self.receipt)],
             input=gate, text=True, capture_output=True, check=False,
