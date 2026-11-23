@@ -429,6 +429,9 @@ jobs:
           print("PUBLIC_P26_PREPACK_TREE_METADATA_ONLY_SHA256=" + metadata_only.hexdigest())
           print("PUBLIC_P26_PREPACK_TREE_WITH_MTIME_SHA256=" + with_times.hexdigest())
           PY
+          # Deterministic path-hash buckets locate content drift without logging paths.
+          # Run under the same fakeroot state as the aggregate pre-pack check.
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 "$GITHUB_WORKSPACE/tools/build/repro_buckets.py" "$rootfs"
           # Produce an ephemeral real p26 from THIS job's actual package/install
           # root, then independently read back its full 128 MiB and filesystem.
           # No Actions artifact, cache, release, signing, or device interaction.
