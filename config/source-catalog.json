@@ -535,6 +535,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_repro_buckets.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "58ad26d32d7b6bc515d0e5fdb9c7b1652f86605c",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_sba6d_stage10_clean_patch.py",
       "component": "modem-ethernet",
       "origin": "independent-original",
@@ -855,6 +864,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "aef90504ea5cd758bb2969fa3a8dee8e39e8609b",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/repro_buckets.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "6b0a07202d58413885f424d0ae498c6b95eb782b",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
