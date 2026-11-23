@@ -5,6 +5,7 @@ on:
     paths:
       - tools/build/compare_pair_repro_receipts.py
       - tests/test_compare_pair_repro_receipts.py
+      - tools/build/test_pair_image_readback.py
       - .github/workflows/compare-pair-repro-receipts.yml
       - config/source-catalog.json
       - tools/build/verify_source_catalog.py
