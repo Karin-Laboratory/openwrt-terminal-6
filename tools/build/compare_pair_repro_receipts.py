@@ -90,12 +90,16 @@ def verify_image(path, expected_digest, expected_size, return_identity=False):
             raise ValueError("image is not a regular file of expected size")
         digest = hashlib.sha256()
         count = 0
-        while True:
-            chunk = stream.read(1024 * 1024)
+        # Bound the read to the declared image size. A concurrently growing
+        # file must not keep the verifier reading indefinitely.
+        while count < expected_size:
+            chunk = stream.read(min(1024 * 1024, expected_size - count))
             if not chunk:
                 break
             digest.update(chunk)
             count += len(chunk)
+        if stream.read(1):
+            raise ValueError("image grew beyond expected size during read")
         after = os.fstat(stream.fileno())
         if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
                 before.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size,
