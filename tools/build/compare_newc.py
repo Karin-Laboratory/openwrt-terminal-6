@@ -25,6 +25,8 @@ def entries(path):
             header = f.read(110)
             if len(header) != 110 or header[:6] not in MAGIC:
                 raise ValueError(f'invalid newc header at offset {offset}')
+            if any(byte not in b'0123456789abcdefABCDEF' for byte in header[6:]):
+                raise ValueError(f'invalid newc field at {offset}')
             try:
                 values = [int(header[6+i*8:14+i*8], 16) for i in range(13)]
             except ValueError as exc:
