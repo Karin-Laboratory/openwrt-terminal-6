@@ -115,6 +115,44 @@ class ImageReadbackTests(unittest.TestCase):
         self.assertIn("REPRO_KERNEL_IMAGE_SHA256=DIFF", output.getvalue())
         self.assertIn("REPRO_RECEIPT_MISMATCH: kernel_image_sha256", output.getvalue())
 
+    def test_cli_rejects_reused_receipt_inode_before_image_reads(self):
+        import contextlib
+        import io
+        import sys
+        receipt = {field: "a" * 64 for field in pair.FIELDS}
+        args = ["compare", "receipt-a", "receipt-b",
+                "--p25-a", "p25-a", "--p25-b", "p25-b",
+                "--p26-a", "p26-a", "--p26-b", "p26-b"]
+        with (
+            mock.patch.object(sys, "argv", args),
+            mock.patch.object(pair, "load_with_identity", side_effect=[
+                (receipt, (2, 1)), (receipt.copy(), (2, 1))
+            ]),
+            mock.patch.object(pair, "verify_image") as verifier,
+            contextlib.redirect_stderr(io.StringIO()) as stderr,
+        ):
+            with self.assertRaises(SystemExit) as caught:
+                pair.main()
+        self.assertEqual(caught.exception.code, 2)
+        self.assertIn("different receipt files", stderr.getvalue())
+        verifier.assert_not_called()
+
+    def test_cli_rejects_incomplete_image_argument_set(self):
+        import contextlib
+        import io
+        import sys
+        with (
+            mock.patch.object(sys, "argv", ["compare", "receipt-a", "receipt-b",
+                                            "--p25-a", "p25-a"]),
+            mock.patch.object(pair, "load_with_identity") as loader,
+            contextlib.redirect_stderr(io.StringIO()) as stderr,
+        ):
+            with self.assertRaises(SystemExit) as caught:
+                pair.main()
+        self.assertEqual(caught.exception.code, 2)
+        self.assertIn("all four image paths", stderr.getvalue())
+        loader.assert_not_called()
+
     def test_corruption_and_size(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "image"
