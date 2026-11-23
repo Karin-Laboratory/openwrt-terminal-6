@@ -562,6 +562,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/build/compare_newc.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "6dabdfb6a4cf99be5a194b79807458c96e743b27",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/build/mt6990-target/mt6990.mk",
       "component": "openwrt-userland",
       "origin": "independent-original",
