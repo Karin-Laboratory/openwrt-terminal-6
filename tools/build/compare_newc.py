@@ -37,10 +37,14 @@ def entries(path):
             name = f.read(namesize)
             if len(name) != namesize or not name.endswith(b'\0'):
                 raise ValueError(f'invalid name at {offset}')
-            f.seek(align4(f.tell()))
+            padding = align4(f.tell()) - f.tell()
+            if f.read(padding) != b'\0' * padding:
+                raise ValueError(f'invalid name padding at {offset}')
             if name == b'TRAILER!!!\0':
                 if size != 0:
                     raise ValueError('nonempty trailer')
+                if f.read().strip(b'\0'):
+                    raise ValueError('nonzero bytes after trailer')
                 break
             digest = hashlib.sha256()
             remaining = size
@@ -50,7 +54,9 @@ def entries(path):
                     raise ValueError(f'truncated payload at {offset}')
                 digest.update(chunk)
                 remaining -= len(chunk)
-            f.seek(align4(f.tell()))
+            padding = align4(f.tell()) - f.tell()
+            if f.read(padding) != b'\0' * padding:
+                raise ValueError(f'invalid payload padding at {offset}')
             result.append({'name': os.fsdecode(name[:-1]), 'sha256': digest.hexdigest(), **item})
     return result
 
