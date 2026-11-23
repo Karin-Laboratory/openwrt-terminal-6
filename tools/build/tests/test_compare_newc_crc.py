@@ -34,6 +34,27 @@ class ChecksumTests(unittest.TestCase):
             path.write_bytes(blob + record("TRAILER!!!"))
             return mod.entries(path)
 
+    def test_trailer_padding_difference_is_not_byte_identical(self):
+        with tempfile.TemporaryDirectory() as d:
+            a = pathlib.Path(d) / "a.cpio"
+            b = pathlib.Path(d) / "b.cpio"
+            payload = record("hello", b"abc") + record("TRAILER!!!")
+            a.write_bytes(payload)
+            b.write_bytes(payload + b"\\0" * 512)
+            report = mod.compare(a, b)
+            self.assertEqual(report["changed"], [])
+            self.assertTrue(report["order_matches"])
+            self.assertFalse(report["byte_identical"])
+
+    def test_equal_complete_archives_are_byte_identical(self):
+        with tempfile.TemporaryDirectory() as d:
+            a = pathlib.Path(d) / "a.cpio"
+            b = pathlib.Path(d) / "b.cpio"
+            payload = record("hello", b"abc") + record("TRAILER!!!")
+            a.write_bytes(payload)
+            b.write_bytes(payload)
+            self.assertTrue(mod.compare(a, b)["byte_identical"])
+
     def test_valid_crc(self):
         self.assertEqual(self.parse(record("hello", b"abc", crc=True))[0]["filesize"], 3)
 
