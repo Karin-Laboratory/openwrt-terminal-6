@@ -24,6 +24,19 @@ class ImageReadbackTests(unittest.TestCase):
                 hashlib.sha256(payload).hexdigest(),
             )
 
+    def test_identity_from_verified_descriptor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "image"
+            alias = pathlib.Path(directory) / "alias"
+            payload = b"distinct image identity"
+            path.write_bytes(payload)
+            alias.hardlink_to(path)
+            expected = hashlib.sha256(payload).hexdigest()
+            first = pair.verify_image(str(path), expected, len(payload), return_identity=True)
+            second = pair.verify_image(str(alias), expected, len(payload), return_identity=True)
+            self.assertEqual(first, second)
+            self.assertEqual(first[0], expected)
+
     def test_corruption_and_size(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "image"
