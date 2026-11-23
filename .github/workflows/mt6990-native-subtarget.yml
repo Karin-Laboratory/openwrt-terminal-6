@@ -392,10 +392,10 @@ jobs:
                           for chunk in iter(lambda: stream.read(1048576), b""):
                               digest.update(chunk)
                       fields.append(digest.hexdigest())
-                  row = ("\\0".join(fields) + "\\n").encode("utf-8", "surrogateescape")
+                  row = ("\0".join(fields) + "\n").encode("utf-8", "surrogateescape")
                   stable.update(row)
                   with_times.update(row)
-                  with_times.update((str(info.st_mtime_ns) + "\\n").encode())
+                  with_times.update((str(info.st_mtime_ns) + "\n").encode())
                   count += 1
           print("PUBLIC_P26_PREPACK_TREE_ENTRY_COUNT=" + str(count))
           print("PUBLIC_P26_PREPACK_TREE_CONTENT_METADATA_SHA256=" + stable.hexdigest())
