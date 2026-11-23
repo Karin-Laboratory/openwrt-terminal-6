@@ -228,6 +228,46 @@ class ImageReadbackTests(unittest.TestCase):
                 )
             self.assertEqual(requests, [1024 * 1024, 1024 * 1024, 1])
 
+    def test_append_during_read_is_rejected(self):
+        # Simulate an image growing after the initial fstat but before EOF.
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "image"
+            payload = b"x" * (1024 * 1024)
+            path.write_bytes(payload)
+            original_fdopen = os.fdopen
+
+            class AppendingStream:
+                def __init__(self, wrapped):
+                    self.wrapped = wrapped
+                    self.appended = False
+
+                def __enter__(self):
+                    self.wrapped.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.wrapped.__exit__(*args)
+
+                def fileno(self):
+                    return self.wrapped.fileno()
+
+                def read(self, size=-1):
+                    chunk = self.wrapped.read(size)
+                    if not self.appended and size == len(payload):
+                        self.appended = True
+                        with path.open("ab") as writer:
+                            writer.write(b"unexpected trailing byte")
+                    return chunk
+
+            with mock.patch.object(
+                pair.os, "fdopen",
+                side_effect=lambda fd, mode: AppendingStream(original_fdopen(fd, mode)),
+            ):
+                with self.assertRaisesRegex(ValueError, "grew beyond expected size"):
+                    pair.verify_image(
+                        str(path), hashlib.sha256(payload).hexdigest(), len(payload)
+                    )
+
     def test_corruption_and_size(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "image"
