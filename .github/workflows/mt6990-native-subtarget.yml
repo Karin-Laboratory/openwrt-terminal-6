@@ -230,7 +230,7 @@ jobs:
           mapfile -d '' -t staged_rootfs < "$rootfs_candidates"
           if test "${#staged_rootfs[@]}" -ne 1; then
             echo "Expected one staged native MT6990 rootfs; found ${#staged_rootfs[@]}" >&2
-            printf '%s\\n' "${staged_rootfs[@]}" >&2
+            printf '%s\n' "${staged_rootfs[@]}" >&2
             exit 1
           fi
           rootfs="${staged_rootfs[0]}"
