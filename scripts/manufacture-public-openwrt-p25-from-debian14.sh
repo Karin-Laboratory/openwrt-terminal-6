@@ -177,7 +177,7 @@ python3 "$root/tools/build/verify_unsigned_pair.py" \
 # Size-only checks and printing hashes do not prove that the final bytes
 # still match the identities accepted by the independent verifier.
 python3 - "$p25" "$p26" "$out/unsigned-pair/same-run-p25-p26-receipt.json" <<'PY'
-import hashlib, json, pathlib, re, sys
+import hashlib, json, os, pathlib, re, stat, sys
 p25, p26, receipt_path = map(pathlib.Path, sys.argv[1:])
 # A final readback must inspect regular image files, not substituted symlinks,
 # directories or special files that can masquerade as valid paths.
@@ -207,9 +207,27 @@ if receipt.get("status") != "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED":
     raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_STATUS")
 for path, field in ((p25, "p25_sha256"), (p26, "p26_sha256")):
     digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
+    # Bind the readback to one opened inode and reject concurrent mutation.
+    # O_NOFOLLOW also prevents a symlink swap between path validation and open.
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode):
+            raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_NOT_REGULAR_" + field)
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        after = os.fstat(fd)
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+            before.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size,
+                                  after.st_mtime_ns, after.st_ctime_ns):
+            raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_CHANGED_DURING_READ_" + field)
+        # Also reject a rename/replacement of the pathname during readback.
+        current = path.lstat()
+        if (current.st_dev, current.st_ino) != (after.st_dev, after.st_ino):
+            raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_REPLACED_" + field)
+    finally:
+        os.close(fd)
     expected = receipt.get(field)
     if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
         raise SystemExit("PUBLIC_PAIR_BLOCKED_INVALID_RECEIPT_DIGEST_" + field)
