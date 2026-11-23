@@ -6,6 +6,7 @@ import os
 import pathlib
 import tempfile
 import unittest
+from unittest import mock
 
 MODULE = pathlib.Path(__file__).with_name("compare_pair_repro_receipts.py")
 spec = importlib.util.spec_from_file_location("pair_receipts", MODULE)
@@ -36,6 +37,27 @@ class ImageReadbackTests(unittest.TestCase):
             second = pair.verify_image(str(alias), expected, len(payload), return_identity=True)
             self.assertEqual(first, second)
             self.assertEqual(first[0], expected)
+
+    def test_cli_rejects_reused_image_inode(self):
+        import contextlib
+        import io
+        import sys
+        receipt = {field: "a" * 64 for field in pair.FIELDS}
+        images = ["p25-a", "p25-b", "p26-a", "p26-b"]
+        args = ["compare", "receipt-a", "receipt-b",
+                "--p25-a", images[0], "--p25-b", images[1],
+                "--p26-a", images[2], "--p26-b", images[3]]
+        identities = iter([(0, 1), (0, 1)])
+        with mock.patch.object(sys, "argv", args), \\
+             mock.patch.object(pair, "load_with_identity", side_effect=[
+                 (receipt, (1, 1)), (receipt, (1, 2))]), \\
+             mock.patch.object(pair, "verify_image",
+                               side_effect=lambda *a, **k: ("a" * 64, next(identities))), \\
+             contextlib.redirect_stderr(io.StringIO()) as stderr:
+            with self.assertRaises(SystemExit) as caught:
+                pair.main()
+        self.assertEqual(caught.exception.code, 2)
+        self.assertIn("four distinct files", stderr.getvalue())
 
     def test_corruption_and_size(self):
         with tempfile.TemporaryDirectory() as directory:
