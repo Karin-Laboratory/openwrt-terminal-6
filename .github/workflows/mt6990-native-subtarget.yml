@@ -390,6 +390,9 @@ jobs:
           root = Path(sys.argv[1])
           stable = hashlib.sha256()
           with_times = hashlib.sha256()
+          # Separate content drift from mode/owner/link drift without logging paths.
+          content_only = hashlib.sha256()
+          metadata_only = hashlib.sha256()
           count = 0
           for base, dirs, files in os.walk(root, followlinks=False):
               dirs.sort()
@@ -414,10 +417,16 @@ jobs:
                   row = ("\0".join(fields) + "\n").encode("utf-8", "surrogateescape")
                   stable.update(row)
                   with_times.update(row)
+                  # Preserve path identity in both projections to detect swaps.
+                  identity = fields[0].encode("utf-8", "surrogateescape") + b"\0"
+                  metadata_only.update(identity + ("\0".join(fields[1:5]) + "\n").encode("utf-8", "surrogateescape"))
+                  content_only.update(identity + ("\0".join(fields[5:]) + "\n").encode("utf-8", "surrogateescape"))
                   with_times.update((str(info.st_mtime_ns) + "\n").encode())
                   count += 1
           print("PUBLIC_P26_PREPACK_TREE_ENTRY_COUNT=" + str(count))
           print("PUBLIC_P26_PREPACK_TREE_CONTENT_METADATA_SHA256=" + stable.hexdigest())
+          print("PUBLIC_P26_PREPACK_TREE_CONTENT_ONLY_SHA256=" + content_only.hexdigest())
+          print("PUBLIC_P26_PREPACK_TREE_METADATA_ONLY_SHA256=" + metadata_only.hexdigest())
           print("PUBLIC_P26_PREPACK_TREE_WITH_MTIME_SHA256=" + with_times.hexdigest())
           PY
           # Produce an ephemeral real p26 from THIS job's actual package/install
