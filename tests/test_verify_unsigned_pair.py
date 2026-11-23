@@ -134,6 +134,23 @@ class PairTests(unittest.TestCase):
                 self.assertFalse(self.out.exists())
                 target.write_bytes(original)
 
+    def test_vmlinux_changed_after_initramfs_verification_rejected(self):
+        original = self.vmlinux.read_bytes()
+
+        def mutate_vmlinux(*args):
+            evidence = self.fake_initramfs(*args)
+            self.vmlinux.write_bytes(original + b"late-change")
+            return evidence
+
+        with self.assertRaisesRegex(ValueError, "VMLINUX_CHANGED_BEFORE_RECEIPT"):
+            pair.verify_pair(self.p25, *self.parts, self.p26,
+                             self.producer, self.independent, self.cpio,
+                             self.initramfs_object, self.vmlinux,
+                             self.image, self.out,
+                             p25_verify=self.fake_p25,
+                             initramfs_verify=mutate_vmlinux)
+        self.assertFalse(self.out.exists())
+
     def test_pair_identity_pass_and_refuse_overwrite(self):
         evidence = self.run_pair()
         self.assertEqual(evidence["status"], "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED")
