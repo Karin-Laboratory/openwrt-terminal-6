@@ -360,6 +360,47 @@ jobs:
           print("P26_SAME_RUN_PACKAGE_INSTALL_RECEIPT_READY",
                 len(packages), record["installed_db_sha256"])
           PY
+          # Pre-pack A/B diagnostic: isolate filesystem drift from SquashFS drift.
+          # Aggregate hashes only; no rootfs payloads or paths are published.
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 - "$rootfs" <<'PY'
+          import hashlib
+          import os
+          import stat
+          import sys
+          from pathlib import Path
+          root = Path(sys.argv[1])
+          stable = hashlib.sha256()
+          with_times = hashlib.sha256()
+          count = 0
+          for base, dirs, files in os.walk(root, followlinks=False):
+              dirs.sort()
+              files.sort()
+              for name in sorted(dirs + files):
+                  path = Path(base) / name
+                  info = path.lstat()
+                  kind = stat.S_IFMT(info.st_mode)
+                  if kind not in (stat.S_IFREG, stat.S_IFDIR, stat.S_IFLNK):
+                      raise SystemExit("P26_REPRO_UNSUPPORTED_FILE_TYPE")
+                  fields = [path.relative_to(root).as_posix(), str(kind),
+                            str(stat.S_IMODE(info.st_mode)), str(info.st_uid),
+                            str(info.st_gid)]
+                  if stat.S_ISLNK(info.st_mode):
+                      fields.append(os.readlink(path))
+                  elif stat.S_ISREG(info.st_mode):
+                      digest = hashlib.sha256()
+                      with path.open("rb") as stream:
+                          for chunk in iter(lambda: stream.read(1048576), b""):
+                              digest.update(chunk)
+                      fields.append(digest.hexdigest())
+                  row = ("\\0".join(fields) + "\\n").encode("utf-8", "surrogateescape")
+                  stable.update(row)
+                  with_times.update(row)
+                  with_times.update((str(info.st_mtime_ns) + "\\n").encode())
+                  count += 1
+          print("PUBLIC_P26_PREPACK_TREE_ENTRY_COUNT=" + str(count))
+          print("PUBLIC_P26_PREPACK_TREE_CONTENT_METADATA_SHA256=" + stable.hexdigest())
+          print("PUBLIC_P26_PREPACK_TREE_WITH_MTIME_SHA256=" + with_times.hexdigest())
+          PY
           # Produce an ephemeral real p26 from THIS job's actual package/install
           # root, then independently read back its full 128 MiB and filesystem.
           # No Actions artifact, cache, release, signing, or device interaction.
