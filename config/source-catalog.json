@@ -562,6 +562,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tools/build/tests/test_compare_newc_crc.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "c1a804b6e6d145748224afacc1fe438ea0164b78",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tools/build/compare_newc.py",
       "component": "kernel",
       "origin": "independent-original",
