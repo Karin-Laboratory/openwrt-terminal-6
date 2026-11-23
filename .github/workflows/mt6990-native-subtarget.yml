@@ -119,7 +119,15 @@ jobs:
         run: |
           set -euo pipefail
           pin=5799d2da76998be50432b0a3325b42713b4b619b
-          work="$(mktemp -d)"
+          # A/B workers must compile from the same absolute path: a random
+          # mktemp directory can enter debug paths and generated metadata.
+          # GitHub-hosted matrix workers have isolated filesystems; fail closed
+          # if this path unexpectedly exists rather than reusing stale bytes.
+          work=/tmp/sbat6-native-repro-build
+          if ! mkdir -- "$work"; then
+            echo 'P25_P26_REPRO_WORKSPACE_NOT_CLEAN' >&2
+            exit 1
+          fi
           trap 'rm -rf -- "$work"' EXIT
           git clone --quiet --no-checkout --filter=blob:none \
             https://github.com/openwrt/openwrt.git "$work/openwrt"
