@@ -151,6 +151,10 @@ jobs:
             printf '%s\n' "${compiled_images[@]}" >&2
             exit 1
           fi
+          # Bind the later PID1 gate to the exact Image bytes accepted here.
+          # Package installation must not silently replace the native kernel.
+          compiled_image_sha256="$(sha256sum "${compiled_images[0]}")"
+          compiled_image_sha256="${compiled_image_sha256%% *}"
           echo 'PUBLIC_MT6990_NATIVE_KERNEL_IMAGE_BUILD_PASS'
           # Now build the real package dependency closure with matching
           # OpenWrt kernel headers/modules metadata. No target/install.
@@ -273,6 +277,11 @@ jobs:
           # This avoids a second ambiguous filesystem scan and preserves
           # whitespace/newlines in kernel paths via the NUL-delimited result.
           kernel="${compiled_images[0]%/arch/arm64/boot/Image}"
+          if ! test -s "${compiled_images[0]}" || \
+             test "$(sha256sum "${compiled_images[0]}" | cut -d ' ' -f1)" != "$compiled_image_sha256"; then
+            echo 'Native MT6990 Image changed after initial compile acceptance' >&2
+            exit 1
+          fi
           if ! test -s "$kernel/arch/arm64/boot/Image"; then
             echo "Missing native MT6990 Image at $kernel" >&2
             exit 1
