@@ -1,0 +1,28 @@
+# Origin: independently authored; SPDX-License-Identifier: MIT.
+name: Compare unsigned pair build receipts (offline)
+on:
+  pull_request:
+    paths:
+      - tools/build/compare_pair_repro_receipts.py
+      - tests/test_compare_pair_repro_receipts.py
+      - tools/build/test_pair_image_readback.py
+      - .github/workflows/compare-pair-repro-receipts.yml
+      - config/source-catalog.json
+      - tools/build/verify_source_catalog.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  receipt-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Run offline receipt comparator regression
+        run: python3 -m unittest discover -s tests -p 'test_compare_pair_repro_receipts.py' -v
+      - name: Run full-image readback regression (synthetic bytes only)
+        run: python3 -m unittest discover -s tools/build -p 'test_pair_image_readback.py' -v
+      - name: Verify source catalog
+        run: python3 tools/build/verify_source_catalog.py
