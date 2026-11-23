@@ -40,7 +40,7 @@ class ChecksumTests(unittest.TestCase):
             b = pathlib.Path(d) / "b.cpio"
             payload = record("hello", b"abc") + record("TRAILER!!!")
             a.write_bytes(payload)
-            b.write_bytes(payload + b"\\0" * 512)
+            b.write_bytes(payload + b"\0" * 512)
             report = mod.compare(a, b)
             self.assertEqual(report["changed"], [])
             self.assertTrue(report["order_matches"])
