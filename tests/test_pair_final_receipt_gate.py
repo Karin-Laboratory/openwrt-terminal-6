@@ -114,7 +114,15 @@ os.fdopen = _swap_fdopen
             input=gate, text=True, capture_output=True, check=False,
         )
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_REPLACED_p25_sha256", result.stderr)
+        # A pathname swap may also change the opened inode's ctime.
+        # Either guard must reject the image before acceptance.
+        self.assertTrue(
+            any(marker in result.stderr for marker in (
+                "PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_REPLACED_p25_sha256",
+                "PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_CHANGED_DURING_READ_p25_sha256",
+            )), result.stderr,
+        )
+        self.assertNotIn("PUBLIC_PAIR_FINAL_RECEIPT_READBACK_PASS", result.stdout)
 
     def test_image_symlink(self):
         target = self.base / "target.bin"
