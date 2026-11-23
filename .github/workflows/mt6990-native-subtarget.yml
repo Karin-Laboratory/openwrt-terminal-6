@@ -5,6 +5,19 @@ on:
       - tools/build/mt6990-target/**
       - tools/build/stage_mt6990_subtarget.py
       - scripts/stage-native-mt6990-phy-ifrao.sh
+      # Re-run native manufacture when its direct source and acceptance gates change.
+      - scripts/manufacture-public-openwrt-p25-from-debian14.sh
+      - scripts/air6-diagnostic-init.c
+      - scripts/build-minimal-arm64-initramfs.py
+      - scripts/verify-unsigned-p25-p26-pair.py
+      - tools/build/pack_p25_unsigned_v2.py
+      - tools/build/pack_p26_rootfs.py
+      - tools/build/verify_p26_independent.py
+      - tests/test_verify_unsigned_pair.py
+      - tests/test_pack_p25_unsigned_v2.py
+      - tests/test_verify_kernel_initramfs.py
+      - board/mt6990-air-terminal-6*.dts
+      - config/sbat6-stage/**
       - patches/mt6990/0002-air6-avoid-sgmii-top-cycle.patch
       - patches/mt6990/0003-air6-check-sgmii-pll-errors.patch
       - tests/test_mt6990_native_subtarget.py
@@ -134,12 +147,27 @@ jobs:
           # Preserve the actual Kbuild failure in hosted logs if a choice or
           # driver dependency still blocks the matching native kernel.
           make -C "$work/openwrt" -j2 V=s target/linux/compile
+          # Enforce one unambiguous nonempty native Image at the first
+          # compile gate, not only at the later diagnostic PID1 stage.
+          # A process-substitution find failure is invisible to set -e/pipefail.
+          # Capture its exit status before trusting any candidate list.
+          image_candidates="$work/native-mt6990-image-candidates.nul"
           if ! find "$work/openwrt/build_dir" -type f \
               -path '*/linux-mediatek_mt6990/linux-*/arch/arm64/boot/Image' \
-              -size +0c -print -quit | grep -q .; then
-            echo "Native MT6990 kernel Image was not produced" >&2
+              -size +0c -print0 > "$image_candidates"; then
+            echo 'Native MT6990 Image discovery failed' >&2
             exit 1
           fi
+          mapfile -d '' -t compiled_images < "$image_candidates"
+          if test "${#compiled_images[@]}" -ne 1; then
+            echo "Expected one compiled native MT6990 Image; found ${#compiled_images[@]}" >&2
+            printf '%s\n' "${compiled_images[@]}" >&2
+            exit 1
+          fi
+          # Bind the later PID1 gate to the exact Image bytes accepted here.
+          # Package installation must not silently replace the native kernel.
+          # Compute the digest without parsing filename-bearing sha256sum output.
+          compiled_image_sha256="$(python3 -c 'import hashlib,sys; print(hashlib.file_digest(open(sys.argv[1], "rb"), "sha256").hexdigest())' "${compiled_images[0]}")"
           echo 'PUBLIC_MT6990_NATIVE_KERNEL_IMAGE_BUILD_PASS'
           # Now build the real package dependency closure with matching
           # OpenWrt kernel headers/modules metadata. No target/install.
@@ -191,9 +219,22 @@ jobs:
           # Unlike target/install it cannot produce a device boot/flash image.
           # CONFIG_SIGNED_PACKAGES=n prevents package-index signing.
           make -C "$work/openwrt" -j1 package/install
-          rootfs="$(find "$work/openwrt/build_dir" -maxdepth 3 \
-            -type d -name 'root-mediatek' -print -quit)"
-          test -n "$rootfs" && test -d "$rootfs"
+          # A stale second staging tree must not silently become the rootfs
+          # accepted by this job. Check find's status and require one match.
+          rootfs_candidates="$work/native-mt6990-rootfs-candidates.nul"
+          if ! find "$work/openwrt/build_dir" -maxdepth 3 \
+              -type d -name 'root-mediatek' -print0 > "$rootfs_candidates"; then
+            echo 'Native MT6990 rootfs discovery failed' >&2
+            exit 1
+          fi
+          mapfile -d '' -t staged_rootfs < "$rootfs_candidates"
+          if test "${#staged_rootfs[@]}" -ne 1; then
+            echo "Expected one staged native MT6990 rootfs; found ${#staged_rootfs[@]}" >&2
+            printf '%s\n' "${staged_rootfs[@]}" >&2
+            exit 1
+          fi
+          rootfs="${staged_rootfs[0]}"
+          test -d "$rootfs"
           for executable in bin/busybox sbin/procd sbin/netifd \
                             sbin/ubusd sbin/uci usr/sbin/dropbear; do
             test -s "$rootfs/$executable" || {
@@ -258,7 +299,15 @@ jobs:
           # The previous native run built Image/rootfs successfully, then
           # failed silently in this new gate. Resolve only the actual MT6990
           # kernel directory and report each failed prerequisite explicitly.
-          kernel="$work/openwrt/build_dir/target-aarch64_cortex-a55_musl/linux-mediatek_mt6990/linux-6.18.60"
+          # Reuse the uniquely selected Image from the earlier compile gate.
+          # This avoids a second ambiguous filesystem scan and preserves
+          # whitespace/newlines in kernel paths via the NUL-delimited result.
+          kernel="${compiled_images[0]%/arch/arm64/boot/Image}"
+          if ! test -s "${compiled_images[0]}" || \
+             test "$(python3 -c 'import hashlib,sys; print(hashlib.file_digest(open(sys.argv[1], "rb"), "sha256").hexdigest())' "${compiled_images[0]}")" != "$compiled_image_sha256"; then
+            echo 'Native MT6990 Image changed after initial compile acceptance' >&2
+            exit 1
+          fi
           if ! test -s "$kernel/arch/arm64/boot/Image"; then
             echo "Missing native MT6990 Image at $kernel" >&2
             exit 1
