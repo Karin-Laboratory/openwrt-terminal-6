@@ -18,8 +18,11 @@ on:
       - tools/build/verify_unsigned_pair.py
       - tests/test_pack_p25_unsigned_v2.py
       - tests/test_verify_unsigned_pair.py
+      - tests/test_pair_final_receipt_gate.py
+      - tests/test_unsigned_pair_digest_fd.py
       - tests/test_build_air6_first_stage.py
       - tests/test_verify_kernel_initramfs.py
+      - scripts/manufacture-public-openwrt-p25-from-debian14.sh
       - .github/workflows/mt6990-native-subtarget.yml
 permissions:
   contents: read
@@ -36,6 +39,18 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests -p 'test_mt6990_native_subtarget.py' -v
+          # Run pair identity and receipt rollback regressions before the long build.
+          python3 -m unittest discover -s tests -p 'test_verify_unsigned_pair.py' -v
+          python3 -m unittest discover -s tests -p 'test_pair_final_receipt_gate.py' -v
+          python3 -m unittest discover -s tests -p 'test_unsigned_pair_digest_fd.py' -v
+          # Exercise the P25 packer and embedded-initramfs contract before
+          # spending runner hours on the native source builds. These are
+          # host-only regressions, not evidence of a newly manufactured image.
+          python3 -m unittest discover -s tests -p 'test_pack_p25_unsigned_v2.py' -v
+          python3 -m unittest discover -s tests -p 'test_verify_kernel_initramfs.py' -v
+          # Syntax gate before expensive native compilation.
+          bash -n scripts/manufacture-public-openwrt-p25-from-debian14.sh
+          echo 'PUBLIC_PAIR_ORCHESTRATOR_SHELL_SYNTAX_PASS'
           python3 tools/build/verify_source_catalog.py
       - name: Pin clean upstream OpenWrt and register noninstallable target
         shell: bash
@@ -86,8 +101,19 @@ jobs:
   native-package-compile:
     name: Compile real OpenWrt procd/netifd packages (noninstallable)
     needs: native-defconfig
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        independent_run: [A, B]
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
+    # Pin build-time identity for both independent matrix workers. This is
+    # a reproducibility input, not proof that kernel/rootfs bytes now match.
+    env:
+      SOURCE_DATE_EPOCH: '0'
+      KBUILD_BUILD_TIMESTAMP: 'Thu Jan  1 00:00:00 UTC 1970'
+      KBUILD_BUILD_USER: openwrt
+      KBUILD_BUILD_HOST: reproducible
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -97,7 +123,15 @@ jobs:
         run: |
           set -euo pipefail
           pin=5799d2da76998be50432b0a3325b42713b4b619b
-          work="$(mktemp -d)"
+          # A/B workers must compile from the same absolute path: a random
+          # mktemp directory can enter debug paths and generated metadata.
+          # GitHub-hosted matrix workers have isolated filesystems; fail closed
+          # if this path unexpectedly exists rather than reusing stale bytes.
+          work=/tmp/sbat6-native-repro-build
+          if ! mkdir -- "$work"; then
+            echo 'P25_P26_REPRO_WORKSPACE_NOT_CLEAN' >&2
+            exit 1
+          fi
           trap 'rm -rf -- "$work"' EXIT
           git clone --quiet --no-checkout --filter=blob:none \
             https://github.com/openwrt/openwrt.git "$work/openwrt"
@@ -345,6 +379,59 @@ jobs:
           print("P26_SAME_RUN_PACKAGE_INSTALL_RECEIPT_READY",
                 len(packages), record["installed_db_sha256"])
           PY
+          # Pre-pack A/B diagnostic: isolate filesystem drift from SquashFS drift.
+          # Aggregate hashes only; no rootfs payloads or paths are published.
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 - "$rootfs" <<'PY'
+          import hashlib
+          import os
+          import stat
+          import sys
+          from pathlib import Path
+          root = Path(sys.argv[1])
+          stable = hashlib.sha256()
+          with_times = hashlib.sha256()
+          # Separate content drift from mode/owner/link drift without logging paths.
+          content_only = hashlib.sha256()
+          metadata_only = hashlib.sha256()
+          count = 0
+          for base, dirs, files in os.walk(root, followlinks=False):
+              dirs.sort()
+              files.sort()
+              for name in ([None] if Path(base) == root else []) + sorted(dirs + files):
+                  path = Path(base) if name is None else Path(base) / name
+                  info = path.lstat()
+                  kind = stat.S_IFMT(info.st_mode)
+                  if kind not in (stat.S_IFREG, stat.S_IFDIR, stat.S_IFLNK):
+                      raise SystemExit("P26_REPRO_UNSUPPORTED_FILE_TYPE")
+                  fields = [("." if name is None else path.relative_to(root).as_posix()), str(kind),
+                            str(stat.S_IMODE(info.st_mode)), str(info.st_uid),
+                            str(info.st_gid)]
+                  if stat.S_ISLNK(info.st_mode):
+                      fields.append(os.readlink(path))
+                  elif stat.S_ISREG(info.st_mode):
+                      digest = hashlib.sha256()
+                      with path.open("rb") as stream:
+                          for chunk in iter(lambda: stream.read(1048576), b""):
+                              digest.update(chunk)
+                      fields.append(digest.hexdigest())
+                  row = ("\0".join(fields) + "\n").encode("utf-8", "surrogateescape")
+                  stable.update(row)
+                  with_times.update(row)
+                  # Preserve path identity in both projections to detect swaps.
+                  identity = fields[0].encode("utf-8", "surrogateescape") + b"\0"
+                  metadata_only.update(identity + ("\0".join(fields[1:5]) + "\n").encode("utf-8", "surrogateescape"))
+                  content_only.update(identity + ("\0".join(fields[5:]) + "\n").encode("utf-8", "surrogateescape"))
+                  with_times.update((str(info.st_mtime_ns) + "\n").encode())
+                  count += 1
+          print("PUBLIC_P26_PREPACK_TREE_ENTRY_COUNT=" + str(count))
+          print("PUBLIC_P26_PREPACK_TREE_CONTENT_METADATA_SHA256=" + stable.hexdigest())
+          print("PUBLIC_P26_PREPACK_TREE_CONTENT_ONLY_SHA256=" + content_only.hexdigest())
+          print("PUBLIC_P26_PREPACK_TREE_METADATA_ONLY_SHA256=" + metadata_only.hexdigest())
+          print("PUBLIC_P26_PREPACK_TREE_WITH_MTIME_SHA256=" + with_times.hexdigest())
+          PY
+          # Deterministic path-hash buckets locate content drift without logging paths.
+          # Run under the same fakeroot state as the aggregate pre-pack check.
+          fakeroot -i "$work/p26-fakeroot.state" -- python3 "$GITHUB_WORKSPACE/tools/build/repro_buckets.py" "$rootfs"
           # Produce an ephemeral real p26 from THIS job's actual package/install
           # root, then independently read back its full 128 MiB and filesystem.
           # No Actions artifact, cache, release, signing, or device interaction.
@@ -784,15 +871,21 @@ jobs:
           sha256sum "$work/air6-first-stage-initramfs.cpio" \
             "$kernel/arch/arm64/boot/Image"
           echo 'PUBLIC_AIR6_FIRST_STAGE_KERNEL_IMAGE_SOURCE_BUILT_PASS'
+          # Preserve the failing command/line when the next P25 stage exits
+          # before it can print its own blocker marker. No binary disclosure.
+          trap 'rc=$?; echo "PUBLIC_PAIR_POST_KERNEL_FAILURE line=$LINENO status=$rc command=$BASH_COMMAND" >&2' ERR
+          echo 'PUBLIC_PAIR_POST_KERNEL_STAGE_ENTER'
           # Unsigned P25 only when the caller supplies both a validated exact
           # boot-v2 configuration and the separately hash-pinned DTB prefix.
           # Neither private config nor vendor prefix is stored in this repo.
           : > "$work/air6-native-empty-ramdisk"
           native_dtb="$kernel/arch/arm64/boot/dts/mediatek/mt6990-air-terminal-6.dtb"
-          test -s "$native_dtb"
+          # The legacy owner-reference path needs the native 6.18.60 DTB.
+          # The default public path builds its own 6.18.63 DTB instead.
           if test -n "${SBAT6_P25_BOOT_V2_CONFIG:-}" && \
              test -n "${SBAT6_P25_DTB_SECTION_PREFIX:-}" && \
              test -n "${SBAT6_P25_REFERENCE_AUDIT:-}"; then
+            test -s "$native_dtb" || { echo "P25_BLOCKED_NATIVE_REFERENCE_DTB_MISSING" >&2; exit 1; }
             test -f "$SBAT6_P25_BOOT_V2_CONFIG"
             test -f "$SBAT6_P25_DTB_SECTION_PREFIX"
             test -f "$SBAT6_P25_REFERENCE_AUDIT"
@@ -843,11 +936,57 @@ jobs:
               'No candidate P25 or P25/P26 pair receipt was produced.' \
               >> "$GITHUB_STEP_SUMMARY"
           else
-            echo 'P25_BLOCKED_RC14_COMPATIBLE_BOOT_V2_CONFIGURATION_UNAVAILABLE'
-            printf '%s\n' '## P25 manufacture status' '' \
-              'BLOCKED: no independently validated SBAT6_P25_BOOT_V2_CONFIG was supplied.' \
-              'No P25 candidate or P25/P26 pair receipt was produced.' \
-              'P26 bytes remain ephemeral; no firmware artifact was uploaded.' \
-              >> "$GITHUB_STEP_SUMMARY"
+            # Default PUBLIC path. Debian PR #14's pinned 17-blob, Linux
+            # 6.18.63 kernel/NETSYS/PCS/MT7531 and DTB are built locally
+            # in this SAME workspace, with this run's P26-bound first-stage.
+            # Existing OpenWrt packer, readback and pair verifier remain the
+            # source of acceptance; no private reference/prefix is consumed.
+            # Reuse this job’s source-built matching OpenWrt toolchain.
+            # Public security policy forbids privileged shell in this workflow.
+            if ! command -v "$compiler" >/dev/null; then
+              echo 'PUBLIC_PAIR_BLOCKED_OPENWRT_COMPILER_UNAVAILABLE' >&2
+              exit 1
+            fi
+            for tool in "${cross}gcc" "${cross}ld"; do
+              if ! test -x "$tool"; then
+                echo "PUBLIC_PAIR_BLOCKED_CROSS_TOOL_UNAVAILABLE: $tool" >&2
+                exit 1
+              fi
+            done
+            # tools/install does not guarantee dtc is selected by the native
+            # package dependency closure. Build the pinned OpenWrt host dtc
+            # explicitly before the public Debian DTB staging step.
+            # The pinned OpenWrt tree does not expose tools/dtc/install as
+            # an independently callable make target. Build the host dtc from
+            # the already source-built kernel's Kbuild host tools instead.
+            PATH="$(dirname "$compiler"):$PATH" timeout 300s \
+              make -C "$kernel" ARCH=arm64 CROSS_COMPILE="$cross" scripts/dtc/dtc
+            host_dtc="$kernel/scripts/dtc/dtc"
+            if ! test -x "$host_dtc"; then
+              echo "PUBLIC_PAIR_BLOCKED_HOST_DTC_UNAVAILABLE: $host_dtc" >&2
+              exit 1
+            fi
+            bash -n "$GITHUB_WORKSPACE/scripts/manufacture-public-openwrt-p25-from-debian14.sh"
+            echo 'PUBLIC_PAIR_PUBLIC_TOOLCHAIN_PREFLIGHT_PASS'
+            echo 'REBUILD_SCOPE=E 6.18.63 real public kernel plus same-run source-built P26'
+            echo 'REUSE_PROOF=only same-job verified P26 bytes and first-stage CPIO'
+            echo 'CACHE_DECISION=no firmware/outputs cached or uploaded'
+            start_epoch="$(date +%s)"
+            AIR6_CROSS_COMPILE="$cross" PATH="$(dirname "$host_dtc"):$(dirname "$compiler"):$PATH" \
+              timeout --signal=TERM --kill-after=15s 7200 \
+              bash "$GITHUB_WORKSPACE/scripts/manufacture-public-openwrt-p25-from-debian14.sh" \
+                "$work/public-source-61863-p25" \
+                "$work/air6-first-stage-initramfs.cpio" \
+                "$work/private-p26/packed/rootfs_a.p26" \
+                "$work/private-p26/packed/p26-receipt.json" \
+                "$work/private-p26/packed/p26-independent-attestation.json"
+            echo "PUBLIC_OSS_PAIR_ELAPSED_SECONDS=$(($(date +%s) - start_epoch))"
+            python3 -c 'import json,sys; r=json.load(open(sys.argv[1], encoding="utf-8")); k=("p25_sha256","p26_sha256","bound_initramfs_sha256","kernel_image_sha256","initramfs_object_sha256","p25_config_sha256"); assert_all=all(isinstance(r.get(x),str) and len(r[x])==64 for x in k); assert assert_all, "invalid pair metadata"; print("PUBLIC_PAIR_REPRO_METADATA="+json.dumps({x:r[x] for x in k},sort_keys=True,separators=(",",":")))' "$work/public-source-61863-p25/unsigned-pair/same-run-p25-p26-receipt.json"
+            echo "PUBLIC_PAIR_REPRO_SOURCE_SHA=$GITHUB_SHA"
+            echo "PUBLIC_PAIR_REPRO_RUN_ID=$GITHUB_RUN_ID"
+            echo "PUBLIC_PAIR_REPRO_RUN_ATTEMPT=$GITHUB_RUN_ATTEMPT"
+            echo "PUBLIC_PAIR_REPRO_RUNNER_NAME=$RUNNER_NAME"
+            echo 'PUBLIC_OPENWRT_UNSIGNED_P25_P26_SAME_WORKSPACE_REAL_BUILD_PASS'
+            echo 'LIMIT: no device LK boot, physical C/A unit, signing or distribution'
           fi
           echo 'LIMIT: Air6 bootloader acceptance and hardware cold boot NOT verified'

@@ -172,10 +172,14 @@ def produce(root, output, source_receipt):
     full = output / "rootfs_a.p26"
     # Fixed time improves repeatability; pin squashfs-tools version independently.
     # Exact byte reproducibility still depends on pinned squashfs-tools version.
+    # SquashFS rejects SOURCE_DATE_EPOCH with explicit timestamp flags.
+    # Preserve the upstream build environment; isolate only this subprocess.
+    squashfs_env = os.environ.copy()
+    squashfs_env.pop("SOURCE_DATE_EPOCH", None)
     subprocess.run(["mksquashfs", str(root), str(raw), "-noappend", "-comp", "xz",
                     "-b", "262144", "-processors", "1", "-no-progress",
                     "-all-time", "0", "-mkfs-time", "0", "-no-xattrs"],
-                   check=True, timeout=1800)
+                   check=True, timeout=1800, env=squashfs_env)
     size = raw.stat().st_size
     require(0 < size < PARTITION_BYTES, "SQUASHFS_EXCEEDS_P26")
     with raw.open("rb") as src, full.open("xb") as dst:

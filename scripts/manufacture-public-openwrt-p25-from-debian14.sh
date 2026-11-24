@@ -1,0 +1,242 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Actual same-workspace source build: Debian PR14 public 6.18.63 network kernel,
+# OpenWrt's already manufactured P26-bound first stage, existing public P25
+# producer and independent P25/P26 verifier. No private binary or signing.
+set -euo pipefail
+[[ $# == 5 ]] || { echo 'usage: script FRESH_ABS_DIR CPIO P26 PRODUCER INDEPENDENT' >&2; exit 2; }
+out="$1"; cpio="$2"; p26="$3"; producer="$4"; independent="$5"
+root="$(cd "$(dirname "$0")/.." && pwd -P)"
+for p in "$out" "$cpio" "$p26" "$producer" "$independent"; do
+  [[ $p == /* ]] || { echo 'PUBLIC_PAIR_BLOCKED_ABSOLUTE_PATH_REQUIRED' >&2; exit 2; }
+done
+[[ $out != / && ! -e $out && ! -L $out && -d $(dirname "$out") ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_OUTPUT_NOT_FRESH' >&2; exit 2; }
+for p in "$cpio" "$p26" "$producer" "$independent"; do
+  [[ -f $p && ! -L $p ]] || { echo 'PUBLIC_PAIR_BLOCKED_MISSING_INPUT' >&2; exit 2; }
+done
+[[ $(stat -c %s "$p26") == 134217728 ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_REAL_P26_SIZE' >&2; exit 1; }
+for bin in git python3 make dtc cpp sha256sum gzip; do
+  command -v "$bin" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_TOOL_$bin" >&2; exit 2; }
+done
+[[ -n ${AIR6_CROSS_COMPILE:-} ]] || { echo "PUBLIC_PAIR_BLOCKED_MATCHING_OPENWRT_CROSS_PREFIX_REQUIRED" >&2; exit 2; }
+command -v "${AIR6_CROSS_COMPILE}gcc" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_CROSS_COMPILER" >&2; exit 2; }
+command -v "${AIR6_CROSS_COMPILE}ld" >/dev/null || { echo "PUBLIC_PAIR_BLOCKED_CROSS_LINKER" >&2; exit 2; }
+# Pin input identities before the long kernel build. A source-built P26 or
+# first-stage archive replaced during compilation must never be paired with
+# the resulting P25, even when its replacement has the expected byte length.
+p26_sha_before="$(sha256sum "$p26" | cut -d ' ' -f 1)"
+cpio_sha_before="$(sha256sum "$cpio" | cut -d ' ' -f 1)"
+producer_sha_before="$(sha256sum "$producer" | cut -d ' ' -f 1)"
+independent_sha_before="$(sha256sum "$independent" | cut -d ' ' -f 1)"
+mkdir -m 0700 "$out"
+# A receipt is evidence of full acceptance, not just verifier completion.
+# Later checks can still fail (external input mutation, size, final readback).
+# Never leave a success-shaped receipt behind after any nonzero exit.
+pair_receipt="$out/unsigned-pair/same-run-p25-p26-receipt.json"
+cleanup_failed_receipt() {
+  local status=$?
+  if (( status != 0 )); then
+    rm -f -- "$pair_receipt"
+  fi
+}
+trap cleanup_failed_receipt EXIT
+# Pin the PUBLIC Debian PR14 source, then let its independent 17-blob source
+# manifest verify every MT6990 donor input. No private source import.
+pin=e05811f8d4d3ee2606f44f27218ef59132a39a5f
+git clone -q --filter=blob:none --no-checkout \
+  https://github.com/Karin-Laboratory/Debian13-Terminal6.git "$out/debian-public"
+git -C "$out/debian-public" fetch -q --depth=1 origin "$pin"
+git -C "$out/debian-public" checkout -q --detach "$pin"
+[[ $(git -C "$out/debian-public" rev-parse HEAD) == "$pin" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_DEBIAN_REVISION' >&2; exit 1; }
+deb="$out/debian-public"
+bash "$deb/scripts/stage-experimental-dtb.sh" "$out/dtb"
+python3 "$deb/scripts/stage-public-mt6990-sources.py" --output "$out/public-mt6990"
+# Use a LOCAL modified copy of the MIT-licensed pinned Debian build recipe.
+# Only add the P26-bound OpenWrt initramfs+XZ built-in requirements.
+python3 - "$deb/scripts/build-linux-6.18.sh" "$deb/scripts/build-openwrt-pair-local.sh" <<'PY'
+from pathlib import Path
+import hashlib, sys
+raw = Path(sys.argv[1]).read_bytes()
+blob = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+if blob != "d84143d75d185c5f90b0296b92bf0fb2fcbb2867":
+    raise SystemExit("PUBLIC_PAIR_BLOCKED_DEBIAN_SCRIPT_BLOB_CHANGED")
+src = raw.decode("utf-8")
+needle = 'if [[ -n "' + chr(36) + '{INITRAMFS_ARCHIVE:-}" ]]; then\n'
+if src.count(needle) != 1:
+    raise SystemExit("PUBLIC_PAIR_BLOCKED_KERNEL_SCRIPT_ANCHOR")
+addition = ('scripts/config --enable SQUASHFS --enable SQUASHFS_XZ '
+            '--enable OVERLAY_FS --enable CRYPTO_SHA256 '
+            '--enable RD_XZ --enable INITRAMFS_COMPRESSION_XZ '
+            '--disable INITRAMFS_COMPRESSION_GZIP\n')
+Path(sys.argv[2]).write_text(src.replace(needle, addition + needle))
+PY
+export PUBLIC_MT6990_STAGE="$out/public-mt6990"
+export PUBLIC_MT6990_SCOPE=network
+export WORKDIR="$out/linux-6.18.63"
+export INITRAMFS_ARCHIVE="$cpio"
+export DTB_PATH="$out/dtb/board/terminal6-debian-ethernet-experimental.dtb"
+export CROSS_COMPILE="$AIR6_CROSS_COMPILE"
+export JOBS=4
+bash "$deb/scripts/build-openwrt-pair-local.sh"
+# The kernel embedded the archive passed at build time. Fail closed if either
+# externally supplied image changed while the expensive build was running.
+[[ "$(sha256sum "$p26" | cut -d ' ' -f 1)" == "$p26_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_P26_CHANGED_DURING_BUILD' >&2; exit 1; }
+[[ "$(sha256sum "$cpio" | cut -d ' ' -f 1)" == "$cpio_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_CPIO_CHANGED_DURING_BUILD' >&2; exit 1; }
+kernel="$out/linux-6.18.63"
+image="$kernel/arch/arm64/boot/Image"
+dtb="$DTB_PATH"
+[[ -s $image && -s $kernel/vmlinux && -s $kernel/usr/initramfs_data.o ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_REAL_KERNEL_IMAGE' >&2; exit 1; }
+for option in CONFIG_ARCH_MEDIATEK=y CONFIG_MMC_MTK=y CONFIG_NET_MEDIATEK_SOC=y \
+  CONFIG_PCS_MTK_LYNXI=y CONFIG_NET_DSA_MT7530=y \
+  CONFIG_SQUASHFS=y CONFIG_SQUASHFS_XZ=y CONFIG_INITRAMFS_COMPRESSION_XZ=y; do
+  grep -qx "$option" "$kernel/.config" ||
+    { echo "PUBLIC_PAIR_BLOCKED_KERNEL_CONFIG_$option" >&2; exit 1; }
+done
+gzip -n -9 -c "$image" > "$out/air6-public-Image.gz"
+python3 "$root/tools/boot/verify_kernel_initramfs.py" \
+  --object "$kernel/usr/initramfs_data.o" --vmlinux "$kernel/vmlinux" \
+  --image "$image" --kernel-gz "$out/air6-public-Image.gz" \
+  --cpio "$cpio" --compression xz
+: > "$out/empty-boot-ramdisk"
+python3 "$root/tools/boot/make_p25_dtb_table.py" \
+  --dtb "$dtb" --page-size 2048 --output "$out/aosp-dt-table64.bin"
+# Convert Debian's PUBLIC numeric boot-v2 profile into OpenWrt's existing
+# boot-v2 schema, with a newly sized AOSP header (never copied OEM bytes).
+python3 - "$deb/configs/public-air6-boot-v2-profile.json" \
+  "$out/aosp-dt-table64.bin" "$out/openwrt-boot-v2-profile.json" <<'PY'
+import hashlib,json,pathlib,sys
+src=json.loads(pathlib.Path(sys.argv[1]).read_text())
+required={'cmdline','dtb_addr','header_size','header_version','kernel_addr',
+          'name','os_version','page_size','ramdisk_addr','second_addr','tags_addr'}
+if not isinstance(src,dict) or set(src)!=required:
+    raise SystemExit("invalid public boot-v2 profile fields")
+if any(type(src[k]) is not int for k in
+       ('page_size','header_version','header_size','os_version','kernel_addr',
+        'ramdisk_addr','second_addr','tags_addr','dtb_addr')):
+    raise SystemExit("invalid public boot-v2 numeric fields")
+if any(not 0 <= src[k] <= 0xffffffff for k in
+       ('os_version','kernel_addr','ramdisk_addr','second_addr','tags_addr','dtb_addr')):
+    raise SystemExit("public boot-v2 numeric field outside uint32 range")
+if not isinstance(src['cmdline'],str) or '\x00' in src['cmdline']:
+    raise SystemExit("invalid public boot-v2 cmdline")
+if (src['page_size'],src['header_version'],src['header_size'],src['name']) != (2048,2,1660,"mt6990"):
+    raise SystemExit("unsupported public boot-v2 profile")
+prefix=pathlib.Path(sys.argv[2]).read_bytes()
+if len(prefix)!=64:
+    raise SystemExit("invalid DTB prefix length")
+profile={k:"0x%x"%src[k] for k in
+         ('kernel_addr','ramdisk_addr','second_addr','tags_addr','dtb_addr')}
+profile.update({"page_size":2048,"os_version":src['os_version'],
+    "name":"mt6990","cmdline":"bootopt=64S3,32N2,64N2 init_debug=4 console=ttyS0,115200n8 earlycon",
+    "ramdisk_mode":"kernel_embedded","dtb_prefix_bytes":64,
+    "dtb_prefix_sha256":hashlib.sha256(prefix).hexdigest()})
+pathlib.Path(sys.argv[3]).write_text(json.dumps(profile,sort_keys=True,indent=2)+"\n")
+PY
+mkdir -m 0700 "$out/unsigned-pair"
+p25="$out/unsigned-pair/boot_a.unsigned.p25"
+profile="$out/openwrt-boot-v2-profile.json"
+prefix="$out/aosp-dt-table64.bin"
+kernel_gz="$out/air6-public-Image.gz"
+empty="$out/empty-boot-ramdisk"
+python3 "$root/tools/boot/pack_p25_unsigned_v2.py" \
+  --kernel "$kernel_gz" --ramdisk "$empty" --dtb "$dtb" \
+  --dtb-prefix "$prefix" --config "$profile" --output "$p25"
+python3 "$root/tools/boot/verify_p25_independent.py" \
+  --p25 "$p25" --kernel "$kernel_gz" --ramdisk "$empty" \
+  --dtb "$dtb" --dtb-prefix "$prefix" --config "$profile"
+python3 "$root/tools/build/verify_unsigned_pair.py" \
+  --p25 "$p25" --kernel "$kernel_gz" --ramdisk "$empty" \
+  --dtb "$dtb" --dtb-prefix "$prefix" --config "$profile" \
+  --p26 "$p26" --producer "$producer" --independent "$independent" \
+  --cpio "$cpio" --initramfs-object "$kernel/usr/initramfs_data.o" \
+  --vmlinux "$kernel/vmlinux" --image "$image" \
+  --out "$out/unsigned-pair/same-run-p25-p26-receipt.json"
+# The producer and independent attestation are external build inputs too.
+# Reject any replacement between preflight and final pair acceptance.
+[[ "$(sha256sum "$producer" | cut -d ' ' -f 1)" == "$producer_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_PRODUCER_RECEIPT_CHANGED' >&2; exit 1; }
+[[ "$(sha256sum "$independent" | cut -d ' ' -f 1)" == "$independent_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_INDEPENDENT_ATTESTATION_CHANGED' >&2; exit 1; }
+# Revalidate immutable external inputs after all packing and verification.
+# The long verification stage must not silently accept later replacements.
+[[ "$(sha256sum "$p26" | cut -d ' ' -f 1)" == "$p26_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_P26_CHANGED_AFTER_VERIFICATION' >&2; exit 1; }
+[[ "$(sha256sum "$cpio" | cut -d ' ' -f 1)" == "$cpio_sha_before" ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_CPIO_CHANGED_AFTER_VERIFICATION' >&2; exit 1; }
+[[ $(stat -c %s "$p25") == 33554432 ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_P25_SIZE' >&2; exit 1; }
+[[ $(stat -c %s "$p26") == 134217728 ]] ||
+  { echo 'PUBLIC_PAIR_BLOCKED_P26_SIZE' >&2; exit 1; }
+# Bind the final full-image readback to the exact verified pair receipt.
+# Size-only checks and printing hashes do not prove that the final bytes
+# still match the identities accepted by the independent verifier.
+python3 - "$p25" "$p26" "$out/unsigned-pair/same-run-p25-p26-receipt.json" <<'PY'
+import hashlib, json, os, pathlib, re, stat, sys
+p25, p26, receipt_path = map(pathlib.Path, sys.argv[1:])
+# A final readback must inspect regular image files, not substituted symlinks,
+# directories or special files that can masquerade as valid paths.
+for image_path, label in ((p25, "P25"), (p26, "P26")):
+    if image_path.is_symlink() or not image_path.is_file():
+        raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_" + label + "_NOT_REGULAR")
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate receipt field: " + key)
+        result[key] = value
+    return result
+# Fail closed on malformed final receipts, not just mismatched hashes.
+if receipt_path.is_symlink() or not receipt_path.is_file():
+    raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_NOT_REGULAR")
+if receipt_path.stat().st_size > 1024 * 1024:
+    raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_TOO_LARGE")
+def reject_constant(value):
+    raise ValueError("nonfinite receipt constant: " + value)
+with receipt_path.open("r", encoding="utf-8") as stream:
+    receipt = json.load(stream, object_pairs_hook=unique_object,
+                        parse_constant=reject_constant)
+if not isinstance(receipt, dict):
+    raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_NOT_OBJECT")
+if receipt.get("status") != "UNSIGNED_PAIR_BYTE_IDENTITIES_VERIFIED":
+    raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_RECEIPT_STATUS")
+for path, field in ((p25, "p25_sha256"), (p26, "p26_sha256")):
+    digest = hashlib.sha256()
+    # Bind the readback to one opened inode and reject concurrent mutation.
+    # O_NOFOLLOW also prevents a symlink swap between path validation and open.
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode):
+            raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_NOT_REGULAR_" + field)
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        after = os.fstat(fd)
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+            before.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size,
+                                  after.st_mtime_ns, after.st_ctime_ns):
+            raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_CHANGED_DURING_READ_" + field)
+        # Also reject a rename/replacement of the pathname during readback.
+        current = path.lstat()
+        if (current.st_dev, current.st_ino) != (after.st_dev, after.st_ino):
+            raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_REPLACED_" + field)
+    finally:
+        os.close(fd)
+    expected = receipt.get(field)
+    if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+        raise SystemExit("PUBLIC_PAIR_BLOCKED_INVALID_RECEIPT_DIGEST_" + field)
+    if digest.hexdigest() != expected:
+        raise SystemExit("PUBLIC_PAIR_BLOCKED_FINAL_IMAGE_RECEIPT_MISMATCH_" + field)
+print("PUBLIC_PAIR_FINAL_RECEIPT_READBACK_PASS")
+PY
+# Read the complete images again from the ephemeral runner filesystem.
+echo 'PUBLIC_OPENWRT_61863_UNSIGNED_P25_P26_SOURCE_PAIRCHECK_PASS'
+sha256sum "$p25" "$p26"
+echo 'AIR6_LK_BOOT_LAN_SSH_P44_WIFI_PHY_NOT_TESTED'
+echo 'NO_BINARY_ARTIFACT_UPLOAD_NO_DEVICE_WRITE_NO_SIGNING'

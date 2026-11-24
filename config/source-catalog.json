@@ -184,6 +184,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "scripts/manufacture-public-openwrt-p25-from-debian14.sh",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "ce812558edaab834836dd26d7190ba56815a180c",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "scripts/package-arm64-busybox-initramfs.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -472,6 +481,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_pair_final_receipt_gate.py",
+      "component": "kernel",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "ffd7fc800ac9fc08c60ed1e43bdc5e1ba08d36ec",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_pinned_donor_source.py",
       "component": "openwrt-userland",
       "origin": "independent-original",
@@ -517,6 +535,15 @@
       "contains_flashable_payload": false
     },
     {
+      "path": "tests/test_repro_buckets.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "58ad26d32d7b6bc515d0e5fdb9c7b1652f86605c",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
       "path": "tests/test_sba6d_stage10_clean_patch.py",
       "component": "modem-ethernet",
       "origin": "independent-original",
@@ -558,6 +585,15 @@
       "origin": "independent-original",
       "license": "MIT",
       "git_blob_sha1": "e8e15d869f3ee822991c94957dc64cac45bb057a",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tests/test_unsigned_pair_digest_fd.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "7d97d80b76983b239860c32abf2ba8c0bac0d624",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -620,7 +656,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "08b414e18fdfef27962882d5b8302b8c021e2c60",
+      "git_blob_sha1": "ab8c7bf31978af0aa3f40cc9b05bfbb6d36a89da",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -827,7 +863,16 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "5a054ab9c4e3aacd18283ab79fbce6fd6fa44205",
+      "git_blob_sha1": "aef90504ea5cd758bb2969fa3a8dee8e39e8609b",
+      "rights_review": "pending",
+      "contains_flashable_payload": false
+    },
+    {
+      "path": "tools/build/repro_buckets.py",
+      "component": "openwrt-userland",
+      "origin": "independent-original",
+      "license": "MIT",
+      "git_blob_sha1": "6b0a07202d58413885f424d0ae498c6b95eb782b",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -890,7 +935,7 @@
       "component": "openwrt-userland",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "edb2cfa1d2d31a45732cda89e3388ed3ae430cd6",
+      "git_blob_sha1": "a3cc109064386016a62feed469db07c55dd29a18",
       "rights_review": "pending",
       "contains_flashable_payload": false
     },
@@ -953,7 +998,7 @@
       "component": "kernel",
       "origin": "independent-original",
       "license": "MIT",
-      "git_blob_sha1": "f549fa4ebf28a18b8c53ce7dda5848990fcdda8d",
+      "git_blob_sha1": "f814eb12e0da00e03e0479d5d7b33ffb3d337093",
       "rights_review": "pending",
       "contains_flashable_payload": false
     }
